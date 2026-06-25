@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+*.tsbuildinfo
+.turbo/
+
+# python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+backend/uv.lock.bak
+
+# env
+.env
+.env.local
+*.local
+
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# media / generated
+backend/media/
+backend/app/api/v1/openapi.json
+packages/api-client/src/generated/
+
+# legacy demo (kept as reference, not tracked into build)
+# Karyerlar_Nazorati_Tizimi.html

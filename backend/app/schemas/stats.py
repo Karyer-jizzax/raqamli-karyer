@@ -1,0 +1,82 @@
+"""Stats / geo DTOs for the department app."""
+
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class Overview(BaseModel):
+    quarries: int
+    districts: int
+    cameras: int
+    organizations: int
+    events: int
+    total_volume: float
+    avg_confidence: float
+
+
+class DistrictGeo(BaseModel):
+    id: UUID
+    code: str
+    name_uz_latn: str
+    name_uz_cyrl: str
+    name_ru: str
+    is_capital: bool
+    svg_path: str | None
+    center_x: float | None
+    center_y: float | None
+    quarry_count: int
+    event_count: int
+
+
+class RegionGeo(BaseModel):
+    region_id: UUID
+    view_height: float
+    districts: list[DistrictGeo]
+
+
+class M1Row(BaseModel):
+    id: UUID
+    plate_region: str
+    plate_number: str
+    model: str
+    direction: str
+    occurred_at: str
+    material_id: str | None
+    volume_final: float
+    volume_confidence: float
+    payer_type: str
+    owner_name: str
+    status: str
+
+
+class M1Response(BaseModel):
+    rows: list[M1Row]
+    total_count: int
+    total_volume: float
+
+
+class DynamicsBucket(BaseModel):
+    month: int
+    total: int
+    confirmed: int
+    detection_pct: float
+
+
+class DynamicsResponse(BaseModel):
+    year: int
+    buckets: list[DynamicsBucket]
+    total_events: int
+    avg_detection: float
+
+
+class ReportRow(BaseModel):
+    key: str
+    count: int
+    volume: float
+
+
+class ReportResponse(BaseModel):
+    report: str  # M2 | M3 | M4 | M5
+    dimension: str
+    rows: list[ReportRow]

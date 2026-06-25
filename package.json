@@ -1,0 +1,26 @@
+{
+  "name": "karier-kontrol",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Karier Kontrol — karyerlar nazorati avtomatlashtirilgan tizimi (monorepo)",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
+    "dev:main": "turbo run dev --filter=@karier/web-main",
+    "dev:department": "turbo run dev --filter=@karier/web-department",
+    "dev:quarry": "turbo run dev --filter=@karier/web-quarry"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.3"
+  }
+}
