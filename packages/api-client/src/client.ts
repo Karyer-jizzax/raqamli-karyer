@@ -132,6 +132,13 @@ export function getMe(): Promise<AuthUserDto> {
   return api.get<AuthUserDto>('/auth/me');
 }
 
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return api.post<void>('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+}
+
 export async function getHealth(): Promise<{ status: string }> {
   const resp = await fetch('/health');
   if (!resp.ok) throw new ApiError(resp.status, 'health failed');
@@ -365,4 +372,28 @@ export const createQuarry = (body: {
   name: string;
   code: string;
 }) => api.post<Quarry>('/quarries', body);
+export const updateQuarry = (
+  id: string,
+  body: { name?: string; status?: 'active' | 'suspended' },
+) => api.patch<Quarry>(`/quarries/${id}`, body);
 export const deleteQuarry = (id: string) => api.del(`/quarries/${id}`);
+
+// ── users (superadmin) ───────────────────────────────────────────────────────
+export interface UserCreateInput {
+  username: string;
+  password: string;
+  full_name?: string;
+  email?: string | null;
+  role?: Role;
+  quarry_id?: string | null;
+  region_id?: string | null;
+}
+export const createUser = (body: UserCreateInput) => api.post<AuthUserDto>('/users', body);
+export const getUsers = (params: { quarry_id?: string } = {}) => {
+  const q = new URLSearchParams(params as Record<string, string>).toString();
+  return api.get<AuthUserDto[]>(`/users${q ? `?${q}` : ''}`);
+};
+export const updateUser = (
+  id: string,
+  body: { full_name?: string; email?: string | null; password?: string; is_active?: boolean },
+) => api.patch<AuthUserDto>(`/users/${id}`, body);

@@ -27,7 +27,16 @@ export function setupI18n(): typeof i18n {
     ),
     lng: readStoredLang(),
     fallbackLng: DEFAULT_LANG,
+    supportedLngs: LANGS as unknown as string[],
+    // i18next title-cases script subtags ("uz-latn" -> "uz-Latn"), which would
+    // not match our lowercase resource keys and t() would return the raw key.
+    // Force lowercase so the resolved language matches the dictionary keys.
+    lowerCaseLng: true,
     interpolation: { escapeValue: false },
+    // Resources are bundled inline (no async backend), so initialize
+    // synchronously and skip Suspense.
+    initImmediate: false,
+    react: { useSuspense: false },
   });
   return i18n;
 }

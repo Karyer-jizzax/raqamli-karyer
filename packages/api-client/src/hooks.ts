@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createEvent,
   createQuarry,
+  createUser,
   deleteQuarry,
+  getUsers,
+  updateQuarry,
+  updateUser,
   getDistricts,
   getDynamics,
   getEvents,
@@ -45,11 +49,50 @@ export function useCreateQuarry() {
   });
 }
 
+export function useUpdateQuarry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: { name?: string; status?: 'active' | 'suspended' } }) =>
+      updateQuarry(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['quarries'] }),
+  });
+}
+
 export function useDeleteQuarry() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deleteQuarry,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quarries'] }),
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createUser,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+}
+
+export function useUsers(params: { quarry_id?: string } = {}, enabled = true) {
+  return useQuery({
+    queryKey: ['users', params],
+    queryFn: () => getUsers(params),
+    enabled,
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: { full_name?: string; email?: string | null; password?: string; is_active?: boolean };
+    }) => updateUser(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 }
 

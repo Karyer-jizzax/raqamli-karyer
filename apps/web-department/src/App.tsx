@@ -103,7 +103,7 @@ function Placeholder({ titleKey }: { titleKey: string }) {
 
 export function App() {
   return (
-    <RequireAuth allowedRoles={['department', 'superadmin']}>
+    <RequireAuth allowedRoles={['department', 'superadmin']} appKey="app_department" accent="#1f7d68">
       <Header />
       <Nav />
       <Routes>

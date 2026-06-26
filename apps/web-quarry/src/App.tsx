@@ -5,7 +5,6 @@ import {
   ingestFrame,
   useCreateEvent,
   useEvents,
-  useHealth,
   useMaterials,
 } from '@karier/api-client';
 import { computeVolume } from '@karier/calc';
@@ -14,17 +13,6 @@ import { Button, Card, LangSwitcher, ProtocolViewer, RequireAuth, StatusPill, us
 import type { StatusKey } from '@karier/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useMemo, useRef, useState } from 'react';
-
-function HealthBadge() {
-  const { t } = useTranslation();
-  const { data, isError } = useHealth();
-  const ok = data?.status === 'ok' && !isError;
-  return (
-    <span style={{ fontSize: 12, fontWeight: 700, color: ok ? 'var(--green)' : 'var(--red)' }}>
-      ● {ok ? t('backend_connected') : t('backend_offline')}
-    </span>
-  );
-}
 
 const num = (s: string) => Number(s) || 0;
 
@@ -328,7 +316,7 @@ function EventList() {
 
 function Shell() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   return (
     <div>
       <header
@@ -345,9 +333,7 @@ function Shell() {
       >
         <strong style={{ fontSize: 16, color: 'var(--brand)' }}>{t('app_quarry')}</strong>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <HealthBadge />
           <LangSwitcher />
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{user?.full_name || user?.username}</span>
           <Button variant="ghost" onClick={logout}>
             {t('logout')}
           </Button>
@@ -419,7 +405,7 @@ const td: React.CSSProperties = { padding: '9px 10px' };
 
 export function App() {
   return (
-    <RequireAuth allowedRoles={['operator', 'superadmin']}>
+    <RequireAuth allowedRoles={['operator', 'superadmin']} appKey="app_quarry" accent="#c0671f">
       <Shell />
     </RequireAuth>
   );

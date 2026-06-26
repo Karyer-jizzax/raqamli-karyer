@@ -21,6 +21,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     full_name: str | None = None
     email: str | None = None
+    password: str | None = None
     is_active: bool | None = None
     quarry_id: UUID | None = None
     region_id: UUID | None = None

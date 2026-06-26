@@ -21,8 +21,13 @@ AdminDep = Annotated[object, Depends(require_role("superadmin"))]
 
 
 @router.get("", response_model=list[UserOut])
-async def list_users(db: DbDep, _a: AdminDep) -> list[User]:
-    result = await db.execute(select(User).order_by(User.username))
+async def list_users(
+    db: DbDep, _a: AdminDep, quarry_id: UUID | None = None
+) -> list[User]:
+    stmt = select(User).order_by(User.username)
+    if quarry_id is not None:
+        stmt = stmt.where(User.quarry_id == quarry_id)
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -46,7 +51,11 @@ async def update_user(user_id: UUID, body: UserUpdate, db: DbDep, _a: AdminDep) 
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Foydalanuvchi topilmadi")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    password = data.pop("password", None)
+    if password:
+        user.password_hash = hash_password(password)
+    for field, value in data.items():
         setattr(user, field, value)
     await db.commit()
     await db.refresh(user)
