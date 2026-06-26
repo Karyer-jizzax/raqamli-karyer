@@ -1,6 +1,5 @@
-import { useHealth } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
-import { Button, Card, LangSwitcher, RequireAuth, useAuth } from '@karier/ui';
+import { Card, LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
 import { Dashboard } from './features/Dashboard';
@@ -16,20 +15,8 @@ const NAV = [
   { to: '/dynamics', key: 'nav_dynamics' },
 ] as const;
 
-function HealthBadge() {
-  const { t } = useTranslation();
-  const { data, isError } = useHealth();
-  const ok = data?.status === 'ok' && !isError;
-  return (
-    <span style={{ fontSize: 12, fontWeight: 700, color: ok ? 'var(--green)' : 'var(--red)' }}>
-      ● {ok ? t('backend_connected') : t('backend_offline')}
-    </span>
-  );
-}
-
 function Header() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
   return (
     <header
       style={{
@@ -45,12 +32,8 @@ function Header() {
     >
       <strong style={{ fontSize: 16, color: 'var(--brand)' }}>{t('app_department')}</strong>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <HealthBadge />
         <LangSwitcher />
-        <span style={{ fontSize: 13, color: 'var(--muted)' }}>{user?.full_name || user?.username}</span>
-        <Button variant="ghost" onClick={logout}>
-          {t('logout')}
-        </Button>
+        <ProfileMenu />
       </div>
     </header>
   );

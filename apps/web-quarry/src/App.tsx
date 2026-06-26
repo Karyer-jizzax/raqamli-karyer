@@ -9,7 +9,7 @@ import {
 } from '@karier/api-client';
 import { computeVolume } from '@karier/calc';
 import { currentLang, useTranslation } from '@karier/i18n';
-import { Button, Card, LangSwitcher, ProtocolViewer, RequireAuth, StatusPill, useAuth } from '@karier/ui';
+import { Button, Card, LangSwitcher, ProfileMenu, ProtocolViewer, RequireAuth, StatusPill } from '@karier/ui';
 import type { StatusKey } from '@karier/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useMemo, useRef, useState } from 'react';
@@ -316,7 +316,6 @@ function EventList() {
 
 function Shell() {
   const { t } = useTranslation();
-  const { logout } = useAuth();
   return (
     <div>
       <header
@@ -334,9 +333,7 @@ function Shell() {
         <strong style={{ fontSize: 16, color: 'var(--brand)' }}>{t('app_quarry')}</strong>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <LangSwitcher />
-          <Button variant="ghost" onClick={logout}>
-            {t('logout')}
-          </Button>
+          <ProfileMenu />
         </div>
       </header>
 
