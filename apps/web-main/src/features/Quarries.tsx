@@ -14,8 +14,16 @@ import {
 import { useTranslation } from '@karier/i18n';
 import {
   cn,
+  getPaginationRange,
   Input,
   Label,
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
   Select,
   SelectContent,
   SelectItem,
@@ -349,21 +357,41 @@ function QuarryTable({
       </Table>
 
       {pageCount > 1 && (
-        <div className="flex items-center justify-end gap-3 border-t px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {t('pg_info', { from: start + 1, to: start + slice.length, total: filtered.length })}
           </span>
-          <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>
-            {t('pg_prev')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current >= pageCount}
-            onClick={() => setPage(current + 1)}
-          >
-            {t('pg_next')}
-          </Button>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  aria-label={t('pg_prev')}
+                  disabled={current <= 1}
+                  onClick={() => setPage(current - 1)}
+                />
+              </PaginationItem>
+              {getPaginationRange(current, pageCount).map((p, i) =>
+                p === 'ellipsis' ? (
+                  <PaginationItem key={`e${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={p}>
+                    <PaginationLink isActive={p === current} onClick={() => setPage(p)}>
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                ),
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  aria-label={t('pg_next')}
+                  disabled={current >= pageCount}
+                  onClick={() => setPage(current + 1)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 

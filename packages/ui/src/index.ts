@@ -52,6 +52,16 @@ export {
   TableCaption,
 } from './ui/table';
 export {
+  Pagination,
+  PaginationContent,
+  PaginationLink,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+  getPaginationRange,
+} from './ui/pagination';
+export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
