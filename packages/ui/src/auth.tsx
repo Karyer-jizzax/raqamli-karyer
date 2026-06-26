@@ -10,6 +10,7 @@ import {
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import type { Role } from '@karier/types';
+import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
 import {
   createContext,
   type FormEvent,
@@ -17,11 +18,29 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
-import { Button, LangSwitcher } from './components';
+import { LangSwitcher } from './components';
+import { cn } from './lib/utils';
+import { Button } from './ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 interface AuthContextValue {
   user: AuthUserDto | null;
@@ -99,14 +118,14 @@ export function RequireAuth({
   const { t } = useTranslation();
 
   if (loading) {
-    return <div style={{ padding: 40, color: 'var(--muted)' }}>{t('loading')}</div>;
+    return <div className="text-muted-foreground p-10">{t('loading')}</div>;
   }
   if (!user) return <LoginScreen allowedRoles={allowedRoles} appKey={appKey} accent={accent} />;
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', height: '100vh', gap: 14 }}>
-        <p style={{ color: 'var(--red)' }}>{t('role_denied')}</p>
-        <Button variant="ghost" onClick={logout}>
+      <div className="grid h-screen place-items-center gap-4">
+        <p className="text-destructive">{t('role_denied')}</p>
+        <Button variant="outline" onClick={logout}>
           {t('logout')}
         </Button>
       </div>
@@ -155,57 +174,51 @@ function LoginScreen({
 
   return (
     <div
+      className="fixed inset-0 grid place-items-center p-5"
       style={{
-        position: 'fixed',
-        inset: 0,
-        display: 'grid',
-        placeItems: 'center',
         background: `linear-gradient(140deg, ${accent} 0%, ${accent}cc 45%, ${accent}88)`,
-        padding: 20,
       }}
     >
       <form
         onSubmit={onSubmit}
-        style={{
-          background: '#fff',
-          borderRadius: 20,
-          padding: '36px 34px',
-          width: '100%',
-          maxWidth: 400,
-          boxShadow: '0 24px 60px rgba(8,25,50,.4)',
-          borderTop: `5px solid ${accent}`,
-        }}
+        className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-2xl"
+        style={{ borderTop: `5px solid ${accent}` }}
       >
         {appTitle && (
-          <div
-            style={{
-              display: 'inline-block',
-              padding: '4px 12px',
-              borderRadius: 999,
-              background: `${accent}1a`,
-              color: accent,
-              fontSize: 12.5,
-              fontWeight: 700,
-              marginBottom: 14,
-              letterSpacing: 0.2,
-            }}
+          <span
+            className="mb-3.5 inline-block rounded-full px-3 py-1 text-xs font-bold"
+            style={{ background: `${accent}1a`, color: accent }}
           >
             {appTitle}
-          </div>
+          </span>
         )}
-        <h2 style={{ margin: '0 0 4px', color: '#15273c' }}>{t('login_title')}</h2>
-        <p style={{ margin: '0 0 22px', color: 'var(--muted)', fontSize: 13 }}>
-          {t('login_subtitle')}
-        </p>
-        <label style={lbl}>{t('login_user')}</label>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} style={inputStyle} autoFocus />
-        <label style={{ ...lbl, marginTop: 12 }}>{t('login_pass')}</label>
-        <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} style={inputStyle} />
-        {err && <div style={{ color: 'var(--red)', fontSize: 12.5, marginTop: 9 }}>{err}</div>}
-        <Button type="submit" disabled={busy} style={{ width: '100%', marginTop: 18, opacity: busy ? 0.7 : 1 }}>
+        <h2 className="mb-1 text-xl font-semibold text-foreground">{t('login_title')}</h2>
+        <p className="text-muted-foreground mb-6 text-sm">{t('login_subtitle')}</p>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="login-user">{t('login_user')}</Label>
+          <Input
+            id="login-user"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="mt-3 grid gap-1.5">
+          <Label htmlFor="login-pass">{t('login_pass')}</Label>
+          <Input
+            id="login-pass"
+            type="password"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+          />
+        </div>
+
+        {err && <div className="text-destructive mt-2.5 text-sm">{err}</div>}
+        <Button type="submit" disabled={busy} className="mt-5 w-full">
           {busy ? t('loading') : t('login_btn')}
         </Button>
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+        <div className="mt-4 flex justify-center">
           <LangSwitcher />
         </div>
       </form>
@@ -217,106 +230,54 @@ function LoginScreen({
 export function ProfileMenu() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const [open, setOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [open]);
 
   if (!user) return null;
   const label = user.full_name || user.username;
   const initial = (label || '?').charAt(0).toUpperCase();
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '5px 10px 5px 6px',
-          border: '1px solid var(--line)',
-          borderRadius: 999,
-          background: '#fff',
-          cursor: 'pointer',
-          font: 'inherit',
-        }}
-      >
-        <span
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: '50%',
-            background: 'var(--brand)',
-            color: '#fff',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          {initial}
-        </span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#23364a' }}>{label}</span>
-        <span style={{ color: 'var(--muted)', fontSize: 10 }}>▾</span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 'calc(100% + 6px)',
-            background: '#fff',
-            border: '1px solid var(--line)',
-            borderRadius: 10,
-            boxShadow: '0 12px 32px rgba(0,0,0,.16)',
-            minWidth: 200,
-            overflow: 'hidden',
-            zIndex: 40,
-          }}
-        >
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#23364a' }}>{label}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-2 rounded-full border bg-card py-1 pr-3 pl-1 text-sm font-semibold outline-none transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50">
+            <span className="grid size-7 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+              {initial}
+            </span>
+            <span className="text-foreground">{label}</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-52">
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="font-semibold">{label}</span>
+            <span className="text-muted-foreground text-xs font-normal">
               @{user.username} · {user.role}
-            </div>
-          </div>
-          <button
-            style={menuItemStyle}
-            onClick={() => {
-              setOpen(false);
-              setPwOpen(true);
-            }}
-          >
+            </span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setPwOpen(true)}>
+            <KeyRoundIcon />
             {t('pw_change')}
-          </button>
-          <button
-            style={{ ...menuItemStyle, color: 'var(--red)' }}
-            onClick={() => {
-              setOpen(false);
-              logout();
-            }}
-          >
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onSelect={logout}>
+            <LogOutIcon />
             {t('logout')}
-          </button>
-        </div>
-      )}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {pwOpen && <ChangePasswordModal onClose={() => setPwOpen(false)} />}
-    </div>
+      <ChangePasswordModal open={pwOpen} onOpenChange={setPwOpen} />
+    </>
   );
 }
 
-function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+function ChangePasswordModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const { t } = useTranslation();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -334,7 +295,10 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       await changePassword(current, next);
-      onClose();
+      onOpenChange(false);
+      setCurrent('');
+      setNext('');
+      setConfirm('');
     } catch (e2) {
       setErr(e2 instanceof ApiError ? e2.message : 'Error');
     } finally {
@@ -343,94 +307,57 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(15,23,42,.45)',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        padding: '9vh 16px',
-        zIndex: 60,
-      }}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={onSubmit}
-        style={{
-          background: '#fff',
-          borderRadius: 14,
-          width: '100%',
-          maxWidth: 400,
-          padding: 20,
-          boxShadow: '0 24px 64px rgba(0,0,0,.28)',
-        }}
-      >
-        <h3 style={{ margin: '0 0 16px', fontSize: 16 }}>{t('pw_change')}</h3>
-        <label style={lbl}>{t('pw_current')}</label>
-        <input
-          type="password"
-          value={current}
-          onChange={(e) => setCurrent(e.target.value)}
-          style={inputStyle}
-          autoComplete="current-password"
-          required
-          autoFocus
-        />
-        <label style={{ ...lbl, marginTop: 12 }}>{t('pw_new')}</label>
-        <input
-          type="password"
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-          style={inputStyle}
-          autoComplete="new-password"
-          required
-        />
-        <label style={{ ...lbl, marginTop: 12 }}>{t('pw_confirm')}</label>
-        <input
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          style={inputStyle}
-          autoComplete="new-password"
-          required
-        />
-        {err && <div style={{ color: 'var(--red)', fontSize: 12.5, marginTop: 9 }}>{err}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
-            {t('q_cancel')}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {t('pw_change')}
-          </Button>
-        </div>
-      </form>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('pw_change')}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="pw-current">{t('pw_current')}</Label>
+            <Input
+              id="pw-current"
+              type="password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              autoComplete="current-password"
+              required
+              autoFocus
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="pw-new">{t('pw_new')}</Label>
+            <Input
+              id="pw-new"
+              type="password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="pw-confirm">{t('pw_confirm')}</Label>
+            <Input
+              id="pw-confirm"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          {err && <div className={cn('text-destructive text-sm')}>{err}</div>}
+          <DialogFooter className="mt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+              {t('q_cancel')}
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {t('pw_change')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
-
-const menuItemStyle: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  padding: '10px 14px',
-  border: 'none',
-  background: 'transparent',
-  cursor: 'pointer',
-  font: 'inherit',
-  fontSize: 13,
-  color: '#23364a',
-};
-
-const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#5a6b7e' };
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '11px 13px',
-  border: '1px solid var(--line)',
-  borderRadius: 10,
-  fontSize: 14,
-  marginTop: 5,
-  fontFamily: 'inherit',
-};

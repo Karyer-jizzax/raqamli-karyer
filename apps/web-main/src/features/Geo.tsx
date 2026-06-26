@@ -12,10 +12,26 @@ import {
   useUpdateRegion,
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
-import { Button, Card } from '@karier/ui';
+import {
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  UiButton as Button,
+} from '@karier/ui';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MapPinIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
-import { districtName, Field, Modal } from '../shared';
+import { districtName, Eyebrow, Field, ModalForm } from '../shared';
 
 type NameForm = { code: string; name_uz_latn: string; name_uz_cyrl: string; name_ru: string };
 
@@ -65,20 +81,16 @@ function RegionModal({ region, onClose }: { region: Region | null; onClose: () =
   }
 
   return (
-    <Modal title={region ? t('geo_edit_region') : t('geo_new_region')} onClose={onClose}>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-        <NameFields f={f} set={set} />
-        {err && <div style={{ color: 'var(--red)', fontSize: 12.5 }}>{err}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
-            {t('q_cancel')}
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {region ? t('q_save') : t('q_create')}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+    <ModalForm
+      title={region ? t('geo_edit_region') : t('geo_new_region')}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      err={err}
+      pending={pending}
+      submitLabel={region ? t('q_save') : t('q_create')}
+    >
+      <NameFields f={f} set={set} />
+    </ModalForm>
   );
 }
 
@@ -126,90 +138,30 @@ function DistrictModal({
   }
 
   return (
-    <Modal title={district ? t('geo_edit_district') : t('geo_new_district')} onClose={onClose}>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-        <NameFields f={f} set={set} />
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 13,
-            color: 'var(--ink)',
-            cursor: 'pointer',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={isCapital}
-            onChange={(e) => setIsCapital(e.target.checked)}
-            style={{ width: 16, height: 16 }}
-          />
-          {t('geo_is_capital')}
-        </label>
-        {err && <div style={{ color: 'var(--red)', fontSize: 12.5 }}>{err}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
-            {t('q_cancel')}
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {district ? t('q_save') : t('q_create')}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-// ── delete confirm (shared for region + district) ────────────────────────────
-function ConfirmModal({
-  title,
-  message,
-  pending,
-  onConfirm,
-  onClose,
-}: {
-  title: string;
-  message: string;
-  pending: boolean;
-  onConfirm: () => Promise<void>;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [err, setErr] = useState('');
-  async function run() {
-    setErr('');
-    try {
-      await onConfirm();
-      onClose();
-    } catch (e2) {
-      setErr(e2 instanceof ApiError ? e2.message : 'Error');
-    }
-  }
-  return (
-    <Modal title={title} onClose={onClose}>
-      <p style={{ margin: '0 0 16px', fontSize: 14 }}>{message}</p>
-      {err && <div style={{ color: 'var(--red)', fontSize: 12.5, marginBottom: 10 }}>{err}</div>}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <Button variant="ghost" onClick={onClose} disabled={pending}>
-          {t('q_no')}
-        </Button>
-        <Button onClick={run} disabled={pending}>
-          {t('q_yes')}
-        </Button>
-      </div>
-    </Modal>
+    <ModalForm
+      title={district ? t('geo_edit_district') : t('geo_new_district')}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      err={err}
+      pending={pending}
+      submitLabel={district ? t('q_save') : t('q_create')}
+    >
+      <NameFields f={f} set={set} />
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={isCapital}
+          onChange={(e) => setIsCapital(e.target.checked)}
+          className="size-4 accent-primary"
+        />
+        {t('geo_is_capital')}
+      </label>
+    </ModalForm>
   );
 }
 
 // ── per-region card with its districts ───────────────────────────────────────
-function RegionCard({
-  region,
-  districts,
-}: {
-  region: Region;
-  districts: District[];
-}) {
+function RegionCard({ region, districts }: { region: Region; districts: District[] }) {
   const { t } = useTranslation();
   const delRegion = useDeleteRegion();
   const delDistrict = useDeleteDistrict();
@@ -220,92 +172,74 @@ function RegionCard({
   const [delDistrictItem, setDelDistrictItem] = useState<District | null>(null);
 
   return (
-    <Card>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <b style={{ fontSize: 16 }}>{districtName(region)}</b>
-            <span style={{ fontFamily: 'var(--mono)', color: 'var(--muted)', fontSize: 12 }}>
-              {region.code}
-            </span>
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b bg-muted/30 px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-lg bg-gradient-to-br from-[#3b6ea5] to-[#1d3a5c] ring-1 ring-black/5">
+            <MapPinIcon className="size-5 text-white" />
           </div>
-          <span style={{ color: 'var(--muted)', fontSize: 12.5 }}>
-            {t('geo_districts_n', { n: districts.length })}
-          </span>
+          <div className="grid gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-base font-semibold tracking-tight">{districtName(region)}</span>
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                {region.code}
+              </span>
+            </div>
+            <Eyebrow className="text-muted-foreground">
+              {t('geo_districts_n', { n: districts.length })}
+            </Eyebrow>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button variant="ghost" onClick={() => setNewDistrict(true)}>
-            + {t('geo_add_district')}
+        <div className="flex flex-wrap gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => setNewDistrict(true)}>
+            <PlusIcon />
+            {t('geo_add_district')}
           </Button>
-          <Button variant="ghost" onClick={() => setEditRegion(true)}>
-            {t('q_edit')}
+          <Button variant="ghost" size="icon" onClick={() => setEditRegion(true)}>
+            <PencilIcon />
           </Button>
-          <Button variant="ghost" onClick={() => setDelRegionOpen(true)}>
-            {t('q_delete')}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDelRegionOpen(true)}
+          >
+            <Trash2Icon />
           </Button>
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          borderTop: '1px solid var(--line)',
-          paddingTop: 12,
-          display: 'grid',
-          gap: 6,
-        }}
-      >
+      <div className="grid gap-1.5 p-4">
         {districts.length === 0 ? (
-          <span style={{ color: 'var(--muted)', fontSize: 13 }}>{t('geo_no_districts')}</span>
+          <span className="px-1 py-2 text-sm text-muted-foreground">{t('geo_no_districts')}</span>
         ) : (
           districts.map((d) => (
             <div
               key={d.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-                padding: '7px 10px',
-                background: 'var(--soft)',
-                borderRadius: 8,
-              }}
+              className="flex items-center justify-between gap-2.5 rounded-lg border border-transparent bg-muted/50 px-3 py-2 transition-colors hover:border-border hover:bg-muted"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 600 }}>{districtName(d)}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{districtName(d)}</span>
                 {d.is_capital && (
-                  <span
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      color: 'var(--brand)',
-                      background: '#fff',
-                      border: '1px solid var(--line)',
-                      borderRadius: 999,
-                      padding: '1px 7px',
-                    }}
-                  >
+                  <Badge variant="outline" className="bg-card">
                     {t('geo_is_capital')}
-                  </span>
+                  </Badge>
                 )}
-                <span style={{ fontFamily: 'var(--mono)', color: 'var(--muted)', fontSize: 11.5 }}>
+                <span className="rounded bg-card px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
                   {d.code}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <Button variant="ghost" onClick={() => setEditDistrict(d)}>
-                  {t('q_edit')}
+              <div className="flex shrink-0 gap-1">
+                <Button variant="ghost" size="icon" onClick={() => setEditDistrict(d)}>
+                  <PencilIcon />
                 </Button>
-                <Button variant="ghost" onClick={() => setDelDistrictItem(d)}>
-                  {t('q_delete')}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setDelDistrictItem(d)}
+                >
+                  <Trash2Icon />
                 </Button>
               </div>
             </div>
@@ -325,24 +259,106 @@ function RegionCard({
         />
       )}
       {delRegionOpen && (
-        <ConfirmModal
+        <ModalForm
           title={t('geo_del_region_title')}
-          message={t('geo_del_region_confirm', { name: districtName(region) })}
-          pending={delRegion.isPending}
-          onConfirm={() => delRegion.mutateAsync(region.id)}
           onClose={() => setDelRegionOpen(false)}
-        />
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await delRegion.mutateAsync(region.id);
+            setDelRegionOpen(false);
+          }}
+          pending={delRegion.isPending}
+          submitLabel={t('q_yes')}
+          cancelLabel={t('q_no')}
+        >
+          <p className="text-sm">{t('geo_del_region_confirm', { name: districtName(region) })}</p>
+        </ModalForm>
       )}
       {delDistrictItem && (
-        <ConfirmModal
+        <ModalForm
           title={t('geo_del_district_title')}
-          message={t('geo_del_district_confirm', { name: districtName(delDistrictItem) })}
-          pending={delDistrict.isPending}
-          onConfirm={() => delDistrict.mutateAsync(delDistrictItem.id)}
           onClose={() => setDelDistrictItem(null)}
-        />
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await delDistrict.mutateAsync(delDistrictItem.id);
+            setDelDistrictItem(null);
+          }}
+          pending={delDistrict.isPending}
+          submitLabel={t('q_yes')}
+          cancelLabel={t('q_no')}
+        >
+          <p className="text-sm">
+            {t('geo_del_district_confirm', { name: districtName(delDistrictItem) })}
+          </p>
+        </ModalForm>
       )}
-    </Card>
+    </div>
+  );
+}
+
+// ── region picker: select + ‹ › steppers to page through regions ─────────────
+function RegionPicker({
+  regions,
+  counts,
+  value,
+  onChange,
+}: {
+  regions: Region[];
+  counts: Map<string, District[]>;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const index = regions.findIndex((r) => r.id === value);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 rounded-xl border bg-card p-3 shadow-sm">
+      <Eyebrow className="px-1 text-muted-foreground">{t('geo_region')}</Eyebrow>
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={index <= 0}
+        onClick={() => {
+          const prev = regions[index - 1];
+          if (prev) onChange(prev.id);
+        }}
+        aria-label={t('pg_prev')}
+      >
+        <ChevronLeftIcon />
+      </Button>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-full sm:w-72">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {regions.map((r) => (
+            <SelectItem key={r.id} value={r.id}>
+              <span className="flex items-center gap-2">
+                {districtName(r)}
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {t('geo_districts_n', { n: counts.get(r.id)?.length ?? 0 })}
+                </span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={index >= regions.length - 1}
+        onClick={() => {
+          const next = regions[index + 1];
+          if (next) onChange(next.id);
+        }}
+        aria-label={t('pg_next')}
+      >
+        <ChevronRightIcon />
+      </Button>
+      <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+        {index + 1} / {regions.length}
+      </span>
+    </div>
   );
 }
 
@@ -351,6 +367,7 @@ export function Geo() {
   const { data: regions, isLoading } = useRegions();
   const { data: districts } = useDistricts();
   const [newRegion, setNewRegion] = useState(false);
+  const [selectedId, setSelectedId] = useState('');
 
   const byRegion = useMemo(() => {
     const map = new Map<string, District[]>();
@@ -362,36 +379,43 @@ export function Geo() {
     return map;
   }, [districts]);
 
+  // Fall back to the first region until one is picked (or if the picked one is gone).
+  const selected = regions?.find((r) => r.id === selectedId) ?? regions?.[0];
+
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          gap: 12,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <h1 style={{ margin: '0 0 2px', fontSize: 22 }}>{t('nav_geo')}</h1>
-          <p style={{ margin: 0, color: 'var(--muted)', fontSize: 13.5 }}>{t('geo_subtitle')}</p>
-        </div>
-        <Button onClick={() => setNewRegion(true)}>+ {t('geo_add_region')}</Button>
+    <div className="grid gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">{t('geo_subtitle')}</p>
+        <Button onClick={() => setNewRegion(true)}>
+          <PlusIcon />
+          {t('geo_add_region')}
+        </Button>
       </div>
 
       {isLoading ? (
-        <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+        <p className="text-muted-foreground">{t('loading')}</p>
       ) : !regions?.length ? (
-        <Card>
-          <p style={{ color: 'var(--muted)', margin: 0 }}>{t('geo_no_regions')}</p>
-        </Card>
-      ) : (
-        <div style={{ display: 'grid', gap: 14 }}>
-          {regions.map((r) => (
-            <RegionCard key={r.id} region={r} districts={byRegion.get(r.id) ?? []} />
-          ))}
+        <div className="bg-card rounded-xl border p-5 shadow-sm">
+          <p className="text-muted-foreground">{t('geo_no_regions')}</p>
         </div>
+      ) : (
+        selected && (
+          <>
+            {regions.length > 1 && (
+              <RegionPicker
+                regions={regions}
+                counts={byRegion}
+                value={selected.id}
+                onChange={setSelectedId}
+              />
+            )}
+            <RegionCard
+              key={selected.id}
+              region={selected}
+              districts={byRegion.get(selected.id) ?? []}
+            />
+          </>
+        )
       )}
 
       {newRegion && <RegionModal region={null} onClose={() => setNewRegion(false)} />}

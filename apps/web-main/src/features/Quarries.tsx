@@ -12,10 +12,37 @@ import {
   useUsers,
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
-import { Button, Card, StatusPill } from '@karier/ui';
+import {
+  cn,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  UiButton as Button,
+} from '@karier/ui';
+import {
+  Building2Icon,
+  CircleCheckIcon,
+  type LucideIcon,
+  MapIcon,
+  PauseCircleIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
-import { districtName, Field, inputStyle, Modal, selectStyle, td, th } from '../shared';
+import { districtName, Eyebrow, Field, ModalForm, StatusDot } from '../shared';
 
 function NewQuarryModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -39,10 +66,8 @@ function NewQuarryModal({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      // 1. Create the quarry (code auto-derived from the district code).
       const code = `${district.code}-Q${Date.now().toString().slice(-5)}`;
       const quarry = await create.mutateAsync({ name, code, district_id: district.id });
-      // 2. Create the operator account bound to that quarry.
       await createUser.mutateAsync({
         username: login,
         password,
@@ -57,42 +82,39 @@ function NewQuarryModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal title={t('q_add')} onClose={onClose}>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-        <Field label={t('q_name')} value={name} onChange={setName} />
-        <Field label={t('q_login')} value={login} onChange={setLogin} autoComplete="off" />
-        <Field
-          label={t('q_password')}
-          value={password}
-          onChange={setPassword}
-          type="password"
-          autoComplete="new-password"
-        />
-        <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
-          {t('q_district')}
-          <select
-            value={districtId}
-            onChange={(e) => setDistrictId(e.target.value)}
-            style={selectStyle}
-          >
+    <ModalForm
+      title={t('q_add')}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      err={err}
+      pending={pending}
+      submitLabel={t('q_create')}
+    >
+      <Field label={t('q_name')} value={name} onChange={setName} />
+      <Field label={t('q_login')} value={login} onChange={setLogin} autoComplete="off" />
+      <Field
+        label={t('q_password')}
+        value={password}
+        onChange={setPassword}
+        type="password"
+        autoComplete="new-password"
+      />
+      <div className="grid gap-1.5">
+        <Label>{t('q_district')}</Label>
+        <Select value={districtId} onValueChange={setDistrictId}>
+          <SelectTrigger>
+            <SelectValue placeholder={t('q_district')} />
+          </SelectTrigger>
+          <SelectContent>
             {districts?.map((d) => (
-              <option key={d.id} value={d.id}>
+              <SelectItem key={d.id} value={d.id}>
                 {districtName(d)}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-        </label>
-        {err && <div style={{ color: 'var(--red)', fontSize: 12.5 }}>{err}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
-            {t('q_cancel')}
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {t('q_create')}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          </SelectContent>
+        </Select>
+      </div>
+    </ModalForm>
   );
 }
 
@@ -126,63 +148,50 @@ function EditQuarryModal({ quarry, onClose }: { quarry: Quarry; onClose: () => v
   }
 
   return (
-    <Modal title={t('q_edit_title')} onClose={onClose}>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
-        <Field label={t('q_name')} value={name} onChange={setName} />
-        <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
-          {t('q_status')}
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as 'active' | 'suspended')}
-            style={selectStyle}
-          >
-            <option value="active">{t('q_st_active')}</option>
-            <option value="suspended">{t('q_st_suspended')}</option>
-          </select>
-        </label>
+    <ModalForm
+      title={t('q_edit_title')}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      err={err}
+      pending={pending}
+      submitLabel={t('q_save')}
+    >
+      <Field label={t('q_name')} value={name} onChange={setName} />
+      <div className="grid gap-1.5">
+        <Label>{t('q_status')}</Label>
+        <Select value={status} onValueChange={(v) => setStatus(v as 'active' | 'suspended')}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">{t('q_st_active')}</SelectItem>
+            <SelectItem value="suspended">{t('q_st_suspended')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div style={{ borderTop: '1px solid var(--line)', margin: '4px 0 0', paddingTop: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#5a6b7e', marginBottom: 8 }}>
-            {t('q_operator')}
-          </div>
-          {operator ? (
-            <div style={{ display: 'grid', gap: 10 }}>
-              <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
-                {t('q_login')}
-                <input
-                  value={operator.username}
-                  readOnly
-                  style={{ ...inputStyle, background: 'var(--soft)', color: 'var(--muted)' }}
-                />
-              </label>
-              <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
-                {t('q_pw_new_optional')}
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  placeholder="••••••"
-                  style={inputStyle}
-                />
-              </label>
+      <div className="mt-1 border-t pt-3">
+        <div className="text-muted-foreground mb-2 text-xs font-semibold">{t('q_operator')}</div>
+        {operator ? (
+          <div className="grid gap-2.5">
+            <Field label={t('q_login')} value={operator.username} readOnly required={false} />
+            <div className="grid gap-1.5">
+              <Label htmlFor="op-pw">{t('q_pw_new_optional')}</Label>
+              <Input
+                id="op-pw"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                placeholder="••••••"
+              />
             </div>
-          ) : (
-            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{t('q_no_operator')}</div>
-          )}
-        </div>
-
-        {err && <div style={{ color: 'var(--red)', fontSize: 12.5 }}>{err}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
-            {t('q_cancel')}
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {t('q_save')}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          </div>
+        ) : (
+          <div className="text-muted-foreground text-sm">{t('q_no_operator')}</div>
+        )}
+      </div>
+    </ModalForm>
   );
 }
 
@@ -191,7 +200,8 @@ function ConfirmDeleteModal({ quarry, onClose }: { quarry: Quarry; onClose: () =
   const del = useDeleteQuarry();
   const [err, setErr] = useState('');
 
-  async function onConfirm() {
+  async function onConfirm(e: FormEvent) {
+    e.preventDefault();
     setErr('');
     try {
       await del.mutateAsync(quarry.id);
@@ -202,43 +212,43 @@ function ConfirmDeleteModal({ quarry, onClose }: { quarry: Quarry; onClose: () =
   }
 
   return (
-    <Modal title={t('q_delete_title')} onClose={onClose}>
-      <p style={{ margin: '0 0 16px', fontSize: 14 }}>{t('q_delete_confirm', { name: quarry.name })}</p>
-      {err && <div style={{ color: 'var(--red)', fontSize: 12.5, marginBottom: 10 }}>{err}</div>}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <Button variant="ghost" onClick={onClose} disabled={del.isPending}>
-          {t('q_no')}
-        </Button>
-        <Button onClick={onConfirm} disabled={del.isPending}>
-          {t('q_yes')}
-        </Button>
-      </div>
-    </Modal>
+    <ModalForm
+      title={t('q_delete_title')}
+      onClose={onClose}
+      onSubmit={onConfirm}
+      err={err}
+      pending={del.isPending}
+      submitLabel={t('q_yes')}
+      cancelLabel={t('q_no')}
+    >
+      <p className="text-sm">{t('q_delete_confirm', { name: quarry.name })}</p>
+    </ModalForm>
   );
 }
 
-// ── overview tiles ───────────────────────────────────────────────────────────
-function StatTile({ label, value, accent }: { label: string; value: number; accent: string }) {
+// ── telemetry strip ──────────────────────────────────────────────────────────
+// The signature element: the four headline figures read as a single instrument
+// panel — hairline-divided channels, uppercase labels, monospace tabular figures.
+function Metric({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  color: string;
+}) {
   return (
-    <Card className="">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ width: 10, height: 36, borderRadius: 6, background: accent, flexShrink: 0 }} />
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{label}</div>
-          <div
-            style={{
-              fontSize: 26,
-              fontWeight: 800,
-              color: 'var(--ink)',
-              fontFamily: 'var(--mono)',
-              lineHeight: 1.1,
-            }}
-          >
-            {value}
-          </div>
-        </div>
+    <div className="flex flex-col gap-2.5 bg-card p-4">
+      <div className="flex items-center gap-2">
+        <Icon className="size-3.5" style={{ color }} />
+        <Eyebrow className="text-muted-foreground">{label}</Eyebrow>
       </div>
-    </Card>
+      <div className="font-mono text-3xl font-bold tracking-tight tabular-nums">{value}</div>
+      <span className="h-0.5 w-8 rounded-full" style={{ background: color }} aria-hidden />
+    </div>
   );
 }
 
@@ -247,20 +257,18 @@ function Stats({ quarries, districtCount }: { quarries: Quarry[]; districtCount:
   const active = quarries.filter((q) => q.status === 'active').length;
   const suspended = quarries.length - active;
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
-        gap: 12,
-      }}
-    >
-      <StatTile label={t('m_stat_total')} value={quarries.length} accent="var(--brand2)" />
-      <StatTile label={t('m_stat_active')} value={active} accent="var(--green)" />
-      <StatTile label={t('m_stat_suspended')} value={suspended} accent="var(--amber)" />
-      <StatTile label={t('m_stat_districts')} value={districtCount} accent="#5b76c4" />
+    <div className="overflow-hidden rounded-xl border bg-border shadow-sm">
+      <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
+        <Metric label={t('m_stat_total')} value={quarries.length} icon={Building2Icon} color="#3b6ea5" />
+        <Metric label={t('m_stat_active')} value={active} icon={CircleCheckIcon} color="#13935f" />
+        <Metric label={t('m_stat_suspended')} value={suspended} icon={PauseCircleIcon} color="#b9831a" />
+        <Metric label={t('m_stat_districts')} value={districtCount} icon={MapIcon} color="#4f46e5" />
+      </div>
     </div>
   );
 }
+
+const TH = 'text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground';
 
 const PAGE_SIZE = 10;
 
@@ -279,8 +287,8 @@ function QuarryTable({
   const [editing, setEditing] = useState<Quarry | null>(null);
   const [deleting, setDeleting] = useState<Quarry | null>(null);
 
-  if (isLoading) return <p style={{ color: 'var(--muted)', padding: 18 }}>{t('loading')}</p>;
-  if (!quarries?.length) return <p style={{ color: 'var(--muted)', padding: 18 }}>{t('q_empty')}</p>;
+  if (isLoading) return <p className="text-muted-foreground p-4">{t('loading')}</p>;
+  if (!quarries?.length) return <p className="text-muted-foreground p-4">{t('q_empty')}</p>;
 
   const q = search.trim().toLowerCase();
   const filtered = quarries.filter((it) => {
@@ -289,7 +297,7 @@ function QuarryTable({
     return it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q);
   });
 
-  if (!filtered.length) return <p style={{ color: 'var(--muted)', padding: 18 }}>{t('q_no_match')}</p>;
+  if (!filtered.length) return <p className="text-muted-foreground p-4">{t('q_no_match')}</p>;
 
   const pageCount = Math.ceil(filtered.length / PAGE_SIZE);
   const current = Math.min(page, pageCount);
@@ -298,60 +306,62 @@ function QuarryTable({
 
   return (
     <div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 11.5 }}>
-              <th style={th}>{t('q_name')}</th>
-              <th style={th}>{t('q_code')}</th>
-              <th style={th}>{t('q_district')}</th>
-              <th style={th}>{t('q_status')}</th>
-              <th style={{ ...th, textAlign: 'right' }}>{t('q_actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {slice.map((it) => {
-              const d = districtMap.get(it.district_id);
-              return (
-                <tr key={it.id} style={{ borderTop: '1px solid var(--line)' }}>
-                  <td style={{ ...td, fontWeight: 600 }}>{it.name}</td>
-                  <td style={{ ...td, fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{it.code}</td>
-                  <td style={td}>{d ? districtName(d) : '—'}</td>
-                  <td style={td}>
-                    <StatusPill status={it.status === 'active' ? 'confirm' : 'flagged'} />
-                  </td>
-                  <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <Button variant="ghost" onClick={() => setEditing(it)}>
-                      {t('q_edit')}
-                    </Button>{' '}
-                    <Button variant="ghost" onClick={() => setDeleting(it)}>
-                      {t('q_delete')}
+      <Table>
+        <TableHeader className="bg-muted/40">
+          <TableRow>
+            <TableHead className={TH}>{t('q_name')}</TableHead>
+            <TableHead className={TH}>{t('q_code')}</TableHead>
+            <TableHead className={TH}>{t('q_district')}</TableHead>
+            <TableHead className={TH}>{t('q_status')}</TableHead>
+            <TableHead className={cn(TH, 'text-right')}>{t('q_actions')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {slice.map((it) => {
+            const d = districtMap.get(it.district_id);
+            return (
+              <TableRow key={it.id}>
+                <TableCell className="font-medium">{it.name}</TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{it.code}</TableCell>
+                <TableCell>{d ? districtName(d) : '—'}</TableCell>
+                <TableCell>
+                  <StatusDot active={it.status === 'active'} />
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(it)}>
+                      <PencilIcon />
                     </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleting(it)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
 
       {pageCount > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 12,
-            marginTop: 14,
-          }}
-        >
-          <span style={{ color: 'var(--muted)', fontSize: 13 }}>
+        <div className="flex items-center justify-end gap-3 border-t px-4 py-3">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {t('pg_info', { from: start + 1, to: start + slice.length, total: filtered.length })}
           </span>
-          <Button variant="ghost" disabled={current <= 1} onClick={() => setPage(current - 1)}>
+          <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>
             {t('pg_prev')}
           </Button>
-          <Button variant="ghost" disabled={current >= pageCount} onClick={() => setPage(current + 1)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={current >= pageCount}
+            onClick={() => setPage(current + 1)}
+          >
             {t('pg_next')}
           </Button>
         </div>
@@ -377,50 +387,54 @@ export function Quarries() {
   );
 
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <div>
-        <h1 style={{ margin: '0 0 2px', fontSize: 22 }}>{t('nav_quarries')}</h1>
-        <p style={{ margin: 0, color: 'var(--muted)', fontSize: 13.5 }}>{t('main_subtitle')}</p>
-      </div>
+    <div className="grid gap-5">
+      <p className="text-muted-foreground text-sm">{t('main_subtitle')}</p>
 
       <Stats quarries={quarries ?? []} districtCount={districts?.length ?? 0} />
 
-      <Card>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            marginBottom: 14,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('q_search')}
-              style={{ ...inputStyle, minWidth: 240 }}
-            />
-            <select
-              value={districtFilter}
-              onChange={(e) => setDistrictFilter(e.target.value)}
-              style={{ ...selectStyle, minWidth: 150 }}
-            >
-              <option value="">{t('q_all_districts')}</option>
-              {districts?.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {districtName(d)}
-                </option>
-              ))}
-            </select>
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <Eyebrow className="text-muted-foreground">{t('m_registry')}</Eyebrow>
+            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+              {quarries?.length ?? 0}
+            </span>
           </div>
-          <Button onClick={() => setModalOpen(true)}>+ {t('q_add')}</Button>
-        </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('q_search')}
+                className="w-full pl-9 sm:w-60"
+              />
+            </div>
+            <Select
+              value={districtFilter || 'all'}
+              onValueChange={(v) => setDistrictFilter(v === 'all' ? '' : v)}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('q_all_districts')}</SelectItem>
+                {districts?.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {districtName(d)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setModalOpen(true)}>
+              <PlusIcon />
+              {t('q_add')}
+            </Button>
+          </div>
+        </header>
 
         <QuarryTable search={search} districtFilter={districtFilter} districtMap={districtMap} />
-      </Card>
+      </div>
 
       {modalOpen && <NewQuarryModal onClose={() => setModalOpen(false)} />}
     </div>
