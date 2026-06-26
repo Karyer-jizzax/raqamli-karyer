@@ -24,6 +24,14 @@ export function setToken(token: string | null): void {
   }
 }
 
+export function getRefreshToken(): string | null {
+  try {
+    return localStorage.getItem(REFRESH_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function setRefreshToken(token: string | null): void {
   try {
     if (token) localStorage.setItem(REFRESH_KEY, token);
@@ -42,13 +50,59 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+// Access tokens are short-lived (15 min). When one expires, a request gets a
+// 401; we transparently exchange the long-lived refresh token for a fresh pair
+// and retry once, so the user is not bounced to the login screen mid-session.
+// Concurrent 401s share a single in-flight refresh to avoid a stampede.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshTokens(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+  try {
+    const resp = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!resp.ok) {
+      // Refresh token itself is invalid/expired — session is truly over.
+      setToken(null);
+      setRefreshToken(null);
+      return false;
+    }
+    const data = (await resp.json()) as TokenResponse;
+    setToken(data.access_token);
+    setRefreshToken(data.refresh_token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureRefresh(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshTokens().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const token = getToken();
   const headers = new Headers(init.headers);
   if (init.body) headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const resp = await fetch(`${API_BASE}${path}`, { ...init, headers });
+
+  // Try a one-shot token refresh on the first 401, then replay the request.
+  if (resp.status === 401 && retry && getRefreshToken()) {
+    const refreshed = await ensureRefresh();
+    if (refreshed) return request<T>(path, init, false);
+  }
+
   if (!resp.ok) {
     let detail = `Request failed: ${resp.status}`;
     try {
@@ -351,6 +405,31 @@ export const getReport = (n: number) => api.get<ReportResponse>(`/stats/reports/
 
 export const getRegions = () => api.get<Region[]>('/regions');
 export const getRegionGeo = (regionId: string) => api.get<RegionGeo>(`/regions/${regionId}/geo`);
+
+// ── region / district CRUD (superadmin) ──────────────────────────────────────
+export interface RegionInput {
+  code: string;
+  name_uz_latn: string;
+  name_uz_cyrl: string;
+  name_ru: string;
+}
+export const createRegion = (body: RegionInput) => api.post<Region>('/regions', body);
+export const updateRegion = (id: string, body: Partial<RegionInput>) =>
+  api.patch<Region>(`/regions/${id}`, body);
+export const deleteRegion = (id: string) => api.del(`/regions/${id}`);
+
+export interface DistrictInput {
+  region_id: string;
+  code: string;
+  name_uz_latn: string;
+  name_uz_cyrl: string;
+  name_ru: string;
+  is_capital?: boolean;
+}
+export const createDistrict = (body: DistrictInput) => api.post<District>('/districts', body);
+export const updateDistrict = (id: string, body: Partial<DistrictInput>) =>
+  api.patch<District>(`/districts/${id}`, body);
+export const deleteDistrict = (id: string) => api.del(`/districts/${id}`);
 export const getOverview = (params: { region_id?: string; district_id?: string } = {}) => {
   const q = new URLSearchParams(params as Record<string, string>).toString();
   return api.get<Overview>(`/stats/overview${q ? `?${q}` : ''}`);

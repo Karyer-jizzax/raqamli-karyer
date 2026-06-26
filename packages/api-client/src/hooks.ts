@@ -1,12 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  createDistrict,
   createEvent,
   createQuarry,
+  createRegion,
   createUser,
+  deleteDistrict,
   deleteQuarry,
+  deleteRegion,
   getUsers,
+  updateDistrict,
   updateQuarry,
+  updateRegion,
   updateUser,
   getDistricts,
   getDynamics,
@@ -110,6 +116,78 @@ export function useCreateEvent() {
 
 export function useRegions() {
   return useQuery({ queryKey: ['regions'], queryFn: getRegions });
+}
+
+export function useCreateRegion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createRegion,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['regions'] }),
+  });
+}
+
+export function useUpdateRegion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: Partial<{
+        code: string;
+        name_uz_latn: string;
+        name_uz_cyrl: string;
+        name_ru: string;
+      }>;
+    }) => updateRegion(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['regions'] }),
+  });
+}
+
+export function useDeleteRegion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteRegion,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['regions'] }),
+  });
+}
+
+export function useCreateDistrict() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createDistrict,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['districts'] }),
+  });
+}
+
+export function useUpdateDistrict() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: Partial<{
+        region_id: string;
+        code: string;
+        name_uz_latn: string;
+        name_uz_cyrl: string;
+        name_ru: string;
+        is_capital: boolean;
+      }>;
+    }) => updateDistrict(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['districts'] }),
+  });
+}
+
+export function useDeleteDistrict() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteDistrict,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['districts'] }),
+  });
 }
 
 export function useRegionGeo(regionId: string | undefined) {
