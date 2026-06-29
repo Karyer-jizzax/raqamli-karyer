@@ -438,7 +438,9 @@ export const createDistrict = (body: DistrictInput) => api.post<District>('/dist
 export const updateDistrict = (id: string, body: Partial<DistrictInput>) =>
   api.patch<District>(`/districts/${id}`, body);
 export const deleteDistrict = (id: string) => api.del(`/districts/${id}`);
-export const getOverview = (params: { region_id?: string; district_id?: string } = {}) => {
+export const getOverview = (
+  params: { region_id?: string; district_id?: string; year?: string; month?: string } = {},
+) => {
   const q = new URLSearchParams(params as Record<string, string>).toString();
   return api.get<Overview>(`/stats/overview${q ? `?${q}` : ''}`);
 };

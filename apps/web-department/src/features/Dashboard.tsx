@@ -28,13 +28,70 @@ export function Dashboard() {
   const [selected, setSelected] = useState<string | null>(null);
   const { data: geo } = useRegionGeo(regionId ?? undefined);
   const lang = currentLang();
-  const { data: overview } = useOverview(
-    selected ? { district_id: selected } : regionId ? { region_id: regionId } : {},
-  );
+
+  const thisYear = new Date().getFullYear();
+  const [period, setPeriod] = useState<{ year: string; month: string }>({
+    year: String(thisYear),
+    month: '',
+  });
+
+  const params: { region_id?: string; district_id?: string; year?: string; month?: string } =
+    selected ? { district_id: selected } : regionId ? { region_id: regionId } : {};
+  if (period.year) params.year = period.year;
+  if (period.month) params.month = period.month;
+  const { data: overview } = useOverview(params);
   const selectedDistrict = geo?.districts.find((d) => d.id === selected);
+
+  const monthName = (m: number) =>
+    new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'uz-UZ', { month: 'long' }).format(
+      new Date(2000, m - 1, 1),
+    );
 
   return (
     <div style={{ padding: 24, display: 'grid', gap: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: 16, color: '#15273c' }}>{t('asosiy_region')}</h2>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
+          <label style={FILTER_LBL}>
+            {t('as_year')}
+            <select
+              style={FILTER_SEL}
+              value={period.year}
+              onChange={(e) => setPeriod((p) => ({ ...p, year: e.target.value }))}
+            >
+              {[thisYear, thisYear - 1, thisYear - 2].map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={FILTER_LBL}>
+            {t('as_month')}
+            <select
+              style={FILTER_SEL}
+              value={period.month}
+              onChange={(e) => setPeriod((p) => ({ ...p, month: e.target.value }))}
+            >
+              <option value="">{t('as_all')}</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {monthName(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div
         style={{
           display: 'grid',
@@ -85,6 +142,21 @@ export function Dashboard() {
     </div>
   );
 }
+
+const FILTER_LBL: React.CSSProperties = {
+  display: 'grid',
+  gap: 4,
+  fontSize: 12,
+  color: 'var(--muted)',
+};
+const FILTER_SEL: React.CSSProperties = {
+  padding: '8px 10px',
+  border: '1px solid var(--line)',
+  borderRadius: 8,
+  background: '#fff',
+  fontFamily: 'inherit',
+  fontSize: 13,
+};
 
 function Row({ k, v }: { k: string; v: string }) {
   return (

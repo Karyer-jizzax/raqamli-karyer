@@ -42,9 +42,15 @@ async def overview(
     user: UserDep,
     region_id: Annotated[UUID | None, Query()] = None,
     district_id: Annotated[UUID | None, Query()] = None,
+    year: Annotated[int | None, Query()] = None,
+    month: Annotated[int | None, Query()] = None,
 ) -> Overview:
     data = await stats_svc.overview(
-        db, region_id=_effective_region(user, region_id), district_id=district_id
+        db,
+        region_id=_effective_region(user, region_id),
+        district_id=district_id,
+        year=year,
+        month=month,
     )
     return Overview(**data)
 

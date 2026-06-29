@@ -18,6 +18,23 @@ async def test_overview(client: httpx.AsyncClient, seeded: None) -> None:
 
 
 @pytest.mark.asyncio
+async def test_overview_period_filter(client: httpx.AsyncClient, seeded: None) -> None:
+    # Year/month scope the event metrics but not the infrastructure counts.
+    token = await login(client, "department", "dept123")
+    base = (
+        await client.get("/api/v1/stats/overview", headers=auth_header(token))
+    ).json()
+    scoped = (
+        await client.get(
+            "/api/v1/stats/overview?year=1990&month=1", headers=auth_header(token)
+        )
+    ).json()
+    assert scoped["quarries"] == base["quarries"]
+    assert scoped["events"] == 0
+    assert scoped["total_volume"] == 0
+
+
+@pytest.mark.asyncio
 async def test_region_geo_has_svg(client: httpx.AsyncClient, seeded: None) -> None:
     token = await login(client, "department", "dept123")
     me = (await client.get("/api/v1/auth/me", headers=auth_header(token))).json()

@@ -198,7 +198,9 @@ export function useRegionGeo(regionId: string | undefined) {
   });
 }
 
-export function useOverview(params: { region_id?: string; district_id?: string } = {}) {
+export function useOverview(
+  params: { region_id?: string; district_id?: string; year?: string; month?: string } = {},
+) {
   return useQuery({ queryKey: ['overview', params], queryFn: () => getOverview(params) });
 }
 

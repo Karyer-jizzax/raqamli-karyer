@@ -40,6 +40,8 @@ async def overview(
     *,
     region_id: UUID | None = None,
     district_id: UUID | None = None,
+    year: int | None = None,
+    month: int | None = None,
 ) -> dict:
     # Quarries / districts / cameras counts scoped to the region/district.
     q_stmt = select(func.count()).select_from(Quarry)
@@ -80,6 +82,12 @@ async def overview(
         district_id=district_id,
         quarry_id=None,
     )
+    # Event-derived metrics are scoped to the selected period; infrastructure
+    # counts (quarries/districts/cameras) are time-independent.
+    if year is not None:
+        agg = agg.where(func.extract("year", Event.occurred_at) == year)
+    if month is not None:
+        agg = agg.where(func.extract("month", Event.occurred_at) == month)
     events, total_volume, avg_conf = (await db.execute(agg)).one()
 
     return {
