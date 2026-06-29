@@ -3,7 +3,9 @@
   --bg: #e9ecf1;
   --panel: #ffffff;
   --ink: #0f1b29;
-  --muted: #56646f;
+  /* Legacy muted *text* gray. Renamed from --muted to avoid colliding with
+     shadcn's --muted (a light *background*) declared in globals.css. */
+  --muted-ink: #56646f;
   --line: #d9dfe7;
   --soft: #eceff4;
   --brand: #1d3a5c;

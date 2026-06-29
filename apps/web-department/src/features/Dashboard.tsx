@@ -11,7 +11,7 @@ function districtName(d: DistrictGeo): string {
 function Tile({ label, value }: { label: string; value: string }) {
   return (
     <Card className="">
-      <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted-ink)', fontWeight: 600 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800, color: '#15273c', fontFamily: 'var(--mono)' }}>
         {value}
       </div>
@@ -119,7 +119,7 @@ export function Dashboard() {
               onSelect={(id) => setSelected((s) => (s === id ? null : id))}
             />
           ) : (
-            <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+            <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
           )}
         </Card>
 
@@ -135,7 +135,7 @@ export function Dashboard() {
               />
             </div>
           ) : (
-            <p style={{ color: 'var(--muted)' }}>{t('dash_select_hint')}</p>
+            <p style={{ color: 'var(--muted-ink)' }}>{t('dash_select_hint')}</p>
           )}
         </Card>
       </div>
@@ -147,7 +147,7 @@ const FILTER_LBL: React.CSSProperties = {
   display: 'grid',
   gap: 4,
   fontSize: 12,
-  color: 'var(--muted)',
+  color: 'var(--muted-ink)',
 };
 const FILTER_SEL: React.CSSProperties = {
   padding: '8px 10px',
@@ -161,7 +161,7 @@ const FILTER_SEL: React.CSSProperties = {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-      <span style={{ color: 'var(--muted)' }}>{k}</span>
+      <span style={{ color: 'var(--muted-ink)' }}>{k}</span>
       <b style={{ fontFamily: 'var(--mono)' }}>{v}</b>
     </div>
   );

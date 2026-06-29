@@ -14,14 +14,14 @@ export function Protocols() {
       <h2 style={{ margin: '0 0 12px' }}>{t('nav_protocol')}</h2>
       <Card>
         {isLoading ? (
-          <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+          <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
         ) : !events?.length ? (
-          <p style={{ color: 'var(--muted)' }}>{t('ev_empty')}</p>
+          <p style={{ color: 'var(--muted-ink)' }}>{t('ev_empty')}</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 11 }}>
+                <tr style={{ textAlign: 'left', color: 'var(--muted-ink)', fontSize: 11 }}>
                   <th style={th}>{t('ev_plate_number')}</th>
                   <th style={th}>{t('ev_vol_final')}</th>
                   <th style={th}>{t('q_status')}</th>

@@ -212,7 +212,7 @@ function RegisterForm() {
           <F label={t('ev_plate_number')} value={f.plate_number} onChange={set('plate_number')} />
         </div>
         <F label={t('ev_model')} value={f.model} onChange={set('model')} />
-        <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+        <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted-ink)' }}>
           {t('ev_material')}
           <select
             value={f.material_id}
@@ -245,14 +245,14 @@ function RegisterForm() {
         </div>
 
         <div style={{ marginTop: 6, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{t('ev_preview')}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted-ink)', marginBottom: 6 }}>{t('ev_preview')}</div>
           <div style={{ display: 'grid', gap: 5 }}>
             <Row k="Vc" v={`${preview.volumeCamera ?? '—'} m³`} />
             <Row k="Vw" v={`${preview.volumeScale} m³`} />
             <Row k={t('ev_vol_final')} v={`${preview.volumeFinal} m³`} />
             <Row k={t('ev_conf')} v={`${preview.confidence}%`} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--muted)' }}>{t('q_status')}</span>
+              <span style={{ color: 'var(--muted-ink)' }}>{t('q_status')}</span>
               <StatusPill status={preview.status} />
             </div>
           </div>
@@ -272,15 +272,15 @@ function EventList() {
   const { data: events, isLoading } = useEvents();
   const [protoEvent, setProtoEvent] = useState<string | null>(null);
 
-  if (isLoading) return <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>;
-  if (!events?.length) return <p style={{ color: 'var(--muted)' }}>{t('ev_empty')}</p>;
+  if (isLoading) return <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>;
+  if (!events?.length) return <p style={{ color: 'var(--muted-ink)' }}>{t('ev_empty')}</p>;
 
   return (
     <div style={{ overflowX: 'auto' }}>
       {protoEvent && <ProtocolViewer eventId={protoEvent} onClose={() => setProtoEvent(null)} />}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 11 }}>
+          <tr style={{ textAlign: 'left', color: 'var(--muted-ink)', fontSize: 11 }}>
             <th style={th}>{t('ev_plate_number')}</th>
             <th style={th}>{t('ev_model')}</th>
             <th style={th}>{t('ev_vol_final')}</th>
@@ -371,7 +371,7 @@ function F({
   mono?: boolean;
 }) {
   return (
-    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted-ink)' }}>
       {label}
       <input
         value={value}
@@ -385,7 +385,7 @@ function F({
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-      <span style={{ color: 'var(--muted)' }}>{k}</span>
+      <span style={{ color: 'var(--muted-ink)' }}>{k}</span>
       <b style={{ fontFamily: 'var(--mono)' }}>{v}</b>
     </div>
   );

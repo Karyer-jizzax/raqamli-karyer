@@ -22,7 +22,7 @@ export function Dynamics() {
 
       <Card>
         {isLoading ? (
-          <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+          <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
         ) : (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 240, padding: '10px 4px' }}>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
@@ -31,7 +31,7 @@ export function Dynamics() {
               const h = Math.round((total / maxTotal) * 190);
               return (
                 <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)' }}>
+                  <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted-ink)' }}>
                     {b ? `${b.detection_pct}%` : ''}
                   </div>
                   <div
@@ -43,7 +43,7 @@ export function Dynamics() {
                       borderRadius: '6px 6px 0 0',
                     }}
                   />
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{MONTHS[m - 1]}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted-ink)' }}>{MONTHS[m - 1]}</div>
                 </div>
               );
             })}
@@ -57,7 +57,7 @@ export function Dynamics() {
 function Tile({ label, value }: { label: string; value: string }) {
   return (
     <Card>
-      <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted-ink)', fontWeight: 600 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800, color: '#15273c', fontFamily: 'var(--mono)' }}>{value}</div>
     </Card>
   );

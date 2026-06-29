@@ -18,7 +18,7 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
   const w = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 70px', gap: 8, alignItems: 'center' }}>
-      <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>
+      <span style={{ fontSize: 12, color: 'var(--muted-ink)' }}>{label}</span>
       <div style={{ background: 'var(--soft)', borderRadius: 6, height: 16 }}>
         <div style={{ width: `${w}%`, background: color, height: '100%', borderRadius: 6 }} />
       </div>
@@ -84,14 +84,14 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', borderBottom: '2px solid var(--brand)', paddingBottom: 10 }}>
           <div>
             <h1 style={{ fontSize: 20, color: 'var(--brand)' }}>{doc.organization}</h1>
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            <div style={{ fontSize: 12, color: 'var(--muted-ink)' }}>
               {doc.region_name_uz_latn} · {doc.district_name_uz_latn} · {doc.quarry_name}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 800 }}>O'LCHOV BAYONNOMASI</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>№ {p.number}</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>{issued}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted-ink)' }}>{issued}</div>
           </div>
         </div>
 
@@ -177,7 +177,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
         </div>
 
         {/* Method + normative */}
-        <p style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 16, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 11.5, color: 'var(--muted-ink)', marginTop: 16, lineHeight: 1.5 }}>
           {p.normative_basis}
         </p>
 
@@ -199,7 +199,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ width: 96, height: 96 }} dangerouslySetInnerHTML={{ __html: doc.qr_svg }} />
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted-ink)', marginTop: 4 }}>
               {p.verification_code}
             </div>
           </div>

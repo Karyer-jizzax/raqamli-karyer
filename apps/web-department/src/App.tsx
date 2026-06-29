@@ -62,7 +62,7 @@ function Nav() {
             fontWeight: 600,
             whiteSpace: 'nowrap',
             textDecoration: 'none',
-            color: isActive ? 'var(--brand)' : 'var(--muted)',
+            color: isActive ? 'var(--brand)' : 'var(--muted-ink)',
             borderBottom: `3px solid ${isActive ? 'var(--brand)' : 'transparent'}`,
           })}
         >

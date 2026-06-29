@@ -116,13 +116,13 @@ export function DataM1() {
               fontSize: 13,
               fontFamily: 'inherit',
               background: tab === n ? 'var(--brand)' : '#fff',
-              color: tab === n ? '#fff' : 'var(--muted)',
+              color: tab === n ? '#fff' : 'var(--muted-ink)',
             }}
           >
             М-{n}
           </button>
         ))}
-        <span style={{ color: 'var(--muted)', fontSize: 13, marginLeft: 6 }}>{t(`rep_m${tab}`)}</span>
+        <span style={{ color: 'var(--muted-ink)', fontSize: 13, marginLeft: 6 }}>{t(`rep_m${tab}`)}</span>
       </div>
 
       {tab === 1 ? <M1Table /> : <ReportView n={tab} />}
@@ -164,9 +164,9 @@ function ReportView({ n }: { n: number }) {
     <Card>
       <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#15273c' }}>{t(`rep_m${n}`)}</h3>
       {isLoading ? (
-        <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+        <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
       ) : rows.length === 0 ? (
-        <p style={{ color: 'var(--muted)' }}>{t('empty_table')}</p>
+        <p style={{ color: 'var(--muted-ink)' }}>{t('empty_table')}</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table className="m1-table" style={{ maxWidth: 560 }}>
@@ -270,7 +270,7 @@ function M1Table() {
       {/* Title + scope */}
       <div>
         <h1 style={{ fontSize: 17, margin: '0 0 4px', color: '#15273c' }}>{t('m1_title')}</h1>
-        <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+        <div style={{ fontSize: 12.5, color: 'var(--muted-ink)' }}>
           {t('region')} / <b style={{ color: '#2a3f57' }}>{t('district')}</b>
         </div>
       </div>
@@ -301,7 +301,7 @@ function M1Table() {
               </select>
             </label>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          <div style={{ fontSize: 12, color: 'var(--muted-ink)' }}>
             {t('as_updated')}: <b style={{ color: '#2a3f57' }}>—</b>
           </div>
         </div>
@@ -343,7 +343,7 @@ function M1Table() {
               borderRadius: 8,
               background: '#fff',
               cursor: 'pointer',
-              color: 'var(--muted)',
+              color: 'var(--muted-ink)',
               fontWeight: 600,
             }}
           >
@@ -354,10 +354,10 @@ function M1Table() {
 
       <Card>
         {isLoading ? (
-          <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+          <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
         ) : (
           <>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6, textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--muted-ink)', marginBottom: 6, textAlign: 'center' }}>
               {t('scrollhint')}
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -394,7 +394,7 @@ function M1Table() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={19} style={{ textAlign: 'center', color: 'var(--muted)', padding: 22 }}>
+                      <td colSpan={19} style={{ textAlign: 'center', color: 'var(--muted-ink)', padding: 22 }}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -418,7 +418,7 @@ function M1Table() {
                           <td className="ctr">
                             {dt.date}
                             <br />
-                            <span style={{ color: 'var(--muted)' }}>{dt.time}</span>
+                            <span style={{ color: 'var(--muted-ink)' }}>{dt.time}</span>
                           </td>
                           <td className="ctr">
                             <button className="m1-ic" onClick={() => setMedia({ row: r, mode: 'photo' })} title={t('th_photo')}>
@@ -434,7 +434,7 @@ function M1Table() {
                             {r.is_loaded ? (
                               <span style={{ color: '#15835a', fontWeight: 600 }}>{t('load_yes')}</span>
                             ) : (
-                              <span style={{ color: 'var(--muted)' }}>{t('load_no')}</span>
+                              <span style={{ color: 'var(--muted-ink)' }}>{t('load_no')}</span>
                             )}
                           </td>
                           <td className="num">{loaded ? f1(r.volume_final) : '-'}</td>
@@ -466,7 +466,7 @@ function M1Table() {
               </table>
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 13, color: 'var(--muted)' }}>
+            <div style={{ marginTop: 10, fontSize: 13, color: 'var(--muted-ink)' }}>
               {t('total_events')}: <b style={{ color: '#15273c' }}>{filtered.length}</b> ·{' '}
               {t('total_vol')}:{' '}
               <b style={{ color: '#15273c', fontFamily: 'var(--mono)' }}>
@@ -517,7 +517,7 @@ const lblStyle: React.CSSProperties = {
   display: 'grid',
   gap: 4,
   fontSize: 12,
-  color: 'var(--muted)',
+  color: 'var(--muted-ink)',
 };
 
 function Sel({

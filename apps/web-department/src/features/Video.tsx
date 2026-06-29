@@ -373,7 +373,7 @@ export function Video() {
       {/* Title */}
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 18, margin: '0 0 4px', color: '#15273c' }}>{t('vid_title')}</h1>
-        <div style={{ fontSize: 13, color: 'var(--muted)' }}>{t('vid_sub')}</div>
+        <div style={{ fontSize: 13, color: 'var(--muted-ink)' }}>{t('vid_sub')}</div>
       </div>
 
       {/* Stats */}
@@ -395,7 +395,7 @@ export function Video() {
                 </span>
                 <b style={{ fontWeight: 800 }}>{CAMERA}</b>
                 <span style={{ color: 'var(--line)' }}>·</span>
-                <span style={{ color: 'var(--muted)' }}>{t('vid_stream')}</span>
+                <span style={{ color: 'var(--muted-ink)' }}>{t('vid_stream')}</span>
               </span>
               <span
                 style={{
@@ -482,7 +482,7 @@ export function Video() {
               </button>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>{t('vid_hint')}</div>
+          <div style={{ fontSize: 12, color: 'var(--muted-ink)' }}>{t('vid_hint')}</div>
         </div>
 
         {/* Right: analysis result */}
@@ -517,7 +517,7 @@ export function Video() {
                 </div>
               </div>
 
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted-ink)', marginBottom: 6 }}>
                 {t('vid_detected_edit')}
               </div>
 
@@ -611,7 +611,7 @@ function Stat({
         <Icon name={icon} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-        <span style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 11.5, color: 'var(--muted-ink)', fontWeight: 600 }}>{label}</span>
         <b
           style={{
             fontSize: 16,
@@ -633,7 +633,7 @@ function Stat({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3, fontWeight: 600 }}>
+      <label style={{ fontSize: 11, color: 'var(--muted-ink)', display: 'block', marginBottom: 3, fontWeight: 600 }}>
         {label}
       </label>
       {children}
@@ -817,7 +817,7 @@ const RES_EMPTY: React.CSSProperties = {
   textAlign: 'center',
   gap: 14,
   padding: '38px 18px',
-  color: 'var(--muted)',
+  color: 'var(--muted-ink)',
 };
 const RES_EMPTY_IC: React.CSSProperties = {
   width: 64,
