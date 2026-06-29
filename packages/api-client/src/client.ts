@@ -317,15 +317,23 @@ export interface RegionGeo {
 
 export interface M1Row {
   id: string;
+  post_code: string | null;
+  camera_label: string | null;
   plate_region: string;
   plate_number: string;
   model: string;
+  vtype: string;
   direction: string;
   occurred_at: string;
+  is_loaded: boolean;
   material_id: string | null;
+  weight_kg: number;
+  density: number;
   volume_final: number;
   volume_confidence: number;
+  material_confidence: number;
   payer_type: string;
+  stir: string;
   owner_name: string;
   status: 'confirm' | 'flagged' | 'inspect';
 }

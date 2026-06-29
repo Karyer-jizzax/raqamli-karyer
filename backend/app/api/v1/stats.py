@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.event import Event
-from app.models.quarry import Quarry
+from app.models.quarry import Camera, Post, Quarry
 from app.models.region import District
 from app.schemas.stats import (
     DynamicsResponse,
@@ -172,30 +172,41 @@ async def m1(
         )
     ).one()
 
-    rows = list(
-        (
-            await db.execute(
-                base.order_by(Event.occurred_at.desc()).limit(limit).offset(offset)
-            )
-        ).scalars().all()
+    # Rows: pull post code + camera label via null-safe joins on the event FKs.
+    rows_stmt = (
+        base.add_columns(Post.code, Camera.code, Camera.name)
+        .outerjoin(Post, Post.id == Event.post_id)
+        .outerjoin(Camera, Camera.id == Event.camera_id)
+        .order_by(Event.occurred_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
+    rows = (await db.execute(rows_stmt)).all()
     return M1Response(
         rows=[
             M1Row(
                 id=e.id,
+                post_code=post_code,
+                camera_label=cam_code or cam_name,
                 plate_region=e.plate_region,
                 plate_number=e.plate_number,
                 model=e.model,
+                vtype=e.vtype,
                 direction=e.direction,
                 occurred_at=e.occurred_at.isoformat(),
+                is_loaded=e.is_loaded,
                 material_id=e.material_id,
+                weight_kg=e.weight_kg,
+                density=float(e.density),
                 volume_final=float(e.volume_final),
                 volume_confidence=float(e.volume_confidence),
+                material_confidence=float(e.material_confidence),
                 payer_type=e.payer_type,
+                stir=e.stir,
                 owner_name=e.owner_name,
                 status=e.status,
             )
-            for e in rows
+            for e, post_code, cam_code, cam_name in rows
         ],
         total_count=int(totals[0]),
         total_volume=round(float(totals[1]), 2),

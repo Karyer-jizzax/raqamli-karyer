@@ -37,15 +37,23 @@ class RegionGeo(BaseModel):
 
 class M1Row(BaseModel):
     id: UUID
+    post_code: str | None
+    camera_label: str | None
     plate_region: str
     plate_number: str
     model: str
+    vtype: str
     direction: str
     occurred_at: str
+    is_loaded: bool
     material_id: str | None
+    weight_kg: int
+    density: float
     volume_final: float
     volume_confidence: float
+    material_confidence: float
     payer_type: str
+    stir: str
     owner_name: str
     status: str
 

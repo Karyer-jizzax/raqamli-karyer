@@ -12,7 +12,7 @@ from app.core.deps import CurrentUser, get_current_user
 from app.db.session import get_db
 from app.models.event import Event
 from app.models.material import Material
-from app.models.quarry import Quarry
+from app.models.quarry import Camera, Post, Quarry
 from app.models.region import District
 from app.schemas.event import EventCreate, EventOut, VolumeInputDto, VolumeResultDto
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
@@ -66,6 +66,18 @@ async def create_event(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "quarry_id talab qilinadi")
         quarry_id = body.quarry_id
 
+    # Default post/camera to the quarry's first ones so M1 columns are populated.
+    post_id = body.post_id
+    if post_id is None:
+        post_id = (
+            await db.execute(select(Post.id).where(Post.quarry_id == quarry_id).limit(1))
+        ).scalar_one_or_none()
+    camera_id = body.camera_id
+    if camera_id is None and post_id is not None:
+        camera_id = (
+            await db.execute(select(Camera.id).where(Camera.post_id == post_id).limit(1))
+        ).scalar_one_or_none()
+
     _material, spec = await _material_spec(db, body.material_id)
     result = compute_volume(
         VolumeInput(
@@ -80,8 +92,8 @@ async def create_event(
 
     event = Event(
         quarry_id=quarry_id,
-        post_id=body.post_id,
-        camera_id=body.camera_id,
+        post_id=post_id,
+        camera_id=camera_id,
         material_id=body.material_id,
         created_by=user.id,  # type: ignore[attr-defined]
         plate_region=body.plate_region,
