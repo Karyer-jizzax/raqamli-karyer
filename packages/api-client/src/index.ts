@@ -84,4 +84,5 @@ export {
   useOverview,
   useDynamics,
   useM1,
+  useReport,
 } from './hooks';

@@ -21,6 +21,7 @@ import {
   getM1,
   getMaterials,
   getOverview,
+  getReport,
   getQuarries,
   getRegionGeo,
   getRegions,
@@ -202,6 +203,10 @@ export function useOverview(
   params: { region_id?: string; district_id?: string; year?: string; month?: string } = {},
 ) {
   return useQuery({ queryKey: ['overview', params], queryFn: () => getOverview(params) });
+}
+
+export function useReport(n: number, enabled = true) {
+  return useQuery({ queryKey: ['report', n], queryFn: () => getReport(n), enabled });
 }
 
 export function useDynamics(params: { year?: number; district_id?: string } = {}) {

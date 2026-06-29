@@ -245,6 +245,14 @@ const uzLatn: Dict = {
   payer_legal: 'Yuridik shaxs',
   payer_indiv: 'Jismoniy shaxs',
   payer_yatt: 'YaTT',
+  rep_m1: "Hodisalar ro'yxati",
+  rep_m2: "Material bo'yicha",
+  rep_m3: "To'lovchi bo'yicha",
+  rep_m4: "Tuman bo'yicha",
+  rep_m5: "Holat bo'yicha",
+  rep_dim: 'Nomi',
+  rep_count: 'Soni',
+  rep_vol: 'Hajmi (m³)',
 };
 
 const uzCyrl: Dict = {
@@ -487,6 +495,14 @@ const uzCyrl: Dict = {
   payer_legal: 'Юридик шахс',
   payer_indiv: 'Жисмоний шахс',
   payer_yatt: 'ЯТТ',
+  rep_m1: 'Ходисалар рўйхати',
+  rep_m2: 'Материал бўйича',
+  rep_m3: 'Тўловчи бўйича',
+  rep_m4: 'Туман бўйича',
+  rep_m5: 'Ҳолат бўйича',
+  rep_dim: 'Номи',
+  rep_count: 'Сони',
+  rep_vol: 'Ҳажми (м³)',
 };
 
 const ru: Dict = {
@@ -729,6 +745,14 @@ const ru: Dict = {
   payer_legal: 'Юр. лицо',
   payer_indiv: 'Физ. лицо',
   payer_yatt: 'ИП',
+  rep_m1: 'Список событий',
+  rep_m2: 'По материалу',
+  rep_m3: 'По плательщику',
+  rep_m4: 'По району',
+  rep_m5: 'По статусу',
+  rep_dim: 'Наименование',
+  rep_count: 'Кол-во',
+  rep_vol: 'Объём (м³)',
 };
 
 export const DICTIONARIES: Record<Lang, Dict> = {

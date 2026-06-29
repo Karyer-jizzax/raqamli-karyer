@@ -56,6 +56,22 @@ async def test_m1_totals_not_cross_joined(client: httpx.AsyncClient, seeded: Non
 
 
 @pytest.mark.asyncio
+async def test_reports(client: httpx.AsyncClient, seeded: None) -> None:
+    token = await login(client, "department", "dept123")
+    dims = {2: "material", 3: "payer_type", 4: "district", 5: "status"}
+    for n, dim in dims.items():
+        resp = await client.get(f"/api/v1/stats/reports/{n}", headers=auth_header(token))
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["report"] == f"M{n}"
+        assert body["dimension"] == dim
+        assert isinstance(body["rows"], list)
+    # Unknown report id is a clean 404, not a server error.
+    bad = await client.get("/api/v1/stats/reports/9", headers=auth_header(token))
+    assert bad.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_dynamics(client: httpx.AsyncClient, seeded: None) -> None:
     token = await login(client, "department", "dept123")
     resp = await client.get("/api/v1/stats/dynamics", headers=auth_header(token))

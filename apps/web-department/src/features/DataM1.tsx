@@ -1,4 +1,4 @@
-import { type M1Row, type Material, useM1, useMaterials } from '@karier/api-client';
+import { type M1Row, type Material, useM1, useMaterials, useReport } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card, StatusPill } from '@karier/ui';
 import { useMemo, useState } from 'react';
@@ -91,7 +91,116 @@ function Plate({ row }: { row: M1Row }) {
   );
 }
 
+const REPORTS = [1, 2, 3, 4, 5] as const;
+
 export function DataM1() {
+  const { t } = useTranslation();
+  const [tab, setTab] = useState<number>(1);
+
+  return (
+    <div style={{ padding: 24, display: 'grid', gap: 14 }}>
+      <style>{DATA_CSS}</style>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {REPORTS.map((n) => (
+          <button
+            key={n}
+            onClick={() => setTab(n)}
+            title={t(`rep_m${n}`)}
+            style={{
+              padding: '8px 15px',
+              borderRadius: 9,
+              border: `1px solid ${tab === n ? 'var(--brand)' : 'var(--line)'}`,
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              background: tab === n ? 'var(--brand)' : '#fff',
+              color: tab === n ? '#fff' : 'var(--muted)',
+            }}
+          >
+            М-{n}
+          </button>
+        ))}
+        <span style={{ color: 'var(--muted)', fontSize: 13, marginLeft: 6 }}>{t(`rep_m${tab}`)}</span>
+      </div>
+
+      {tab === 1 ? <M1Table /> : <ReportView n={tab} />}
+    </div>
+  );
+}
+
+// M2-M5: aggregate breakdown of events by a single dimension.
+function ReportView({ n }: { n: number }) {
+  const { t } = useTranslation();
+  const lang = currentLang();
+  const { data: materials } = useMaterials();
+  const { data, isLoading } = useReport(n);
+
+  const matById = useMemo(() => {
+    const m = new Map<string, Material>();
+    (materials ?? []).forEach((x) => m.set(x.id, x));
+    return m;
+  }, [materials]);
+
+  const labelFor = (dimension: string, key: string): string => {
+    if (!key || key === '—' || key === 'None') return '—';
+    if (dimension === 'material') return materialName(matById.get(key), lang);
+    if (dimension === 'payer_type')
+      return (['legal', 'indiv', 'yatt'] as string[]).includes(key) ? t(`payer_${key}`) : key;
+    if (dimension === 'status')
+      return (['confirm', 'flagged', 'inspect'] as string[]).includes(key)
+        ? t(`status_${key}`)
+        : key;
+    return key; // district name
+  };
+
+  const rows = data?.rows ?? [];
+  const totalCount = rows.reduce((s, r) => s + r.count, 0);
+  const totalVol = rows.reduce((s, r) => s + r.volume, 0);
+  const f2 = (x: number) => formatDecimal(x, lang);
+
+  return (
+    <Card>
+      <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#15273c' }}>{t(`rep_m${n}`)}</h3>
+      {isLoading ? (
+        <p style={{ color: 'var(--muted)' }}>{t('loading')}</p>
+      ) : rows.length === 0 ? (
+        <p style={{ color: 'var(--muted)' }}>{t('empty_table')}</p>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="m1-table" style={{ maxWidth: 560 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left' }}>{t('rep_dim')}</th>
+                <th>{t('rep_count')}</th>
+                <th>{t('rep_vol')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={`${r.key}-${i}`}>
+                  <td>{labelFor(data?.dimension ?? '', r.key)}</td>
+                  <td className="num">{r.count}</td>
+                  <td className="num">{f2(r.volume)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>{t('jami')}</td>
+                <td className="num">{totalCount}</td>
+                <td className="num">{f2(totalVol)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function M1Table() {
   const { t } = useTranslation();
   const lang = currentLang();
   const { data: materials } = useMaterials();
@@ -157,9 +266,7 @@ export function DataM1() {
   const year = new Date().getFullYear();
 
   return (
-    <div style={{ padding: 24, display: 'grid', gap: 14 }}>
-      <style>{DATA_CSS}</style>
-
+    <div style={{ display: 'grid', gap: 14 }}>
       {/* Title + scope */}
       <div>
         <h1 style={{ fontSize: 17, margin: '0 0 4px', color: '#15273c' }}>{t('m1_title')}</h1>
