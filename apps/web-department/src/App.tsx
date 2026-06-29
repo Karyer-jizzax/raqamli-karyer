@@ -1,11 +1,12 @@
 import { useTranslation } from '@karier/i18n';
-import { Card, LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
+import { LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
 import { Dashboard } from './features/Dashboard';
 import { DataM1 } from './features/DataM1';
 import { Dynamics } from './features/Dynamics';
 import { Protocols } from './features/Protocols';
+import { Video } from './features/Video';
 
 const NAV = [
   { to: '/dashboard', key: 'nav_dashboard' },
@@ -72,18 +73,6 @@ function Nav() {
   );
 }
 
-function Placeholder({ titleKey }: { titleKey: string }) {
-  const { t } = useTranslation();
-  return (
-    <div style={{ padding: 24 }}>
-      <Card>
-        <h2 style={{ margin: '0 0 6px' }}>{t(titleKey)}</h2>
-        <p style={{ color: 'var(--muted)', margin: 0 }}>{t('coming_soon')}</p>
-      </Card>
-    </div>
-  );
-}
-
 export function App() {
   return (
     <RequireAuth allowedRoles={['department', 'superadmin']} appKey="app_department" accent="#1f7d68">
@@ -92,7 +81,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/video" element={<Placeholder titleKey="nav_video" />} />
+        <Route path="/video" element={<Video />} />
         <Route path="/data" element={<DataM1 />} />
         <Route path="/protocol" element={<Protocols />} />
         <Route path="/dynamics" element={<Dynamics />} />
