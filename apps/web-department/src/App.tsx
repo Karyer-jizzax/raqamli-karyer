@@ -4,8 +4,10 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
 import { Dashboard } from './features/Dashboard';
 import { DataM1 } from './features/DataM1';
+import { DistrictDetail } from './features/DistrictDetail';
 import { Dynamics } from './features/Dynamics';
 import { Protocols } from './features/Protocols';
+import { QuarryDetail } from './features/QuarryDetail';
 import { Video } from './features/Video';
 
 const NAV = [
@@ -81,6 +83,11 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/districts/:districtId" element={<DistrictDetail />} />
+        <Route
+          path="/dashboard/districts/:districtId/quarries/:quarryId"
+          element={<QuarryDetail />}
+        />
         <Route path="/video" element={<Video />} />
         <Route path="/data" element={<DataM1 />} />
         <Route path="/protocol" element={<Protocols />} />

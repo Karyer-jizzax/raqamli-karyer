@@ -1,6 +1,6 @@
 import { type M1Row, type Material, useM1, useMaterials, useReport } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { Card, StatusPill } from '@karier/ui';
+import { Card } from '@karier/ui';
 import { useMemo, useState } from 'react';
 
 import cam1Mp4 from '../assets/video/cam1.mp4';
@@ -44,11 +44,6 @@ type Lang = ReturnType<typeof currentLang>;
 function materialName(m: Material | undefined, lang: Lang): string {
   if (!m) return '-';
   return lang === 'ru' ? m.name_ru : lang === 'uz-cyrl' ? m.name_uz_cyrl : m.name_uz_latn;
-}
-
-// confidence → traffic-light colour (mirrors the reference matCls()).
-function coefColor(c: number): string {
-  return c >= 95 ? '#15835a' : c >= 80 ? '#9a6a00' : '#c0463c';
 }
 
 function fmtDateTime(iso: string): { date: string; time: string } {
@@ -368,15 +363,13 @@ function M1Table() {
                     <th rowSpan={2}>{t('th_post')}</th>
                     <th rowSpan={2}>{t('th_camera')}</th>
                     <th rowSpan={2}>{t('th_plate')}</th>
-                    <th colSpan={6}>{t('grp_events')}</th>
+                    <th colSpan={5}>{t('grp_events')}</th>
                     <th rowSpan={2}>{t('th_load')}</th>
-                    <th className="grp-ai" colSpan={3}>{t('grp_ai')}</th>
-                    <th className="grp-mat" colSpan={2}>{t('grp_mat')}</th>
+                    <th className="grp-ai" colSpan={2}>{t('grp_ai')}</th>
+                    <th className="grp-mat" colSpan={1}>{t('grp_mat')}</th>
                     <th className="grp-yhxx" colSpan={2}>{t('grp_yhxx')}</th>
-                    <th rowSpan={2}>{t('th_status')}</th>
                   </tr>
                   <tr>
-                    <th>{t('th_model')}</th>
                     <th>{t('th_type')}</th>
                     <th>{t('th_dir')}</th>
                     <th>{t('th_time')}</th>
@@ -384,9 +377,7 @@ function M1Table() {
                     <th>{t('th_video')}</th>
                     <th className="grp-ai">{t('th_m3')}</th>
                     <th className="grp-ai">{t('th_ton')}</th>
-                    <th className="grp-ai">{t('th_coef')}</th>
                     <th className="grp-mat">{t('th_matname')}</th>
-                    <th className="grp-mat">{t('th_coef')}</th>
                     <th className="grp-yhxx">{t('th_stir')}</th>
                     <th className="grp-yhxx">{t('th_owner')}</th>
                   </tr>
@@ -394,7 +385,7 @@ function M1Table() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={19} style={{ textAlign: 'center', color: 'var(--muted-ink)', padding: 22 }}>
+                      <td colSpan={15} style={{ textAlign: 'center', color: 'var(--muted-ink)', padding: 22 }}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -408,7 +399,6 @@ function M1Table() {
                           <td className="ctr">{r.post_code ?? '—'}</td>
                           <td className="ctr">{r.camera_label ?? '—'}</td>
                           <td className="ctr"><Plate row={r} /></td>
-                          <td>{r.model}</td>
                           <td className="ctr">{vtypeLabel(r.vtype)}</td>
                           <td className="ctr">
                             <span style={{ color: r.direction === 'exit' ? '#15835a' : '#9a6a00', fontWeight: 600 }}>
@@ -439,16 +429,9 @@ function M1Table() {
                           </td>
                           <td className="num">{loaded ? f1(r.volume_final) : '-'}</td>
                           <td className="num">{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
-                          <td className="num" style={{ color: loaded ? coefColor(r.volume_confidence) : undefined }}>
-                            {loaded ? f2(r.volume_confidence) : '-'}
-                          </td>
                           <td>{r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}</td>
-                          <td className="num" style={{ color: r.material_id ? coefColor(r.material_confidence) : undefined }}>
-                            {r.material_id ? f2(r.material_confidence) : '-'}
-                          </td>
                           <td className="ctr">{r.stir || '—'}</td>
                           <td>{r.owner_name || '—'}</td>
-                          <td className="ctr"><StatusPill status={r.status} /></td>
                         </tr>
                       );
                     })
@@ -456,11 +439,11 @@ function M1Table() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td className="ctr" colSpan={11}>
+                    <td className="ctr" colSpan={10}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className="num">{f1(totalVol)}</td>
-                    <td colSpan={7} />
+                    <td colSpan={4} />
                   </tr>
                 </tfoot>
               </table>

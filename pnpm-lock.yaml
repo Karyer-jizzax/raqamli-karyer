@@ -183,6 +183,8 @@ importers:
         specifier: ^6.0.7
         version: 6.4.3(jiti@2.7.0)(lightningcss@1.32.0)
 
+  backend: {}
+
   packages/api-client:
     dependencies:
       '@karier/types':

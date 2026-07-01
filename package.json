@@ -14,9 +14,10 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
-    "dev:main": "turbo run dev --filter=@karier/web-main",
-    "dev:department": "turbo run dev --filter=@karier/web-department",
-    "dev:quarry": "turbo run dev --filter=@karier/web-quarry"
+    "dev:backend": "turbo run dev --filter=@karier/backend",
+    "dev:main": "turbo run dev --filter=@karier/web-main --filter=@karier/backend",
+    "dev:department": "turbo run dev --filter=@karier/web-department --filter=@karier/backend",
+    "dev:quarry": "turbo run dev --filter=@karier/web-quarry --filter=@karier/backend"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

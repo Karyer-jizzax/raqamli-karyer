@@ -289,10 +289,18 @@ export interface Overview {
   quarries: number;
   districts: number;
   cameras: number;
+  cameras_active?: number;
+  cameras_inactive?: number;
   organizations: number;
+  companies_mining?: number;
+  companies_other?: number;
+  companies_physical?: number;
+  companies_ytt?: number;
   events: number;
   total_volume: number;
   avg_confidence: number;
+  documents?: number;
+  documents_invoice?: number;
 }
 
 export interface DistrictGeo {
