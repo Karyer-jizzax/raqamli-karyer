@@ -49,7 +49,6 @@ async def region_geo(db: AsyncSession, region_id: UUID) -> dict:
         "districts": [
             {
                 "id": d.id,
-                "code": d.code,
                 "name_uz_latn": d.name_uz_latn,
                 "name_uz_cyrl": d.name_uz_cyrl,
                 "name_ru": d.name_ru,

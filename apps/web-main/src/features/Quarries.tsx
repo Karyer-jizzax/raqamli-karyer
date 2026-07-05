@@ -6,7 +6,10 @@ import {
   useCreateUser,
   useDeleteQuarry,
   useDistricts,
+  useMaterials,
   useQuarries,
+  useQuarryMaterials,
+  useSetQuarryMaterials,
   useUpdateQuarry,
   useUpdateUser,
   useUsers,
@@ -39,18 +42,21 @@ import {
 } from '@karier/ui';
 import {
   Building2Icon,
+  CameraIcon,
   CircleCheckIcon,
   type LucideIcon,
   MapIcon,
+  PackageIcon,
   PauseCircleIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
 } from 'lucide-react';
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
-import { districtName, Eyebrow, Field, ModalForm, StatusDot } from '../shared';
+import { districtName, Eyebrow, Field, ModalForm, slugCode, StatusDot } from '../shared';
+import { QuarryPostsModal } from './QuarryPosts';
 
 function NewQuarryModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -74,7 +80,7 @@ function NewQuarryModal({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      const code = `${district.code}-Q${Date.now().toString().slice(-5)}`;
+      const code = `${slugCode(name)}-Q${Date.now().toString().slice(-5)}`;
       const quarry = await create.mutateAsync({ name, code, district_id: district.id });
       await createUser.mutateAsync({
         username: login,
@@ -234,6 +240,74 @@ function ConfirmDeleteModal({ quarry, onClose }: { quarry: Quarry; onClose: () =
   );
 }
 
+function QuarryMaterialsModal({ quarry, onClose }: { quarry: Quarry; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { data: allMaterials } = useMaterials();
+  const { data: assigned, isLoading } = useQuarryMaterials(quarry.id);
+  const setMaterials = useSetQuarryMaterials();
+  const [selected, setSelected] = useState<Set<string> | null>(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (assigned && selected === null) setSelected(new Set(assigned.map((m) => m.id)));
+  }, [assigned, selected]);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev ?? []);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setErr('');
+    try {
+      await setMaterials.mutateAsync({
+        quarryId: quarry.id,
+        materialIds: Array.from(selected ?? []),
+      });
+      onClose();
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : 'Error');
+    }
+  }
+
+  return (
+    <ModalForm
+      title={t('mat_link_title', { name: quarry.name })}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      err={err}
+      pending={setMaterials.isPending}
+      submitLabel={t('q_save')}
+    >
+      {isLoading || selected === null ? (
+        <p className="text-muted-foreground text-sm">{t('loading')}</p>
+      ) : !allMaterials?.length ? (
+        <p className="text-muted-foreground text-sm">{t('mat_empty')}</p>
+      ) : (
+        <div className="grid gap-2">
+          {allMaterials.map((m) => (
+            <label key={m.id} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selected.has(m.id)}
+                onChange={() => toggle(m.id)}
+                className="size-4 accent-primary"
+              />
+              {districtName(m)}
+              <span className="font-mono text-[11px] text-muted-foreground">{m.id}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </ModalForm>
+  );
+}
+
 // ── telemetry strip ──────────────────────────────────────────────────────────
 // The signature element: the four headline figures read as a single instrument
 // panel — hairline-divided channels, uppercase labels, monospace tabular figures.
@@ -294,6 +368,8 @@ function QuarryTable({
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Quarry | null>(null);
   const [deleting, setDeleting] = useState<Quarry | null>(null);
+  const [linking, setLinking] = useState<Quarry | null>(null);
+  const [managingPosts, setManagingPosts] = useState<Quarry | null>(null);
 
   if (isLoading) return <p className="text-muted-foreground p-4">{t('loading')}</p>;
   if (!quarries?.length) return <p className="text-muted-foreground p-4">{t('q_empty')}</p>;
@@ -318,7 +394,6 @@ function QuarryTable({
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className={TH}>{t('q_name')}</TableHead>
-            <TableHead className={TH}>{t('q_code')}</TableHead>
             <TableHead className={TH}>{t('q_district')}</TableHead>
             <TableHead className={TH}>{t('q_status')}</TableHead>
             <TableHead className={cn(TH, 'text-right')}>{t('q_actions')}</TableHead>
@@ -330,13 +405,28 @@ function QuarryTable({
             return (
               <TableRow key={it.id}>
                 <TableCell className="font-medium">{it.name}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{it.code}</TableCell>
                 <TableCell>{d ? districtName(d) : '—'}</TableCell>
                 <TableCell>
                   <StatusDot active={it.status === 'active'} />
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('mat_link_title', { name: it.name })}
+                      onClick={() => setLinking(it)}
+                    >
+                      <PackageIcon />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('q_posts_manage', { name: it.name })}
+                      onClick={() => setManagingPosts(it)}
+                    >
+                      <CameraIcon />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(it)}>
                       <PencilIcon />
                     </Button>
@@ -397,6 +487,10 @@ function QuarryTable({
 
       {editing && <EditQuarryModal quarry={editing} onClose={() => setEditing(null)} />}
       {deleting && <ConfirmDeleteModal quarry={deleting} onClose={() => setDeleting(null)} />}
+      {linking && <QuarryMaterialsModal quarry={linking} onClose={() => setLinking(null)} />}
+      {managingPosts && (
+        <QuarryPostsModal quarry={managingPosts} onClose={() => setManagingPosts(null)} />
+      )}
     </div>
   );
 }

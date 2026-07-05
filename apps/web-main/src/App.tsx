@@ -5,19 +5,22 @@ import {
   ChevronRightIcon,
   MapIcon,
   MenuIcon,
+  PackageIcon,
   XIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Geo } from './features/Geo';
+import { Materials } from './features/Materials';
 import { Quarries } from './features/Quarries';
 import { Eyebrow } from './shared';
 
-type Tab = 'quarries' | 'geo';
+type Tab = 'quarries' | 'geo' | 'materials';
 
 const NAV: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: 'quarries', label: 'nav_quarries', icon: Building2Icon },
+  { key: 'materials', label: 'nav_materials', icon: PackageIcon },
   { key: 'geo', label: 'nav_geo', icon: MapIcon },
 ];
 
@@ -165,7 +168,7 @@ function Home() {
           onMenu={() => setSidebarOpen(true)}
         />
         <main className="mx-auto max-w-6xl p-4 lg:p-6">
-          {tab === 'quarries' ? <Quarries /> : <Geo />}
+          {tab === 'quarries' ? <Quarries /> : tab === 'materials' ? <Materials /> : <Geo />}
         </main>
       </div>
     </div>

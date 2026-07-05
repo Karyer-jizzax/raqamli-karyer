@@ -26,11 +26,7 @@ async def _material_spec(db: AsyncSession, material_id: str) -> tuple[Material, 
     material = await db.get(Material, material_id)
     if material is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Material topilmadi")
-    spec = MaterialSpec(
-        lo=float(material.density_min),
-        hi=float(material.density_max),
-        is_tent=material.is_tent,
-    )
+    spec = MaterialSpec(lo=float(material.density_min), hi=float(material.density_max))
     return material, spec
 
 
@@ -39,16 +35,7 @@ async def volume_preview(
     body: VolumeInputDto, _user: CurrentUser, db: DbDep
 ) -> VolumeResultDto:
     _material, spec = await _material_spec(db, body.material_id)
-    result = compute_volume(
-        VolumeInput(
-            density=body.density,
-            weight_kg=body.weight_kg,
-            length_m=body.length_m,
-            width_m=body.width_m,
-            height_m=body.height_m,
-        ),
-        spec,
-    )
+    result = compute_volume(VolumeInput(density=body.density, weight_kg=body.weight_kg), spec)
     return VolumeResultDto(**result.__dict__)
 
 
@@ -79,16 +66,7 @@ async def create_event(
         ).scalar_one_or_none()
 
     _material, spec = await _material_spec(db, body.material_id)
-    result = compute_volume(
-        VolumeInput(
-            density=body.density,
-            weight_kg=body.weight_kg,
-            length_m=body.length_m,
-            width_m=body.width_m,
-            height_m=body.height_m,
-        ),
-        spec,
-    )
+    result = compute_volume(VolumeInput(density=body.density, weight_kg=body.weight_kg), spec)
 
     event = Event(
         quarry_id=quarry_id,
@@ -110,10 +88,10 @@ async def create_event(
         width_m=body.width_m,
         height_m=body.height_m,
         tent_cover_pct=body.tent_cover_pct,
-        volume_camera=result.volume_camera,
-        volume_scale=result.volume_scale,
+        volume_camera=None,
+        volume_scale=result.volume_final,
         volume_final=result.volume_final,
-        diff_pct=result.diff_pct,
+        diff_pct=None,
         volume_confidence=result.confidence,
         material_confidence=body.material_confidence,
         status=result.status,

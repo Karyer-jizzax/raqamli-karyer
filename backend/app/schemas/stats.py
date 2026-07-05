@@ -17,7 +17,6 @@ class Overview(BaseModel):
 
 class DistrictGeo(BaseModel):
     id: UUID
-    code: str
     name_uz_latn: str
     name_uz_cyrl: str
     name_ru: str

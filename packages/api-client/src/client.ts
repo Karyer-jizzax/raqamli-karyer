@@ -123,6 +123,8 @@ export const api = {
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: (path: string) => request<void>(path, { method: 'DELETE' }),
 };
 
@@ -147,7 +149,6 @@ export interface TokenResponse {
 export interface District {
   id: string;
   region_id: string;
-  code: string;
   name_uz_latn: string;
   name_uz_cyrl: string;
   name_ru: string;
@@ -200,6 +201,24 @@ export async function getHealth(): Promise<{ status: string }> {
 }
 
 export const getMaterials = () => api.get<Material[]>('/materials');
+export interface MaterialInput {
+  id: string;
+  default_density: number;
+  density_min: number;
+  density_max: number;
+  is_tent?: boolean;
+  name_uz_latn: string;
+  name_uz_cyrl: string;
+  name_ru: string;
+}
+export const createMaterial = (body: MaterialInput) => api.post<Material>('/materials', body);
+export const updateMaterial = (id: string, body: Partial<Omit<MaterialInput, 'id'>>) =>
+  api.patch<Material>(`/materials/${id}`, body);
+export const deleteMaterial = (id: string) => api.del(`/materials/${id}`);
+export const getQuarryMaterials = (quarryId: string) =>
+  api.get<Material[]>(`/quarries/${quarryId}/materials`);
+export const setQuarryMaterials = (quarryId: string, materialIds: string[]) =>
+  api.put<Material[]>(`/quarries/${quarryId}/materials`, { material_ids: materialIds });
 export const getDistricts = (regionId?: string) =>
   api.get<District[]>(`/districts${regionId ? `?region_id=${regionId}` : ''}`);
 export interface EventRecord {
@@ -233,28 +252,38 @@ export interface EventInput {
   material_id: string;
   density: number;
   weight_kg: number;
-  length_m: number;
-  width_m: number;
-  height_m: number;
+  // Legacy/optional — no longer used in the volume calculation (scale-only).
+  length_m?: number;
+  width_m?: number;
+  height_m?: number;
   owner_name: string;
   stir: string;
+  // Which physical post/camera captured this event (falls back to the
+  // quarry's first post/camera server-side if omitted).
+  post_id?: string;
+  camera_id?: string;
 }
 
 export const getEvents = () => api.get<EventRecord[]>('/events');
 export const createEvent = (body: EventInput) => api.post<EventRecord>('/events', body);
 
-// ── video / AI detection ────────────────────────────────────────────────────
+// ── scale (tarozi) ───────────────────────────────────────────────────────────
+export interface ScaleReading {
+  weight_kg: number;
+}
+export const getScaleReading = (plateRegion: string, plateNumber: string) =>
+  api.get<ScaleReading>(
+    `/scale/reading?plate_region=${encodeURIComponent(plateRegion)}&plate_number=${encodeURIComponent(plateNumber)}`,
+  );
+
+// ── video / AI detection (plate + material recognition only — weight comes
+// from the scale, not the camera) ───────────────────────────────────────────
 export interface Detection {
   plate_region: string;
   plate_number: string;
   model: string;
   material_id: string;
   bbox: number[]; // [x, y, w, h] normalized 0..1
-  length_m: number;
-  width_m: number;
-  height_m: number;
-  weight_kg: number;
-  density: number;
   plate_confidence: number;
   type_confidence: number;
 }
@@ -265,12 +294,19 @@ export interface AnalyzeResponse {
   media_url: string | null;
 }
 
-async function postForm<T>(path: string, file: File | null): Promise<T> {
+async function postForm<T>(
+  path: string,
+  file: File | null,
+  fields: Record<string, string | undefined> = {},
+): Promise<T> {
   const token = getToken();
   const headers = new Headers();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   const fd = new FormData();
   if (file) fd.append('file', file);
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) fd.append(key, value);
+  }
   const resp = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: fd });
   if (!resp.ok) throw new ApiError(resp.status, `Request failed: ${resp.status}`);
   return (await resp.json()) as T;
@@ -278,10 +314,14 @@ async function postForm<T>(path: string, file: File | null): Promise<T> {
 
 export const analyzeFrame = (file: File | null) =>
   postForm<AnalyzeResponse>('/video/analyze', file);
-export const ingestFrame = (file: File | null) =>
+export const ingestFrame = (
+  file: File | null,
+  refs: { postId?: string; cameraId?: string } = {},
+) =>
   postForm<{ event: EventRecord; detection: Detection; media_url: string | null }>(
     '/video/ingest',
     file,
+    { post_id: refs.postId, camera_id: refs.cameraId },
   );
 
 // ── stats / geo (department) ────────────────────────────────────────────────
@@ -299,13 +339,10 @@ export interface Overview {
   events: number;
   total_volume: number;
   avg_confidence: number;
-  documents?: number;
-  documents_invoice?: number;
 }
 
 export interface DistrictGeo {
   id: string;
-  code: string;
   name_uz_latn: string;
   name_uz_cyrl: string;
   name_ru: string;
@@ -368,7 +405,6 @@ export interface DynamicsResponse {
 
 export interface Region {
   id: string;
-  code: string;
   name_uz_latn: string;
   name_uz_cyrl: string;
   name_ru: string;
@@ -424,7 +460,6 @@ export const getRegionGeo = (regionId: string) => api.get<RegionGeo>(`/regions/$
 
 // ── region / district CRUD (superadmin) ──────────────────────────────────────
 export interface RegionInput {
-  code: string;
   name_uz_latn: string;
   name_uz_cyrl: string;
   name_ru: string;
@@ -436,7 +471,6 @@ export const deleteRegion = (id: string) => api.del(`/regions/${id}`);
 
 export interface DistrictInput {
   region_id: string;
-  code: string;
   name_uz_latn: string;
   name_uz_cyrl: string;
   name_ru: string;
@@ -462,6 +496,53 @@ export const getM1 = (params: Record<string, string> = {}) => {
   const q = new URLSearchParams(params).toString();
   return api.get<M1Response>(`/stats/m1${q ? `?${q}` : ''}`);
 };
+
+// ── posts / cameras (superadmin — physical camera topology per quarry) ──────
+// Two fixed posts per quarry: the entrance gate (in/out control) and the
+// weighbridge post at the factory. Each post's pole carries two cameras:
+// `plate` (ANPR) and `record` (evidentiary video — does not measure volume).
+export interface Post {
+  id: string;
+  quarry_id: string;
+  code: string;
+  name: string;
+}
+export interface PostInput {
+  code: string;
+  name: string;
+}
+export type CameraKind = 'plate' | 'record';
+export interface Camera {
+  id: string;
+  post_id: string;
+  code: string;
+  name: string;
+  kind: CameraKind;
+  stream_url: string | null;
+  is_active: boolean;
+}
+export interface CameraInput {
+  code: string;
+  name: string;
+  kind?: CameraKind;
+  stream_url?: string | null;
+}
+export const getQuarryPosts = (quarryId: string) =>
+  api.get<Post[]>(`/quarries/${quarryId}/posts`);
+export const createPost = (quarryId: string, body: PostInput) =>
+  api.post<Post>(`/quarries/${quarryId}/posts`, body);
+export const updatePost = (id: string, body: Partial<PostInput>) =>
+  api.patch<Post>(`/posts/${id}`, body);
+export const deletePost = (id: string) => api.del(`/posts/${id}`);
+
+export const getPostCameras = (postId: string) => api.get<Camera[]>(`/posts/${postId}/cameras`);
+export const createCamera = (postId: string, body: CameraInput) =>
+  api.post<Camera>(`/posts/${postId}/cameras`, body);
+export const updateCamera = (
+  id: string,
+  body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active'>>,
+) => api.patch<Camera>(`/cameras/${id}`, body);
+export const deleteCamera = (id: string) => api.del(`/cameras/${id}`);
 
 export const getQuarries = () => api.get<Quarry[]>('/quarries');
 export const createQuarry = (body: {

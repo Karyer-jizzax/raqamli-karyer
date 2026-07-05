@@ -3,15 +3,25 @@
 import uuid
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import Boolean, Column, ForeignKey, String, Table, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
 
 # status: active | suspended
 QUARRY_STATUSES = ("active", "suspended")
-# camera kind: plate | volume
-CAMERA_KINDS = ("plate", "volume")
+# camera kind: plate (ANPR) | record (evidentiary video, no detection)
+CAMERA_KINDS = ("plate", "record")
+
+# Which materials (products) a quarry produces/handles — plain many-to-many.
+quarry_materials = Table(
+    "quarry_materials",
+    Base.metadata,
+    Column("quarry_id", Uuid, ForeignKey("quarries.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "material_id", String(32), ForeignKey("materials.id", ondelete="CASCADE"), primary_key=True
+    ),
+)
 
 
 class Quarry(Base, UUIDMixin, TimestampMixin):

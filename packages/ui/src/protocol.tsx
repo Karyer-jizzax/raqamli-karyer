@@ -14,19 +14,6 @@ const STATUS_COLOR: Record<string, string> = {
   inspect: 'var(--red)',
 };
 
-function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const w = max > 0 ? Math.round((value / max) * 100) : 0;
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 70px', gap: 8, alignItems: 'center' }}>
-      <span style={{ fontSize: 12, color: 'var(--muted-ink)' }}>{label}</span>
-      <div style={{ background: 'var(--soft)', borderRadius: 6, height: 16 }}>
-        <div style={{ width: `${w}%`, background: color, height: '100%', borderRadius: 6 }} />
-      </div>
-      <b style={{ fontFamily: 'var(--mono)', fontSize: 12, textAlign: 'right' }}>{value} m³</b>
-    </div>
-  );
-}
-
 /** Full-screen overlay that generates (idempotent) + shows a protocol for an event. */
 export function ProtocolViewer({ eventId, onClose }: { eventId: string; onClose: () => void }) {
   const [doc, setDoc] = useState<Doc | null>(null);
@@ -68,9 +55,6 @@ export function ProtocolViewer({ eventId, onClose }: { eventId: string; onClose:
 
 export function ProtocolDocument({ doc }: { doc: Doc }) {
   const { protocol: p, event: e } = doc;
-  const vc = e.volume_camera ?? 0;
-  const vw = e.volume_scale;
-  const max = Math.max(vc, vw, e.volume_final, 1);
   const issued = new Date(p.issued_at).toLocaleString();
 
   return (
@@ -140,20 +124,10 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
         <table>
           <tbody>
             <tr>
-              <th>Kamera hajmi (L×W×H)</th>
-              <td style={{ fontFamily: 'var(--mono)' }}>
-                {e.volume_camera ?? '—'} m³ ({e.length_m}×{e.width_m}×{e.height_m})
-              </td>
-            </tr>
-            <tr>
               <th>Tarozi hajmi (vazn÷zichlik)</th>
               <td style={{ fontFamily: 'var(--mono)' }}>
-                {e.volume_scale} m³ ({e.weight_kg} kg ÷ {e.density})
+                {e.volume_final} m³ ({e.weight_kg} kg ÷ {e.density})
               </td>
-            </tr>
-            <tr>
-              <th>Farq</th>
-              <td style={{ fontFamily: 'var(--mono)' }}>{e.diff_pct ?? '—'}%</td>
             </tr>
             <tr>
               <th>Material</th>
@@ -167,14 +141,6 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
             </tr>
           </tbody>
         </table>
-
-        {/* Comparison chart */}
-        <h3 style={{ fontSize: 13, margin: '16px 0 8px' }}>Hajm taqqoslash</h3>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <Bar label="Kamera (AI)" value={vc} max={max} color="var(--brand2)" />
-          <Bar label="Tarozi" value={vw} max={max} color="var(--teal, #0e6b6b)" />
-          <Bar label="Yakuniy" value={e.volume_final} max={max} color="var(--green)" />
-        </div>
 
         {/* Method + normative */}
         <p style={{ fontSize: 11.5, color: 'var(--muted-ink)', marginTop: 16, lineHeight: 1.5 }}>

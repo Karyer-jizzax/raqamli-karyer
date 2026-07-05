@@ -13,11 +13,6 @@ class DetectionOut(BaseModel):
     model: str
     material_id: str
     bbox: list[float]  # [x, y, w, h] normalized 0..1
-    length_m: float
-    width_m: float
-    height_m: float
-    weight_kg: int
-    density: float
     plate_confidence: float
     type_confidence: float
 

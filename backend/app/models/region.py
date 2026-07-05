@@ -12,7 +12,6 @@ from app.db.base import Base, TimestampMixin, UUIDMixin
 class Region(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "regions"
 
-    code: Mapped[str] = mapped_column(String(16), unique=True)
     name_uz_latn: Mapped[str] = mapped_column(String(64))
     name_uz_cyrl: Mapped[str] = mapped_column(String(64))
     name_ru: Mapped[str] = mapped_column(String(64))
@@ -27,7 +26,6 @@ class District(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "districts"
 
     region_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("regions.id"), index=True)
-    code: Mapped[str] = mapped_column(String(16), unique=True)
     name_uz_latn: Mapped[str] = mapped_column(String(64))
     name_uz_cyrl: Mapped[str] = mapped_column(String(64))
     name_ru: Mapped[str] = mapped_column(String(64))

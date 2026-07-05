@@ -28,24 +28,30 @@ MATERIALS = [
     ("tent", 1.55, 1.40, 1.70, True, "Tent qoplangan", "Тент қопланган", "Под тентом"),
 ]
 
-REGION = ("JIZ", "Jizzax viloyati", "Жиззах вилояти", "Джизакская область")
+REGION = ("Jizzax viloyati", "Жиззах вилояти", "Джизакская область")
 
-# (code, uz-latn, uz-cyrl, ru, is_capital)
+# (uz-latn, uz-cyrl, ru, is_capital)
 DISTRICTS = [
-    ("JIZ-ARN", "Arnasoy", "Арнасой", "Арнасай", False),
-    ("JIZ-BAX", "Baxmal", "Бахмал", "Бахмаль", False),
-    ("JIZ-DOS", "Do'stlik", "Дўстлик", "Дустлик", False),
-    ("JIZ-FOR", "Forish", "Фориш", "Фариш", False),
-    ("JIZ-GAL", "G'allaorol", "Ғаллаорол", "Галляарал", False),
-    ("JIZ-SHR", "Sharof Rashidov", "Шароф Рашидов", "Шараф Рашидов", False),
-    ("JIZ-MIR", "Mirzacho'l", "Мирзачўл", "Мирзачуль", False),
-    ("JIZ-PAX", "Paxtakor", "Пахтакор", "Пахтакор", False),
-    ("JIZ-YAN", "Yangiobod", "Янгиобод", "Янгиабад", False),
-    ("JIZ-ZOM", "Zomin", "Зомин", "Заамин", False),
-    ("JIZ-ZAF", "Zafarobod", "Зафаробод", "Зафарабад", False),
-    ("JIZ-ZAR", "Zarbdor", "Зарбдор", "Зарбдар", False),
-    ("JIZ-CITY", "Jizzax sh.", "Жиззах ш.", "г. Джизак", True),
+    ("Arnasoy", "Арнасой", "Арнасай", False),
+    ("Baxmal", "Бахмал", "Бахмаль", False),
+    ("Do'stlik", "Дўстлик", "Дустлик", False),
+    ("Forish", "Фориш", "Фариш", False),
+    ("G'allaorol", "Ғаллаорол", "Галляарал", False),
+    ("Sharof Rashidov", "Шароф Рашидов", "Шараф Рашидов", False),
+    ("Mirzacho'l", "Мирзачўл", "Мирзачуль", False),
+    ("Paxtakor", "Пахтакор", "Пахтакор", False),
+    ("Yangiobod", "Янгиобод", "Янгиабад", False),
+    ("Zomin", "Зомин", "Заамин", False),
+    ("Zafarobod", "Зафаробод", "Зафарабад", False),
+    ("Zarbdor", "Зарбдор", "Зарбдар", False),
+    ("Jizzax sh.", "Жиззах ш.", "г. Джизак", True),
 ]
+
+
+def _slug(name: str) -> str:
+    """Short stable code derived from a name — used only for quarry codes."""
+    return "".join(ch for ch in name.upper() if ch.isalnum())[:8] or "DIST"
+
 
 # (username, password, full_name, role)
 USERS = [
@@ -70,24 +76,24 @@ async def seed() -> None:
 
         # Region (Jizzax)
         region = (
-            await db.execute(select(Region).where(Region.code == REGION[0]))
+            await db.execute(select(Region).where(Region.name_uz_latn == REGION[0]))
         ).scalar_one_or_none()
         if region is None:
             region = Region(
-                code=REGION[0], name_uz_latn=REGION[1], name_uz_cyrl=REGION[2], name_ru=REGION[3]
+                name_uz_latn=REGION[0], name_uz_cyrl=REGION[1], name_ru=REGION[2]
             )
             db.add(region)
             await db.flush()
 
         # Districts
-        for code, nl, nc, nr, cap in DISTRICTS:
+        for nl, nc, nr, cap in DISTRICTS:
             exists = (
-                await db.execute(select(District).where(District.code == code))
+                await db.execute(select(District).where(District.name_uz_latn == nl))
             ).scalar_one_or_none()
             if exists is None:
                 db.add(
                     District(
-                        region_id=region.id, code=code,
+                        region_id=region.id,
                         name_uz_latn=nl, name_uz_cyrl=nc, name_ru=nr, is_capital=cap,
                     )
                 )
@@ -121,7 +127,7 @@ async def seed() -> None:
                         Quarry(
                             district_id=dist.id,
                             name=f"{dist.name_uz_latn} karyer {n}",
-                            code=f"{dist.code}-Q{n}",
+                            code=f"{_slug(dist.name_uz_latn)}-Q{n}",
                             status="active",
                         )
                     )
@@ -130,7 +136,7 @@ async def seed() -> None:
         # Demo quarry + post + camera in the first district (for the operator).
         first_district = (
             await db.execute(
-                select(District).where(District.code == DISTRICTS[0][0])
+                select(District).where(District.name_uz_latn == DISTRICTS[0][0])
             )
         ).scalar_one()
         demo_quarry = (
@@ -145,11 +151,20 @@ async def seed() -> None:
             )
             db.add(demo_quarry)
             await db.flush()
-            post = Post(quarry_id=demo_quarry.id, code="0613-01", name="Asosiy post")
-            db.add(post)
+            # Two fixed posts per quarry: the entrance gate (in/out control) and
+            # the weighbridge post at the factory. Each post carries one pole
+            # with two cameras — plate (ANPR) + record (evidentiary video).
+            entrance = Post(quarry_id=demo_quarry.id, code="P-KIRISH", name="Kirish nazorati posti")
+            scale_post = Post(quarry_id=demo_quarry.id, code="P-TAROZI", name="Tarozi posti")
+            db.add_all([entrance, scale_post])
             await db.flush()
-            db.add(
-                Camera(post_id=post.id, code="R-1-KA1", name="Kamera 1", kind="plate")
+            db.add_all(
+                [
+                    Camera(post_id=entrance.id, code="P-KIRISH-C1", name="Raqam kamerasi", kind="plate"),
+                    Camera(post_id=entrance.id, code="P-KIRISH-C2", name="Video kamerasi", kind="record"),
+                    Camera(post_id=scale_post.id, code="P-TAROZI-C1", name="Raqam kamerasi", kind="plate"),
+                    Camera(post_id=scale_post.id, code="P-TAROZI-C2", name="Video kamerasi", kind="record"),
+                ]
             )
 
         # Users (department scoped to region, operator to the demo quarry)

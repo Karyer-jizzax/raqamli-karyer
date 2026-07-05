@@ -1,16 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  createCamera,
   createDistrict,
   createEvent,
+  createMaterial,
+  createPost,
   createQuarry,
   createRegion,
   createUser,
+  deleteCamera,
   deleteDistrict,
+  deleteMaterial,
+  deletePost,
   deleteQuarry,
   deleteRegion,
   getUsers,
+  updateCamera,
   updateDistrict,
+  updateMaterial,
+  updatePost,
   updateQuarry,
   updateRegion,
   updateUser,
@@ -21,10 +30,20 @@ import {
   getM1,
   getMaterials,
   getOverview,
+  getPostCameras,
+  getQuarryMaterials,
+  getQuarryPosts,
   getReport,
   getQuarries,
   getRegionGeo,
   getRegions,
+  getScaleReading,
+  setQuarryMaterials,
+  type Camera,
+  type CameraInput,
+  type MaterialInput,
+  type Post,
+  type PostInput,
 } from './client';
 
 export function useHealth() {
@@ -38,6 +57,49 @@ export function useHealth() {
 
 export function useMaterials() {
   return useQuery({ queryKey: ['materials'], queryFn: getMaterials });
+}
+
+export function useCreateMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createMaterial,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['materials'] }),
+  });
+}
+
+export function useUpdateMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Partial<Omit<MaterialInput, 'id'>> }) =>
+      updateMaterial(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['materials'] }),
+  });
+}
+
+export function useDeleteMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteMaterial,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['materials'] }),
+  });
+}
+
+export function useQuarryMaterials(quarryId: string | undefined) {
+  return useQuery({
+    queryKey: ['quarry-materials', quarryId],
+    queryFn: () => getQuarryMaterials(quarryId!),
+    enabled: !!quarryId,
+  });
+}
+
+export function useSetQuarryMaterials() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quarryId, materialIds }: { quarryId: string; materialIds: string[] }) =>
+      setQuarryMaterials(quarryId, materialIds),
+    onSuccess: (_data, { quarryId }) =>
+      qc.invalidateQueries({ queryKey: ['quarry-materials', quarryId] }),
+  });
 }
 
 export function useDistricts(regionId?: string) {
@@ -70,6 +132,78 @@ export function useDeleteQuarry() {
   return useMutation({
     mutationFn: deleteQuarry,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quarries'] }),
+  });
+}
+
+export function useQuarryPosts(quarryId: string | undefined) {
+  return useQuery({
+    queryKey: ['quarry-posts', quarryId],
+    queryFn: () => getQuarryPosts(quarryId!),
+    enabled: !!quarryId,
+  });
+}
+
+export function useCreatePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quarryId, body }: { quarryId: string; body: PostInput }) =>
+      createPost(quarryId, body),
+    onSuccess: (data: Post) => qc.invalidateQueries({ queryKey: ['quarry-posts', data.quarry_id] }),
+  });
+}
+
+export function useUpdatePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Partial<PostInput> }) => updatePost(id, body),
+    onSuccess: (data: Post) => qc.invalidateQueries({ queryKey: ['quarry-posts', data.quarry_id] }),
+  });
+}
+
+export function useDeletePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string; quarryId: string }) => deletePost(id),
+    onSuccess: (_d, { quarryId }) => qc.invalidateQueries({ queryKey: ['quarry-posts', quarryId] }),
+  });
+}
+
+export function usePostCameras(postId: string | undefined) {
+  return useQuery({
+    queryKey: ['post-cameras', postId],
+    queryFn: () => getPostCameras(postId!),
+    enabled: !!postId,
+  });
+}
+
+export function useCreateCamera() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ postId, body }: { postId: string; body: CameraInput }) =>
+      createCamera(postId, body),
+    onSuccess: (data: Camera) => qc.invalidateQueries({ queryKey: ['post-cameras', data.post_id] }),
+  });
+}
+
+export function useUpdateCamera() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active'>>;
+    }) => updateCamera(id, body),
+    onSuccess: (data: Camera) => qc.invalidateQueries({ queryKey: ['post-cameras', data.post_id] }),
+  });
+}
+
+export function useDeleteCamera() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string; postId: string }) => deleteCamera(id),
+    onSuccess: (_d, { postId }) => qc.invalidateQueries({ queryKey: ['post-cameras', postId] }),
   });
 }
 
@@ -112,6 +246,13 @@ export function useCreateEvent() {
   return useMutation({
     mutationFn: createEvent,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['events'] }),
+  });
+}
+
+export function useScaleReading() {
+  return useMutation({
+    mutationFn: ({ plateRegion, plateNumber }: { plateRegion: string; plateNumber: string }) =>
+      getScaleReading(plateRegion, plateNumber),
   });
 }
 

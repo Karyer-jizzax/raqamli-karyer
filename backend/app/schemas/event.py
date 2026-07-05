@@ -15,16 +15,10 @@ class VolumeInputDto(BaseModel):
     material_id: str
     density: float
     weight_kg: float
-    length_m: float
-    width_m: float
-    height_m: float
 
 
 class VolumeResultDto(BaseModel):
-    volume_camera: float | None
-    volume_scale: float
     volume_final: float
-    diff_pct: float | None
     confidence: float
     status: StatusKey
 
@@ -38,13 +32,13 @@ class EventCreate(BaseModel):
     is_loaded: bool = True
     vtype: str = "truck"
     payer_type: PayerType = "legal"
-    # measurement
+    # measurement — weight comes from the weighbridge (tarozi), not the camera
     material_id: str
     density: float
     weight_kg: int
-    length_m: float
-    width_m: float
-    height_m: float
+    length_m: float = 0
+    width_m: float = 0
+    height_m: float = 0
     tent_cover_pct: float = 0
     material_confidence: float = 99.9
     # owner

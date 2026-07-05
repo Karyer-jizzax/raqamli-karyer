@@ -4,6 +4,8 @@ import { Card } from '@karier/ui';
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { DATA_CSS, M1Table } from './DataM1';
+
 function name(d: { name_ru: string; name_uz_cyrl: string; name_uz_latn: string }): string {
   const l = currentLang();
   return l === 'ru' ? d.name_ru : l === 'uz-cyrl' ? d.name_uz_cyrl : d.name_uz_latn;
@@ -27,8 +29,6 @@ function mockQuarry(code: string) {
   const loaded = Math.round(trucks * 0.68);
   const notLoaded = trucks - loaded;
   const unidentified = (h >> 5) % 40;
-  const documents = Math.round(trucks * 0.9);
-  const documentsInvoice = Math.round(documents * 0.72);
   const cameras = 2 + (h % 3);
   const camerasActive = Math.max(1, cameras - ((h >> 7) % 2));
   return {
@@ -38,8 +38,6 @@ function mockQuarry(code: string) {
     loaded,
     notLoaded,
     unidentified,
-    documents,
-    documentsInvoice,
     cameras,
     camerasActive,
     camerasInactive: cameras - camerasActive,
@@ -80,12 +78,6 @@ const IconTruck = (
     <path d="M11 8h4l3 3v2h-7V8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     <circle cx="5" cy="15" r="1.6" stroke="currentColor" strokeWidth="1.3" />
     <circle cx="15" cy="15" r="1.6" stroke="currentColor" strokeWidth="1.3" />
-  </svg>
-);
-const IconDocuments = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M7 7h6M7 11h6M7 15h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 const IconCamera = (
@@ -256,7 +248,6 @@ export function QuarryDetail() {
         <StatCard icon={IconVolume} label={t('dash_ore_volume')} value={fn(stat.volume)} unit="m³" />
         <StatCard icon={IconTruck} label={t('dash_trucks_total')} value={fn(stat.trucks)} />
         <StatCard icon={IconEvents} label={t('dash_events')} value={fn(stat.events)} />
-        <StatCard icon={IconDocuments} label={t('dash_documents')} value={fn(stat.documents)} />
         <StatCard icon={IconCamera} label={t('dash_cameras')} value={fn(stat.cameras)} />
       </div>
 
@@ -278,7 +269,6 @@ export function QuarryDetail() {
             <span style={{ fontWeight: 700, color: '#15273c', fontSize: 13 }}>{t('q_info')}</span>
           </div>
           <InfoRow label={t('q_name')} value={quarryName} accent />
-          <InfoRow label={t('q_code')} value={<span style={{ fontFamily: 'var(--mono)' }}>{quarry?.code ?? '—'}</span>} />
           <InfoRow
             label={t('q_status')}
             value={
@@ -299,7 +289,6 @@ export function QuarryDetail() {
           />
           <InfoRow label={t('q_district')} value={districtName || '—'} />
           <InfoRow label={t('dash_region')} value={regionName || '—'} />
-          <InfoRow label={t('q_org')} value={quarry?.organization_id ?? t('q_no_org')} />
           <div style={{ marginTop: 10 }}>
             <StatBox label={t('dash_cameras_active')} value={fn(stat.camerasActive)} />
           </div>
@@ -370,6 +359,13 @@ export function QuarryDetail() {
             })}
           </div>
         </Card>
+      </div>
+
+      {/* Per-quarry data table (same M1 view as the Data page, scoped here) */}
+      <div>
+        <h3 style={{ margin: '0 0 10px', fontSize: 15, color: '#15273c' }}>{t('nav_data')}</h3>
+        <style>{DATA_CSS}</style>
+        <M1Table quarryId={quarryId} />
       </div>
     </div>
   );

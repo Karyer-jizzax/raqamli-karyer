@@ -4,19 +4,24 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import CurrentUser, get_current_user, require_role
 from app.db.session import get_db
-from app.models.quarry import Camera, Post, Quarry
+from app.models.material import Material
+from app.models.quarry import Camera, Post, Quarry, quarry_materials
+from app.schemas.material import MaterialOut
 from app.schemas.quarry import (
     CameraCreate,
     CameraOut,
+    CameraUpdate,
     PostCreate,
     PostOut,
+    PostUpdate,
     QuarryCreate,
+    QuarryMaterialsUpdate,
     QuarryOut,
     QuarryUpdate,
 )
@@ -32,6 +37,20 @@ async def _get_quarry(db: AsyncSession, quarry_id: UUID) -> Quarry:
     if quarry is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Karyer topilmadi")
     return quarry
+
+
+async def _get_post(db: AsyncSession, post_id: UUID) -> Post:
+    post = await db.get(Post, post_id)
+    if post is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Post topilmadi")
+    return post
+
+
+async def _get_camera(db: AsyncSession, camera_id: UUID) -> Camera:
+    camera = await db.get(Camera, camera_id)
+    if camera is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kamera topilmadi")
+    return camera
 
 
 @router.get("/quarries", response_model=list[QuarryOut])
@@ -102,6 +121,23 @@ async def create_post(quarry_id: UUID, body: PostCreate, db: DbDep, _a: AdminDep
     return post
 
 
+@router.patch("/posts/{post_id}", response_model=PostOut)
+async def update_post(post_id: UUID, body: PostUpdate, db: DbDep, _a: AdminDep) -> Post:
+    post = await _get_post(db, post_id)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(post, field, value)
+    await db.commit()
+    await db.refresh(post)
+    return post
+
+
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_post(post_id: UUID, db: DbDep, _a: AdminDep) -> None:
+    post = await _get_post(db, post_id)
+    await db.delete(post)
+    await db.commit()
+
+
 # ── cameras ────────────────────────────────────────────────────────────────
 @router.get("/posts/{post_id}/cameras", response_model=list[CameraOut])
 async def list_cameras(post_id: UUID, _user: CurrentUser, db: DbDep) -> list[Camera]:
@@ -121,3 +157,60 @@ async def create_camera(post_id: UUID, body: CameraCreate, db: DbDep, _a: AdminD
     await db.commit()
     await db.refresh(camera)
     return camera
+
+
+@router.patch("/cameras/{camera_id}", response_model=CameraOut)
+async def update_camera(camera_id: UUID, body: CameraUpdate, db: DbDep, _a: AdminDep) -> Camera:
+    camera = await _get_camera(db, camera_id)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(camera, field, value)
+    await db.commit()
+    await db.refresh(camera)
+    return camera
+
+
+@router.delete("/cameras/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_camera(camera_id: UUID, db: DbDep, _a: AdminDep) -> None:
+    camera = await _get_camera(db, camera_id)
+    await db.delete(camera)
+    await db.commit()
+
+
+# ── materials (products a quarry produces) ─────────────────────────────────
+@router.get("/quarries/{quarry_id}/materials", response_model=list[MaterialOut])
+async def list_quarry_materials(quarry_id: UUID, _user: CurrentUser, db: DbDep) -> list[Material]:
+    await _get_quarry(db, quarry_id)
+    result = await db.execute(
+        select(Material)
+        .join(quarry_materials, quarry_materials.c.material_id == Material.id)
+        .where(quarry_materials.c.quarry_id == quarry_id)
+        .order_by(Material.default_density)
+    )
+    return list(result.scalars().all())
+
+
+@router.put("/quarries/{quarry_id}/materials", response_model=list[MaterialOut])
+async def set_quarry_materials(
+    quarry_id: UUID, body: QuarryMaterialsUpdate, db: DbDep, _a: AdminDep
+) -> list[Material]:
+    await _get_quarry(db, quarry_id)
+    await db.execute(delete(quarry_materials).where(quarry_materials.c.quarry_id == quarry_id))
+    if body.material_ids:
+        try:
+            await db.execute(
+                insert(quarry_materials),
+                [{"quarry_id": quarry_id, "material_id": mid} for mid in set(body.material_ids)],
+            )
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Noto'g'ri mahsulot ID") from exc
+    else:
+        await db.commit()
+    result = await db.execute(
+        select(Material)
+        .join(quarry_materials, quarry_materials.c.material_id == Material.id)
+        .where(quarry_materials.c.quarry_id == quarry_id)
+        .order_by(Material.default_density)
+    )
+    return list(result.scalars().all())

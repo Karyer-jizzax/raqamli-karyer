@@ -1,4 +1,4 @@
-import { type M1Row, type Material, useM1, useMaterials, useReport } from '@karier/api-client';
+import { type M1Row, type Material, useM1, useMaterials } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card } from '@karier/ui';
 import { useMemo, useState } from 'react';
@@ -9,7 +9,7 @@ import poster1 from '../assets/video/poster1.jpg';
 
 // Table chrome that can't be expressed inline (sticky-ish header, hover, group
 // tints, control styling). Injected once.
-const DATA_CSS = `
+export const DATA_CSS = `
 .m1-table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
 .m1-table th,.m1-table td{border:1px solid var(--line);padding:7px 9px}
 .m1-table thead th{background:#f4f7fb;color:#2a3f57;font-weight:700;font-size:11.5px;text-align:center}
@@ -32,11 +32,13 @@ const DATA_CSS = `
 .m1-mcard{background:#fff;border-radius:14px;overflow:hidden;max-width:640px;width:100%;box-shadow:0 24px 60px rgba(8,25,50,.4)}
 .m1-mhead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700}
 .m1-mx{border:none;background:#f0f3f8;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px}
+.m1-plate-btn{border:none;background:none;padding:0;cursor:pointer}
+.m1-plate-btn:hover .m1-plate{box-shadow:0 0 0 2px rgba(30,95,168,.35)}
+.m1-hist-card{max-width:820px}
 `;
 
 const STATUSES = ['confirm', 'flagged', 'inspect'] as const;
 const DIRECTIONS = ['exit', 'enter'] as const;
-const PAYERS = ['legal', 'indiv', 'yatt'] as const;
 const LOADS = ['yes', 'no'] as const;
 
 type Lang = ReturnType<typeof currentLang>;
@@ -86,120 +88,20 @@ function Plate({ row }: { row: M1Row }) {
   );
 }
 
-const REPORTS = [1, 2, 3, 4, 5] as const;
-
 export function DataM1() {
-  const { t } = useTranslation();
-  const [tab, setTab] = useState<number>(1);
-
   return (
     <div style={{ padding: 24, display: 'grid', gap: 14 }}>
       <style>{DATA_CSS}</style>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        {REPORTS.map((n) => (
-          <button
-            key={n}
-            onClick={() => setTab(n)}
-            title={t(`rep_m${n}`)}
-            style={{
-              padding: '8px 15px',
-              borderRadius: 9,
-              border: `1px solid ${tab === n ? 'var(--brand)' : 'var(--line)'}`,
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: 'inherit',
-              background: tab === n ? 'var(--brand)' : '#fff',
-              color: tab === n ? '#fff' : 'var(--muted-ink)',
-            }}
-          >
-            М-{n}
-          </button>
-        ))}
-        <span style={{ color: 'var(--muted-ink)', fontSize: 13, marginLeft: 6 }}>{t(`rep_m${tab}`)}</span>
-      </div>
-
-      {tab === 1 ? <M1Table /> : <ReportView n={tab} />}
+      <M1Table />
     </div>
   );
 }
 
-// M2-M5: aggregate breakdown of events by a single dimension.
-function ReportView({ n }: { n: number }) {
+export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const { data: materials } = useMaterials();
-  const { data, isLoading } = useReport(n);
-
-  const matById = useMemo(() => {
-    const m = new Map<string, Material>();
-    (materials ?? []).forEach((x) => m.set(x.id, x));
-    return m;
-  }, [materials]);
-
-  const labelFor = (dimension: string, key: string): string => {
-    if (!key || key === '—' || key === 'None') return '—';
-    if (dimension === 'material') return materialName(matById.get(key), lang);
-    if (dimension === 'payer_type')
-      return (['legal', 'indiv', 'yatt'] as string[]).includes(key) ? t(`payer_${key}`) : key;
-    if (dimension === 'status')
-      return (['confirm', 'flagged', 'inspect'] as string[]).includes(key)
-        ? t(`status_${key}`)
-        : key;
-    return key; // district name
-  };
-
-  const rows = data?.rows ?? [];
-  const totalCount = rows.reduce((s, r) => s + r.count, 0);
-  const totalVol = rows.reduce((s, r) => s + r.volume, 0);
-  const f2 = (x: number) => formatDecimal(x, lang);
-
-  return (
-    <Card>
-      <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#15273c' }}>{t(`rep_m${n}`)}</h3>
-      {isLoading ? (
-        <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
-      ) : rows.length === 0 ? (
-        <p style={{ color: 'var(--muted-ink)' }}>{t('empty_table')}</p>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="m1-table" style={{ maxWidth: 560 }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left' }}>{t('rep_dim')}</th>
-                <th>{t('rep_count')}</th>
-                <th>{t('rep_vol')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={`${r.key}-${i}`}>
-                  <td>{labelFor(data?.dimension ?? '', r.key)}</td>
-                  <td className="num">{r.count}</td>
-                  <td className="num">{f2(r.volume)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>{t('jami')}</td>
-                <td className="num">{totalCount}</td>
-                <td className="num">{f2(totalVol)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function M1Table() {
-  const { t } = useTranslation();
-  const lang = currentLang();
-  const { data: materials } = useMaterials();
-  const { data, isLoading } = useM1({ limit: '500' });
+  const { data, isLoading } = useM1(quarryId ? { limit: '500', quarry_id: quarryId } : { limit: '500' });
 
   const [f, setF] = useState<Record<string, string>>({});
   const set = (k: string) => (v: string) =>
@@ -211,6 +113,7 @@ function M1Table() {
     });
 
   const [media, setMedia] = useState<{ row: M1Row; mode: 'photo' | 'video' } | null>(null);
+  const [history, setHistory] = useState<{ plate_region: string; plate_number: string } | null>(null);
 
   const matById = useMemo(() => {
     const m = new Map<string, Material>();
@@ -242,7 +145,6 @@ function M1Table() {
     if (f.vtype && r.vtype !== f.vtype) return false;
     if (f.status && r.status !== f.status) return false;
     if (f.load && (f.load === 'yes') !== r.is_loaded) return false;
-    if (f.payer_type && r.payer_type !== f.payer_type) return false;
     if (f.material_id && r.material_id !== f.material_id) return false;
     if (f.plate) {
       const hay = `${r.plate_region} ${r.plate_number}`.toUpperCase();
@@ -250,6 +152,13 @@ function M1Table() {
     }
     return true;
   });
+
+  const historyRows = useMemo(() => {
+    if (!history) return [];
+    return rows
+      .filter((r) => r.plate_region === history.plate_region && r.plate_number === history.plate_number)
+      .sort((a, b) => (a.occurred_at < b.occurred_at ? 1 : -1));
+  }, [rows, history]);
 
   const totalVol = filtered.reduce((s, r) => s + (r.volume_final || 0), 0);
   const f2 = (n: number) => formatDecimal(n, lang);
@@ -262,13 +171,16 @@ function M1Table() {
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
-      {/* Title + scope */}
-      <div>
-        <h1 style={{ fontSize: 17, margin: '0 0 4px', color: '#15273c' }}>{t('m1_title')}</h1>
-        <div style={{ fontSize: 12.5, color: 'var(--muted-ink)' }}>
-          {t('region')} / <b style={{ color: '#2a3f57' }}>{t('district')}</b>
+      {/* Title + scope (skipped when embedded on the quarry detail page — that
+          page already has its own title/breadcrumb) */}
+      {!quarryId && (
+        <div>
+          <h1 style={{ fontSize: 17, margin: '0 0 4px', color: '#15273c' }}>{t('m1_title')}</h1>
+          <div style={{ fontSize: 12.5, color: 'var(--muted-ink)' }}>
+            {t('region')} / <b style={{ color: '#2a3f57' }}>{t('district')}</b>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Period (display-only) + updated stamp */}
       <Card>
@@ -317,8 +229,6 @@ function M1Table() {
             opts={STATUSES.map((s) => [s, t(`status_${s}`)])} />
           <Sel label={t('filt_load')} value={f.load} onChange={set('load')} t={t}
             opts={LOADS.map((l) => [l, t(`load_${l === 'yes' ? 'yes' : 'no'}`)])} />
-          <Sel label={t('filt_payer')} value={f.payer_type} onChange={set('payer_type')} t={t}
-            opts={PAYERS.map((p) => [p, t(`payer_${p}`)])} />
           <Sel label={t('flt_material')} value={f.material_id} onChange={set('material_id')} t={t}
             opts={(materials ?? []).map((m) => [m.id, materialName(m, lang)])} />
           <label style={lblStyle}>
@@ -398,7 +308,16 @@ function M1Table() {
                           <td className="ctr">{i + 1}</td>
                           <td className="ctr">{r.post_code ?? '—'}</td>
                           <td className="ctr">{r.camera_label ?? '—'}</td>
-                          <td className="ctr"><Plate row={r} /></td>
+                          <td className="ctr">
+                            <button
+                              type="button"
+                              className="m1-plate-btn"
+                              title={t('veh_history_hint')}
+                              onClick={() => setHistory({ plate_region: r.plate_region, plate_number: r.plate_number })}
+                            >
+                              <Plate row={r} />
+                            </button>
+                          </td>
                           <td className="ctr">{vtypeLabel(r.vtype)}</td>
                           <td className="ctr">
                             <span style={{ color: r.direction === 'exit' ? '#15835a' : '#9a6a00', fontWeight: 600 }}>
@@ -459,6 +378,81 @@ function M1Table() {
           </>
         )}
       </Card>
+
+      {history && (
+        <div className="m1-mwrap" onClick={() => setHistory(null)}>
+          <div className="m1-mcard m1-hist-card" onClick={(e) => e.stopPropagation()}>
+            <div className="m1-mhead">
+              <span>
+                {t('veh_history_title')} ·{' '}
+                <span style={{ fontFamily: 'var(--mono)' }}>
+                  {history.plate_region} {history.plate_number}
+                </span>
+              </span>
+              <button className="m1-mx" onClick={() => setHistory(null)}>
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: 14, maxHeight: '70vh', overflow: 'auto' }}>
+              {historyRows.length === 0 ? (
+                <p style={{ color: 'var(--muted-ink)', margin: 0 }}>{t('veh_history_empty')}</p>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="m1-table">
+                    <thead>
+                      <tr>
+                        <th>{t('th_time')}</th>
+                        <th>{t('th_post')}</th>
+                        <th>{t('th_camera')}</th>
+                        <th>{t('th_dir')}</th>
+                        <th>{t('th_load')}</th>
+                        <th>{t('th_m3')}</th>
+                        <th>{t('th_ton')}</th>
+                        <th>{t('grp_mat')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyRows.map((r) => {
+                        const dt = fmtDateTime(r.occurred_at);
+                        const loaded = r.volume_final > 0;
+                        return (
+                          <tr key={r.id}>
+                            <td className="ctr">
+                              {dt.date}
+                              <br />
+                              <span style={{ color: 'var(--muted-ink)' }}>{dt.time}</span>
+                            </td>
+                            <td className="ctr">{r.post_code ?? '—'}</td>
+                            <td className="ctr">{r.camera_label ?? '—'}</td>
+                            <td className="ctr">
+                              <span style={{ color: r.direction === 'exit' ? '#15835a' : '#9a6a00', fontWeight: 600 }}>
+                                {t(`dir_${r.direction}`)}
+                              </span>
+                            </td>
+                            <td className="ctr">
+                              {r.is_loaded ? (
+                                <span style={{ color: '#15835a', fontWeight: 600 }}>{t('load_yes')}</span>
+                              ) : (
+                                <span style={{ color: 'var(--muted-ink)' }}>{t('load_no')}</span>
+                              )}
+                            </td>
+                            <td className="num">{loaded ? f1(r.volume_final) : '-'}</td>
+                            <td className="num">{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
+                            <td>{r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ marginTop: 10, fontSize: 13, color: 'var(--muted-ink)' }}>
+                {t('veh_history_total')}: <b style={{ color: '#15273c' }}>{historyRows.length}</b>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {media && (
         <div className="m1-mwrap" onClick={() => setMedia(null)}>

@@ -57,7 +57,7 @@ async def create_region(body: RegionCreate, db: DbDep, _a: AdminDep) -> Region:
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Hudud kodi band") from exc
+        raise HTTPException(status.HTTP_409_CONFLICT, "Hududni saqlab bo'lmadi") from exc
     await db.refresh(region)
     return region
 
@@ -71,7 +71,7 @@ async def update_region(region_id: UUID, body: RegionUpdate, db: DbDep, _a: Admi
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Hudud kodi band") from exc
+        raise HTTPException(status.HTTP_409_CONFLICT, "Hududni saqlab bo'lmadi") from exc
     await db.refresh(region)
     return region
 
@@ -112,7 +112,7 @@ async def create_district(body: DistrictCreate, db: DbDep, _a: AdminDep) -> Dist
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Tuman kodi band") from exc
+        raise HTTPException(status.HTTP_409_CONFLICT, "Tumanni saqlab bo'lmadi") from exc
     await db.refresh(district)
     return district
 
@@ -131,7 +131,7 @@ async def update_district(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Tuman kodi band") from exc
+        raise HTTPException(status.HTTP_409_CONFLICT, "Tumanni saqlab bo'lmadi") from exc
     await db.refresh(district)
     return district
 

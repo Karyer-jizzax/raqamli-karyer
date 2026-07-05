@@ -6,36 +6,71 @@ import {
   useCreateEvent,
   useEvents,
   useMaterials,
+  usePostCameras,
+  useQuarryPosts,
+  useScaleReading,
 } from '@karier/api-client';
 import { computeVolume } from '@karier/calc';
 import { currentLang, useTranslation } from '@karier/i18n';
-import { Button, Card, LangSwitcher, ProfileMenu, ProtocolViewer, RequireAuth, StatusPill } from '@karier/ui';
+import {
+  Button,
+  Card,
+  LangSwitcher,
+  ProfileMenu,
+  ProtocolViewer,
+  RequireAuth,
+  StatusPill,
+  useAuth,
+} from '@karier/ui';
 import type { StatusKey } from '@karier/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useMemo, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 const num = (s: string) => Number(s) || 0;
 
 function RegisterForm() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { data: materials } = useMaterials();
+  const { data: posts } = useQuarryPosts(user?.quarry_id ?? undefined);
   const create = useCreateEvent();
+  const scaleReading = useScaleReading();
+
+  // Which physical post/camera this operator is capturing from — attributed
+  // on both the manual save and the AI autosave, instead of the server's
+  // "first post" fallback.
+  const [postId, setPostId] = useState('');
+  useEffect(() => {
+    if (posts?.length && !posts.some((p) => p.id === postId)) setPostId(posts[0]!.id);
+  }, [posts, postId]);
+  const { data: cameras } = usePostCameras(postId || undefined);
+  const camera = cameras?.find((c) => c.kind === 'plate' && c.is_active) ?? cameras?.[0];
 
   const [f, setF] = useState({
     plate_region: '80',
     plate_number: 'R 548 SA',
     model: 'HOWO SINOTRUK',
     material_id: 'qumshagal',
-    weight_kg: '87400',
+    weight_kg: '',
     density: '1.55',
-    length_m: '5.64',
-    width_m: '2.5',
-    height_m: '4.0',
     owner_name: '',
     stir: '',
   });
   const [err, setErr] = useState('');
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  async function onFetchScale() {
+    setErr('');
+    try {
+      const reading = await scaleReading.mutateAsync({
+        plateRegion: f.plate_region,
+        plateNumber: f.plate_number,
+      });
+      set('weight_kg')(String(reading.weight_kg));
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : 'Tarozi xatosi');
+    }
+  }
 
   // ── AI video stage ────────────────────────────────────────────────────────
   const qc = useQueryClient();
@@ -67,11 +102,6 @@ function RegisterForm() {
         plate_number: d.plate_number,
         model: d.model,
         material_id: d.material_id,
-        weight_kg: String(d.weight_kg),
-        density: String(d.density),
-        length_m: String(d.length_m),
-        width_m: String(d.width_m),
-        height_m: String(d.height_m),
       }));
     } catch {
       setErr('AI tahlil xatosi');
@@ -84,7 +114,7 @@ function RegisterForm() {
     setBusy(true);
     setErr('');
     try {
-      await ingestFrame(file);
+      await ingestFrame(file, { postId: postId || undefined, cameraId: camera?.id });
       await qc.invalidateQueries({ queryKey: ['events'] });
     } catch {
       setErr('Ingest xatosi');
@@ -100,9 +130,6 @@ function RegisterForm() {
         materialId: f.material_id,
         density: num(f.density),
         weightKg: num(f.weight_kg),
-        lengthM: num(f.length_m),
-        widthM: num(f.width_m),
-        heightM: num(f.height_m),
       }),
     [f],
   );
@@ -119,11 +146,10 @@ function RegisterForm() {
       material_id: f.material_id,
       density: num(f.density),
       weight_kg: num(f.weight_kg),
-      length_m: num(f.length_m),
-      width_m: num(f.width_m),
-      height_m: num(f.height_m),
       owner_name: f.owner_name,
       stir: f.stir,
+      post_id: postId || undefined,
+      camera_id: camera?.id,
     };
     try {
       await create.mutateAsync(body);
@@ -135,6 +161,24 @@ function RegisterForm() {
   return (
     <Card>
       <h3 style={{ margin: '0 0 12px' }}>{t('nav_video')}</h3>
+
+      {posts && posts.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'end', gap: 10, marginBottom: 10 }}>
+          <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted-ink)' }}>
+            {t('vid_stat_post')}
+            <select value={postId} onChange={(e) => setPostId(e.target.value)} style={inp}>
+              {posts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span style={{ fontSize: 12, color: 'var(--muted-ink)' }}>
+            {t('vid_stat_cam')}: {camera ? camera.name : t('camera_empty')}
+          </span>
+        </div>
+      )}
 
       {/* AI stage: image + bbox overlay */}
       <div
@@ -230,14 +274,17 @@ function RegisterForm() {
             })}
           </select>
         </label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8, alignItems: 'end' }}>
           <F label={t('ev_weight')} value={f.weight_kg} onChange={set('weight_kg')} mono />
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onFetchScale}
+            disabled={scaleReading.isPending}
+          >
+            {scaleReading.isPending ? t('ev_scale_reading') : t('ev_fetch_scale')}
+          </Button>
           <F label={t('ev_density')} value={f.density} onChange={set('density')} mono />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <F label="L (m)" value={f.length_m} onChange={set('length_m')} mono />
-          <F label="W (m)" value={f.width_m} onChange={set('width_m')} mono />
-          <F label="H (m)" value={f.height_m} onChange={set('height_m')} mono />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <F label={t('ev_owner')} value={f.owner_name} onChange={set('owner_name')} />
@@ -247,8 +294,6 @@ function RegisterForm() {
         <div style={{ marginTop: 6, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
           <div style={{ fontSize: 11, color: 'var(--muted-ink)', marginBottom: 6 }}>{t('ev_preview')}</div>
           <div style={{ display: 'grid', gap: 5 }}>
-            <Row k="Vc" v={`${preview.volumeCamera ?? '—'} m³`} />
-            <Row k="Vw" v={`${preview.volumeScale} m³`} />
             <Row k={t('ev_vol_final')} v={`${preview.volumeFinal} m³`} />
             <Row k={t('ev_conf')} v={`${preview.confidence}%`} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

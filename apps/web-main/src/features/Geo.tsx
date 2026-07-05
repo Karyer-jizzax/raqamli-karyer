@@ -33,9 +33,9 @@ import { type FormEvent, useMemo, useState } from 'react';
 
 import { districtName, Eyebrow, Field, ModalForm } from '../shared';
 
-type NameForm = { code: string; name_uz_latn: string; name_uz_cyrl: string; name_ru: string };
+type NameForm = { name_uz_latn: string; name_uz_cyrl: string; name_ru: string };
 
-const emptyNames: NameForm = { code: '', name_uz_latn: '', name_uz_cyrl: '', name_ru: '' };
+const emptyNames: NameForm = { name_uz_latn: '', name_uz_cyrl: '', name_ru: '' };
 
 function NameFields({ f, set }: { f: NameForm; set: (k: keyof NameForm) => (v: string) => void }) {
   const { t } = useTranslation();
@@ -44,7 +44,6 @@ function NameFields({ f, set }: { f: NameForm; set: (k: keyof NameForm) => (v: s
       <Field label={t('geo_name_latn')} value={f.name_uz_latn} onChange={set('name_uz_latn')} />
       <Field label={t('geo_name_cyrl')} value={f.name_uz_cyrl} onChange={set('name_uz_cyrl')} />
       <Field label={t('geo_name_ru')} value={f.name_ru} onChange={set('name_ru')} />
-      <Field label={t('geo_code')} value={f.code} onChange={set('code')} autoComplete="off" />
     </>
   );
 }
@@ -57,7 +56,6 @@ function RegionModal({ region, onClose }: { region: Region | null; onClose: () =
   const [f, setF] = useState<NameForm>(
     region
       ? {
-          code: region.code,
           name_uz_latn: region.name_uz_latn,
           name_uz_cyrl: region.name_uz_cyrl,
           name_ru: region.name_ru,
@@ -110,7 +108,6 @@ function DistrictModal({
   const [f, setF] = useState<NameForm>(
     district
       ? {
-          code: district.code,
           name_uz_latn: district.name_uz_latn,
           name_uz_cyrl: district.name_uz_cyrl,
           name_ru: district.name_ru,
@@ -181,9 +178,6 @@ function RegionCard({ region, districts }: { region: Region; districts: District
           <div className="grid gap-0.5">
             <div className="flex items-center gap-2">
               <span className="text-base font-semibold tracking-tight">{districtName(region)}</span>
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-                {region.code}
-              </span>
             </div>
             <Eyebrow className="text-muted-foreground">
               {t('geo_districts_n', { n: districts.length })}
@@ -225,9 +219,6 @@ function RegionCard({ region, districts }: { region: Region; districts: District
                     {t('geo_is_capital')}
                   </Badge>
                 )}
-                <span className="rounded bg-card px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-                  {d.code}
-                </span>
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" onClick={() => setEditDistrict(d)}>

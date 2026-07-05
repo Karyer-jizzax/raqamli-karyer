@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 QuarryStatus = Literal["active", "suspended"]
-CameraKind = Literal["plate", "volume"]
+CameraKind = Literal["plate", "record"]
 
 
 class QuarryCreate(BaseModel):
@@ -39,6 +39,10 @@ class PostCreate(BaseModel):
     name: str
 
 
+class PostUpdate(BaseModel):
+    name: str | None = None
+
+
 class PostOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,6 +57,16 @@ class CameraCreate(BaseModel):
     name: str
     kind: CameraKind = "plate"
     stream_url: str | None = None
+
+
+class CameraUpdate(BaseModel):
+    name: str | None = None
+    stream_url: str | None = None
+    is_active: bool | None = None
+
+
+class QuarryMaterialsUpdate(BaseModel):
+    material_ids: list[str]
 
 
 class CameraOut(BaseModel):

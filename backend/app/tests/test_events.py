@@ -9,19 +9,12 @@ from app.tests.conftest import auth_header, login
 @pytest.mark.asyncio
 async def test_volume_preview(client: httpx.AsyncClient, seeded: None) -> None:
     token = await login(client, "operator", "oper123")
-    body = {
-        "material_id": "qumshagal",
-        "density": 1.55,
-        "weight_kg": 87400,
-        "length_m": 5.64,
-        "width_m": 2.5,
-        "height_m": 4.0,
-    }
+    body = {"material_id": "qumshagal", "density": 1.55, "weight_kg": 87400}
     resp = await client.post("/api/v1/volume/preview", json=body, headers=auth_header(token))
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "confirm"
-    assert abs(data["volume_scale"] - 56.39) < 0.1
+    assert abs(data["volume_final"] - 56.39) < 0.1
 
 
 @pytest.mark.asyncio

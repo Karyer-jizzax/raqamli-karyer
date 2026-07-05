@@ -95,12 +95,6 @@ const IconVolume = (
     <rect x="13" y="4" width="5" height="14" rx="1" stroke="currentColor" strokeWidth="1.5" />
   </svg>
 );
-const IconDocuments = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-    <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M7 7h6M7 11h6M7 15h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
 const IconCamera = (
   <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
     <rect x="2" y="6" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -245,14 +239,6 @@ export function Dashboard() {
             value={`${fn(overview?.total_volume)} m³`}
             accent
           />
-
-          <StatRow
-            icon={IconDocuments}
-            label={t('dash_documents')}
-            value={fn(overview?.documents)}
-            accent
-          />
-          <SubRow label={t('dash_documents_invoice')} value={fn(overview?.documents_invoice)} />
 
           <StatRow
             icon={IconCamera}

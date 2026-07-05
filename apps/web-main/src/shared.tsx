@@ -17,6 +17,18 @@ export function districtName(d: { name_uz_latn: string; name_uz_cyrl: string; na
   return l === 'ru' ? d.name_ru : l === 'uz-cyrl' ? d.name_uz_cyrl : d.name_uz_latn;
 }
 
+/** Short unique-ish code derived from a name, for entities that need one client-side. */
+export function slugCode(name: string): string {
+  const base = name
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 10);
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return (base || 'X') + suffix;
+}
+
 /**
  * Uppercase instrument label — the unifying typographic device across the
  * command-console chrome (sidebar sections, panel titles, table headers, stats).

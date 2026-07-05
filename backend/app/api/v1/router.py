@@ -10,6 +10,7 @@ from app.api.v1 import (
     protocols,
     quarries,
     regions,
+    scale,
     stats,
     users,
     video,
@@ -24,5 +25,6 @@ api_router.include_router(quarries.router)
 api_router.include_router(events.router)
 api_router.include_router(protocols.router)
 api_router.include_router(video.router)
+api_router.include_router(scale.router)
 api_router.include_router(stats.router)
 api_router.include_router(users.router)
