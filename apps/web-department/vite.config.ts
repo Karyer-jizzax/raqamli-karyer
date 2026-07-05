@@ -10,6 +10,7 @@ export default defineConfig({
     port: 5374,
     proxy: {
       '/api': { target: apiTarget, changeOrigin: true },
+      '/media': { target: apiTarget, changeOrigin: true },
       '/health': { target: apiTarget, changeOrigin: true },
     },
   },

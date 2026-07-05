@@ -7,14 +7,19 @@ Mirrors the demo record shape. Volume fields are computed authoritatively by
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Uuid, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.models.media import Media
 
 
 class Event(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "events"
+
+    # Idempotency key from the quarry-side local server (API.md /api/weigh).
+    # Nullable: manually created / demo events have no source event_uid.
+    event_uid: Mapped[uuid.UUID | None] = mapped_column(Uuid, unique=True, nullable=True)
 
     quarry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("quarries.id"), index=True)
     post_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("posts.id"), nullable=True)
@@ -31,6 +36,9 @@ class Event(Base, UUIDMixin, TimestampMixin):
     plate_number: Mapped[str] = mapped_column(String(16))
     model: Mapped[str] = mapped_column(String(64), default="")
 
+    # true = main factory weighbridge (plate + weight + video); false = kon
+    # checkpoint (plate + photo only, no weight). See API.md is_main semantics.
+    is_main: Mapped[bool] = mapped_column(Boolean, default=True)
     direction: Mapped[str] = mapped_column(String(8), default="exit")  # exit | enter
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
@@ -59,3 +67,23 @@ class Event(Base, UUIDMixin, TimestampMixin):
     # owner snapshot
     owner_name: Mapped[str] = mapped_column(String(255), default="")
     stir: Mapped[str] = mapped_column(String(20), default="")
+
+    # Captured photos / video for this event (ANPR snapshots + scale clip).
+    # selectin so it loads safely under async without per-access lazy queries.
+    media: Mapped[list[Media]] = relationship(
+        "Media",
+        primaryjoin="Event.id == Media.event_id",
+        order_by="Media.captured_at",
+        lazy="selectin",
+        viewonly=True,
+    )
+
+    @property
+    def image_urls(self) -> list[str]:
+        """Snapshot URLs (ANPR photos / frames) for the UI gallery."""
+        return [m.url for m in self.media if m.kind in ("photo", "frame")]
+
+    @property
+    def video_url(self) -> str | None:
+        """First video clip URL, if any (main scale events only)."""
+        return next((m.url for m in self.media if m.kind == "video"), None)

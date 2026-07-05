@@ -22,9 +22,20 @@ class Settings(BaseSettings):
 
     api_v1_prefix: str = "/api/v1"
 
+    # Quarry local-server ingest (API.md /api/weigh) — comma-separated list of
+    # valid X-API-Key values (one per quarry local server). Change in prod.
+    weigh_api_keys: str = "KARYER-01-SECRET"
+    # Max size (MB) per uploaded part. The local server sends a ~10s H.264 clip
+    # plus jpg snapshots; Starlette's default 1MB/part would reject them.
+    weigh_max_upload_mb: int = 120
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def weigh_api_key_set(self) -> set[str]:
+        return {k.strip() for k in self.weigh_api_keys.split(",") if k.strip()}
 
 
 @lru_cache

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
+from app.api.weigh import router as weigh_router
 from app.core.config import settings
 from app.services.storage import MEDIA_DIR
 
@@ -25,6 +26,10 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+# Quarry local-server ingest — matches API.md exactly (/api/ping, /api/weigh),
+# authenticated by X-API-Key rather than JWT.
+app.include_router(weigh_router, prefix="/api")
 
 # Serve uploaded media (camera frames). Swap for S3/CDN in production.
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)

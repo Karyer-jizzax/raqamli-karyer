@@ -49,10 +49,12 @@ Local server ishga tushganda va vaqti-vaqti bilan chaqiradi.
 
 ### 3.2. `POST /api/weigh` — asosiy hodisa (raqam + vazn + rasm + video)
 
-Bitta mashina hodisasi. **Ikki xil format**dan birini qo'llab-quvvatlash kerak:
+Bitta mashina hodisasi. Local server **default holda Format B (multipart)** yuboradi
+— rasm va video **faylning o'zi** ketadi. Format `config.server.send_files` bilan
+tanlanadi (`true` = multipart, `false` = JSON). Serverда **Format B ni** qo'llang.
 
-#### Format A — `application/json` (fayl yo'lsiz, hozirgi holat)
-Faqat matnli ma'lumot. Rasm/video **yo'llari** yuboriladi (fayllar keyin, B formatda).
+#### Format A — `application/json` (fayl yo'lsiz)
+Faqat matnli ma'lumot. Rasm/video **yo'llari** yuboriladi (faqat `send_files:false` da).
 
 ```
 POST /api/weigh
@@ -74,8 +76,10 @@ Content-Type: application/json
 }
 ```
 
-#### Format B — `multipart/form-data` (rasm + video fayl bilan) ✅ tavsiya
+#### Format B — `multipart/form-data` (rasm + video fayl bilan) ✅ DEFAULT
 Rasm va video faylning **o'zi** yuboriladi. Server fayllarni saqlab, URL qaytaradi.
+Video 10s yozib olinadi — local server hodisani **video tayyor bo'lgach** yuboradi,
+shuning uchun `video` part doim to'liq keladi.
 
 ```
 POST /api/weigh
@@ -192,8 +196,26 @@ Xato javob tanasi (ixtiyoriy):
 
 ---
 
-## 8. Hozirgi holat / kelishuv kerak
+## 8. Hozirgi holat — ikkala tomon tayyor ✅
+
+**Local server (mijoz):**
 - ✅ Payload shakli tayyor (yuqoridagi).
-- ⏳ **Kelishuv:** Format **A (JSON)** yetarlimi yoki darhol **B (multipart, fayl bilan)**
-  kerakmi? Fayl saqlash serverdami yoki S3'dami?
-- ⏳ Server URL, API kalit, port — server tayyor bo'lgach `config.json`ga yoziladi.
+- ✅ **Multipart bilan rasm + video faylni yuboradi** (default, sinovdan o'tgan).
+- ✅ Rasm/video **yuborishdan oldin siqiladi** (rasm ~80% kichrayadi; video ffmpeg bo'lsa H.264).
+- ✅ Video tayyor bo'lgachgina yuboradi; `event_uid` idempotency; retry backoff.
+
+**Server (qabul qiluvchi — amalga oshirildi):**
+- ✅ `GET /api/ping` va `POST /api/weigh` (Format A va B) ishlaydi, sinovdan o'tgan.
+- ✅ `event_uid` UNIQUE — dublikat → mavjud `id` bilan `200` (`duplicate:true`).
+- ✅ `X-API-Key` — `WEIGH_API_KEYS` (.env) dagi kalitlar bilan tekshiriladi.
+- ✅ **Fayllar server diskda** saqlanadi (`backend/media/`), `/media/...` URL bilan servis
+  qilinadi. Prod'da S3/MinIO'ga almashtirish mumkin (bir xil interfeys).
+- ✅ **Maksimal so'rov hajmi:** har part uchun **120 MB** (sozlanadi: `WEIGH_MAX_UPLOAD_MB`).
+  Undan katta bo'lsa `413` qaytadi. (Starlette'ning default 1MB limiti oshirilgan.)
+
+**Kelishilgan mos-kelish qoidalari:**
+- `quarry_id` → bazadagi karyer **`code`** bilan mos bo'lsin (masalan `DEMO-1`).
+- `camera_name` → kamera **`name` yoki `code`** bilan mos kelsa, post/kamera avtomatik bog'lanadi.
+- Material payload'da yo'q — server rasmdan aniqlaydi, vazndan hajmni hisoblaydi.
+
+**Qolgan:** Server URL, API kalit, port — server tayyor bo'lgach `config.json`ga yoziladi.

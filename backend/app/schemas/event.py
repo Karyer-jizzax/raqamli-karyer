@@ -60,6 +60,7 @@ class EventOut(BaseModel):
     plate_number: str
     model: str
     direction: str
+    is_main: bool
     occurred_at: datetime
     is_loaded: bool
     vtype: str
@@ -79,3 +80,6 @@ class EventOut(BaseModel):
     status: str
     owner_name: str
     stir: str
+    # Captured media (populated from the Event.media relationship).
+    image_urls: list[str] = []
+    video_url: str | None = None

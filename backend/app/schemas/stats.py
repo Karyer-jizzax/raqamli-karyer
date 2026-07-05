@@ -43,6 +43,7 @@ class M1Row(BaseModel):
     model: str
     vtype: str
     direction: str
+    is_main: bool
     occurred_at: str
     is_loaded: bool
     material_id: str | None
@@ -55,6 +56,8 @@ class M1Row(BaseModel):
     stir: str
     owner_name: str
     status: str
+    image_urls: list[str] = []
+    video_url: str | None = None
 
 
 class M1Response(BaseModel):

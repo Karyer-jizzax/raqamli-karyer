@@ -1,11 +1,7 @@
-import { type M1Row, type Material, useM1, useMaterials } from '@karier/api-client';
+import { type M1Row, type Material, mediaUrl, useM1, useMaterials } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card } from '@karier/ui';
 import { useMemo, useState } from 'react';
-
-import cam1Mp4 from '../assets/video/cam1.mp4';
-import cam1Webm from '../assets/video/cam1.webm';
-import poster1 from '../assets/video/poster1.jpg';
 
 // Table chrome that can't be expressed inline (sticky-ish header, hover, group
 // tints, control styling). Injected once.
@@ -35,6 +31,11 @@ export const DATA_CSS = `
 .m1-plate-btn{border:none;background:none;padding:0;cursor:pointer}
 .m1-plate-btn:hover .m1-plate{box-shadow:0 0 0 2px rgba(30,95,168,.35)}
 .m1-hist-card{max-width:820px}
+.m1-ic:disabled{opacity:.32;cursor:default}
+.m1-ic:disabled:hover{border-color:var(--line)}
+.m1-gal{display:grid;gap:6px;max-height:70vh;overflow:auto;background:#000}
+.m1-gal img{width:100%;display:block}
+.m1-mempty{margin:0;padding:48px 16px;text-align:center;color:var(--muted-ink);background:#f7f9fc}
 `;
 
 const STATUSES = ['confirm', 'flagged', 'inspect'] as const;
@@ -303,6 +304,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                     filtered.map((r, i) => {
                       const dt = fmtDateTime(r.occurred_at);
                       const loaded = r.volume_final > 0;
+                      const hasPhoto = (r.image_urls?.length ?? 0) > 0;
+                      const hasVideo = Boolean(r.video_url);
                       return (
                         <tr key={r.id}>
                           <td className="ctr">{i + 1}</td>
@@ -330,12 +333,22 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                             <span style={{ color: 'var(--muted-ink)' }}>{dt.time}</span>
                           </td>
                           <td className="ctr">
-                            <button className="m1-ic" onClick={() => setMedia({ row: r, mode: 'photo' })} title={t('th_photo')}>
+                            <button
+                              className="m1-ic"
+                              disabled={!hasPhoto}
+                              onClick={() => setMedia({ row: r, mode: 'photo' })}
+                              title={t('th_photo')}
+                            >
                               <Glyph path={EYE} />
                             </button>
                           </td>
                           <td className="ctr">
-                            <button className="m1-ic" onClick={() => setMedia({ row: r, mode: 'video' })} title={t('th_video')}>
+                            <button
+                              className="m1-ic"
+                              disabled={!hasVideo}
+                              onClick={() => setMedia({ row: r, mode: 'video' })}
+                              title={t('th_video')}
+                            >
                               <Glyph path={PLAY} />
                             </button>
                           </td>
@@ -467,21 +480,30 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
               </button>
             </div>
             {media.mode === 'video' ? (
-              <video
-                key={media.row.id}
-                poster={poster1}
-                controls
-                autoPlay
-                muted
-                loop
-                playsInline
-                style={{ width: '100%', display: 'block', background: '#000' }}
-              >
-                <source src={cam1Mp4} type="video/mp4" />
-                <source src={cam1Webm} type="video/webm" />
-              </video>
+              media.row.video_url ? (
+                <video
+                  key={media.row.id}
+                  controls
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  poster={mediaUrl(media.row.image_urls?.[0])}
+                  style={{ width: '100%', display: 'block', background: '#000' }}
+                >
+                  <source src={mediaUrl(media.row.video_url)} type="video/mp4" />
+                </video>
+              ) : (
+                <p className="m1-mempty">{t('vid_no_image')}</p>
+              )
+            ) : (media.row.image_urls?.length ?? 0) > 0 ? (
+              <div className="m1-gal">
+                {(media.row.image_urls ?? []).map((u, idx) => (
+                  <img key={idx} src={mediaUrl(u)} alt="" />
+                ))}
+              </div>
             ) : (
-              <img src={poster1} alt="" style={{ width: '100%', display: 'block' }} />
+              <p className="m1-mempty">{t('vid_no_image')}</p>
             )}
           </div>
         </div>

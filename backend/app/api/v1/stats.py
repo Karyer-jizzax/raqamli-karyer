@@ -199,6 +199,7 @@ async def m1(
                 model=e.model,
                 vtype=e.vtype,
                 direction=e.direction,
+                is_main=e.is_main,
                 occurred_at=e.occurred_at.isoformat(),
                 is_loaded=e.is_loaded,
                 material_id=e.material_id,
@@ -211,6 +212,8 @@ async def m1(
                 stir=e.stir,
                 owner_name=e.owner_name,
                 status=e.status,
+                image_urls=e.image_urls,
+                video_url=e.video_url,
             )
             for e, post_code, cam_code, cam_name in rows
         ],

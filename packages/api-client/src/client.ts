@@ -4,6 +4,22 @@
 import type { Role } from '@karier/types';
 
 const API_BASE = (import.meta.env?.VITE_API_BASE as string | undefined) ?? '/api/v1';
+
+// Media (photos/video) are served from the backend root at /media/... — not
+// under the /api/v1 prefix. Resolve a stored url against the backend origin so
+// it works whether API_BASE is same-origin ('/api/v1') or absolute.
+const MEDIA_ORIGIN = (() => {
+  try {
+    return API_BASE.startsWith('http') ? new URL(API_BASE).origin : '';
+  } catch {
+    return '';
+  }
+})();
+
+/** Turn a backend media path ('/media/x.jpg') into a browser-loadable URL. */
+export const mediaUrl = (path: string | null | undefined): string =>
+  !path ? '' : /^https?:\/\//.test(path) ? path : `${MEDIA_ORIGIN}${path}`;
+
 const TOKEN_KEY = 'kk_access_token';
 const REFRESH_KEY = 'kk_refresh_token';
 
@@ -228,6 +244,7 @@ export interface EventRecord {
   plate_number: string;
   model: string;
   direction: string;
+  is_main: boolean;
   occurred_at: string;
   payer_type: string;
   material_id: string | null;
@@ -241,6 +258,8 @@ export interface EventRecord {
   status: 'confirm' | 'flagged' | 'inspect';
   owner_name: string;
   stir: string;
+  image_urls: string[];
+  video_url: string | null;
 }
 
 export interface EventInput {
@@ -369,6 +388,7 @@ export interface M1Row {
   model: string;
   vtype: string;
   direction: string;
+  is_main: boolean;
   occurred_at: string;
   is_loaded: boolean;
   material_id: string | null;
@@ -381,6 +401,8 @@ export interface M1Row {
   stir: string;
   owner_name: string;
   status: 'confirm' | 'flagged' | 'inspect';
+  image_urls: string[];
+  video_url: string | null;
 }
 
 export interface M1Response {
