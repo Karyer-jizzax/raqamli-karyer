@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+media/
+.env
+.env.*
+!.env.prod.example
+docker-compose.prod.yml
+uv.lock.bak
