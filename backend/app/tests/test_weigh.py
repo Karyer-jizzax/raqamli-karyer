@@ -102,6 +102,22 @@ async def test_weigh_is_idempotent(client: httpx.AsyncClient, seeded: None) -> N
 
 
 @pytest.mark.asyncio
+async def test_weigh_maps_direction_in_out(client: httpx.AsyncClient, seeded: None) -> None:
+    token = await login(client, "department", "dept123")
+
+    async def dir_of(direction: object) -> str:
+        uid = str(uuid.uuid4())
+        r = await client.post("/api/weigh", headers=KEY, json=_payload(uid, direction=direction))
+        assert r.status_code == 200, r.text
+        rows = (await client.get("/api/v1/stats/m1", headers=auth_header(token))).json()["rows"]
+        return next(row["direction"] for row in rows if row["id"] == r.json()["id"])
+
+    assert await dir_of("in") == "enter"
+    assert await dir_of("out") == "exit"
+    assert await dir_of(None) == "exit"  # unknown → model default
+
+
+@pytest.mark.asyncio
 async def test_weigh_kon_event_without_weight(client: httpx.AsyncClient, seeded: None) -> None:
     uid = str(uuid.uuid4())
     resp = await client.post(

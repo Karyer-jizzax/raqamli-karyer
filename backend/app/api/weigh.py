@@ -62,11 +62,21 @@ class WeighIn(BaseModel):
     camera_name: str
     is_main: bool
     plate: str | None = None
+    direction: str | None = None  # "in" | "out" | null (see API.md)
     weight: float | None = None
     unit: str = "kg"
     event_time: str
     video_path: str | None = None
     image_paths: list[str] = []
+
+
+# The local server reports movement as in/out; our Event uses enter/exit.
+_DIRECTION_MAP = {"in": "enter", "out": "exit"}
+
+
+def _map_direction(raw: str | None) -> str:
+    """in→enter, out→exit; unknown/null falls back to the model default."""
+    return _DIRECTION_MAP.get((raw or "").lower(), "exit")
 
 
 def _parse_event_time(raw: str) -> datetime:
@@ -205,7 +215,7 @@ async def weigh(request: Request, db: DbDep, _key: ApiKeyDep) -> dict[str, objec
         plate_region=plate_region,
         plate_number=plate_number,
         model=model,
-        direction="exit",
+        direction=_map_direction(payload.direction),
         occurred_at=_parse_event_time(payload.event_time),
         is_loaded=True,
         vtype="truck",

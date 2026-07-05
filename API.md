@@ -68,6 +68,7 @@ Content-Type: application/json
   "camera_name": "ZAVOD-KIRISH",
   "is_main": true,
   "plate": "01S748HE",
+  "direction": "in",
   "weight": 31200.0,
   "unit": "kg",
   "event_time": "2026-07-05 14:39:27",
@@ -120,6 +121,7 @@ curl -X POST http://SERVER:5555/api/weigh \
 | `camera_name` | string | ✅ | Kamera nomi — stansiyalarni shu orqali ajratiladi. |
 | `is_main` | bool | ✅ | **`true`** = asosiy zavod (tarozili). **`false`** = kon (faqat raqam). |
 | `plate` | string / null | ⛔ | Davlat raqami (masalan `01S748HE`). Aniqlanmasa `null`. |
+| `direction` | string / null | ⛔ | **`"in"`** = kirish, **`"out"`** = chiqish, `null` = raqam aniqlanmagan. |
 | `weight` | number / null | ⛔ | Vazn (kg). Kon'da (is_main=false) odatda `null`. |
 | `unit` | string | ✅ | Doim `"kg"`. |
 | `event_time` | string | ✅ | UTC+5, `YYYY-MM-DD HH:MM:SS`. |
@@ -129,6 +131,18 @@ curl -X POST http://SERVER:5555/api/weigh \
 ### `is_main` semantikasi
 - **`is_main: true`** — asosiy zavod tarozisi: raqam **+ vazn + video** keladi.
 - **`is_main: false`** — kon nazorat nuqtasi: faqat **raqam (+ rasm)**, vazn/video yo'q.
+
+### `direction` semantikasi (kirish/chiqish)
+Bitta darvoza/tarozidan mashina **ham kiradi, ham chiqadi**. Local server har
+harakat yo'nalishini avtomatik aniqlaydi:
+- Mashina (raqam) shu stansiyada **birinchi marta** ko'rinsa → `"in"` (kirish).
+- Keyingi ko'rinishда → `"out"` (chiqish). Shu tartibda almashinib boradi.
+- Oxirgi harakatdan **N soat** (default 12, sozlanadi) o'tib ketsa — hisob
+  tozalanib, yana `"in"` deb boshlanadi.
+- Raqam aniqlanmagan (`plate: null`) bo'lsa → `direction: null`.
+
+Server har hodisani alohida yozadi — `in`/`out` juftliklari orqali mashinaning
+ichкarida qancha turgani, necha qatnov qilgani hisoblab chiqiladi.
 
 ---
 
@@ -199,7 +213,7 @@ Xato javob tanasi (ixtiyoriy):
 ## 8. Hozirgi holat — ikkala tomon tayyor ✅
 
 **Local server (mijoz):**
-- ✅ Payload shakli tayyor (yuqoridagi).
+- ✅ Payload shakli tayyor (yuqoridagi), `direction` (in/out) avtomatik aniqlanadi.
 - ✅ **Multipart bilan rasm + video faylni yuboradi** (default, sinovdan o'tgan).
 - ✅ Rasm/video **yuborishdan oldin siqiladi** (rasm ~80% kichrayadi; video ffmpeg bo'lsa H.264).
 - ✅ Video tayyor bo'lgachgina yuboradi; `event_uid` idempotency; retry backoff.
@@ -208,6 +222,7 @@ Xato javob tanasi (ixtiyoriy):
 - ✅ `GET /api/ping` va `POST /api/weigh` (Format A va B) ishlaydi, sinovdan o'tgan.
 - ✅ `event_uid` UNIQUE — dublikat → mavjud `id` bilan `200` (`duplicate:true`).
 - ✅ `X-API-Key` — `WEIGH_API_KEYS` (.env) dagi kalitlar bilan tekshiriladi.
+- ✅ `direction`: **`in`→`enter`**, **`out`→`exit`** ga xaritalanadi (`null`→`exit`).
 - ✅ **Fayllar server diskda** saqlanadi (`backend/media/`), `/media/...` URL bilan servis
   qilinadi. Prod'da S3/MinIO'ga almashtirish mumkin (bir xil interfeys).
 - ✅ **Maksimal so'rov hajmi:** har part uchun **120 MB** (sozlanadi: `WEIGH_MAX_UPLOAD_MB`).
