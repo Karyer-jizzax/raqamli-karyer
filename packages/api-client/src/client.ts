@@ -211,7 +211,10 @@ export function changePassword(currentPassword: string, newPassword: string): Pr
 }
 
 export async function getHealth(): Promise<{ status: string }> {
-  const resp = await fetch('/health');
+  // /health lives at the backend root, not under /api/v1. MEDIA_ORIGIN is ''
+  // in dev (vite proxies /health) and the absolute backend origin in production
+  // (VITE_API_BASE is a full URL), so this resolves correctly in both.
+  const resp = await fetch(`${MEDIA_ORIGIN}/health`);
   if (!resp.ok) throw new ApiError(resp.status, 'health failed');
   return (await resp.json()) as { status: string };
 }
