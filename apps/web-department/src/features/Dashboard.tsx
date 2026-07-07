@@ -246,7 +246,7 @@ export function Dashboard() {
             value={fn(overview?.cameras)}
             accent
           />
-          <SubRow label={t('dash_cameras_active')} value={fn(overview?.cameras_active ?? overview?.cameras)} />
+          <SubRow label={t('dash_cameras_active')} value={fn(overview?.cameras_active)} />
           <div style={{ borderBottom: 'none' }}>
             <SubRow label={t('dash_cameras_inactive')} value={fn(overview?.cameras_inactive)} />
           </div>

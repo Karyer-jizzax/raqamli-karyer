@@ -1,6 +1,6 @@
 """Stats endpoints for the department app (scope-aware)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -14,10 +14,12 @@ from app.models.event import Event
 from app.models.quarry import Camera, Post, Quarry
 from app.models.region import District
 from app.schemas.stats import (
+    DistrictCargo,
     DynamicsResponse,
     M1Response,
     M1Row,
     Overview,
+    QuarryStats,
     ReportResponse,
     ReportRow,
 )
@@ -53,6 +55,58 @@ async def overview(
         month=month,
     )
     return Overview(**data)
+
+
+def _check_region_access(user: object, region_id: UUID) -> None:
+    """Department users may only read stats inside their own region."""
+    if user.role == "department" and user.region_id != region_id:  # type: ignore[attr-defined]
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Boshqa viloyat ma'lumotiga ruxsat yo'q")
+
+
+@router.get("/quarries/{quarry_id}", response_model=QuarryStats)
+async def quarry_stats(
+    quarry_id: UUID,
+    db: DbDep,
+    user: UserDep,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+) -> QuarryStats:
+    row = (
+        await db.execute(
+            select(District.region_id)
+            .join(Quarry, Quarry.district_id == District.id)
+            .where(Quarry.id == quarry_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Karyer topilmadi")
+    _check_region_access(user, row)
+
+    data = await stats_svc.quarry_stats(
+        db, quarry_id=quarry_id, date_from=date_from, date_to=date_to
+    )
+    return QuarryStats(**data)
+
+
+@router.get("/districts/{district_id}/cargo", response_model=DistrictCargo)
+async def district_cargo(
+    district_id: UUID,
+    db: DbDep,
+    user: UserDep,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+) -> DistrictCargo:
+    region_id = (
+        await db.execute(select(District.region_id).where(District.id == district_id))
+    ).scalar_one_or_none()
+    if region_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tuman topilmadi")
+    _check_region_access(user, region_id)
+
+    data = await stats_svc.district_cargo(
+        db, district_id=district_id, date_from=date_from, date_to=date_to
+    )
+    return DistrictCargo(**data)
 
 
 @router.get("/dynamics", response_model=DynamicsResponse)

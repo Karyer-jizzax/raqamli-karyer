@@ -27,9 +27,11 @@ import {
   getDynamics,
   getEvents,
   getHealth,
+  getDistrictCargo,
   getM1,
   getMaterials,
   getOverview,
+  getQuarryStats,
   getPostCameras,
   getQuarryMaterials,
   getQuarryPosts,
@@ -41,6 +43,7 @@ import {
   setQuarryMaterials,
   type Camera,
   type CameraInput,
+  type DateRangeParams,
   type MaterialInput,
   type Post,
   type PostInput,
@@ -277,7 +280,6 @@ export function useUpdateRegion() {
     }: {
       id: string;
       body: Partial<{
-        code: string;
         name_uz_latn: string;
         name_uz_cyrl: string;
         name_ru: string;
@@ -313,7 +315,6 @@ export function useUpdateDistrict() {
       id: string;
       body: Partial<{
         region_id: string;
-        code: string;
         name_uz_latn: string;
         name_uz_cyrl: string;
         name_ru: string;
@@ -344,6 +345,22 @@ export function useOverview(
   params: { region_id?: string; district_id?: string; year?: string; month?: string } = {},
 ) {
   return useQuery({ queryKey: ['overview', params], queryFn: () => getOverview(params) });
+}
+
+export function useQuarryStats(quarryId: string | undefined, params: DateRangeParams = {}) {
+  return useQuery({
+    queryKey: ['quarry-stats', quarryId, params],
+    queryFn: () => getQuarryStats(quarryId!, params),
+    enabled: !!quarryId,
+  });
+}
+
+export function useDistrictCargo(districtId: string | undefined, params: DateRangeParams = {}) {
+  return useQuery({
+    queryKey: ['district-cargo', districtId, params],
+    queryFn: () => getDistrictCargo(districtId!, params),
+    enabled: !!districtId,
+  });
 }
 
 export function useReport(n: number, enabled = true) {

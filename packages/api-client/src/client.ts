@@ -153,6 +153,8 @@ export interface AuthUserDto {
   role: Role;
   quarry_id: string | null;
   region_id: string | null;
+  // Returned by /users (management endpoints); absent on /auth/me.
+  is_active?: boolean;
 }
 
 export interface TokenResponse {
@@ -274,10 +276,6 @@ export interface EventInput {
   material_id: string;
   density: number;
   weight_kg: number;
-  // Legacy/optional — no longer used in the volume calculation (scale-only).
-  length_m?: number;
-  width_m?: number;
-  height_m?: number;
   owner_name: string;
   stir: string;
   // Which physical post/camera captured this event (falls back to the
@@ -351,16 +349,57 @@ export interface Overview {
   quarries: number;
   districts: number;
   cameras: number;
-  cameras_active?: number;
-  cameras_inactive?: number;
+  cameras_active: number;
+  cameras_inactive: number;
   organizations: number;
-  companies_mining?: number;
-  companies_other?: number;
-  companies_physical?: number;
-  companies_ytt?: number;
   events: number;
   total_volume: number;
   avg_confidence: number;
+}
+
+export interface QuarryStats {
+  events: number;
+  trucks: number;
+  volume: number;
+  loaded: number;
+  not_loaded: number;
+  unidentified: number;
+  cameras: number;
+  cameras_active: number;
+  cameras_inactive: number;
+  last_event_at: string | null;
+}
+
+export interface CargoPost {
+  id: string;
+  code: string;
+  name: string;
+  events: number;
+  trucks: number;
+  cameras: number;
+  cameras_active: number;
+}
+
+export interface CargoQuarryRow {
+  id: string;
+  name: string;
+  count: number;
+  volume: number;
+}
+
+export interface DistrictCargo {
+  trucks_total: number;
+  loaded: number;
+  not_loaded: number;
+  unidentified: number;
+  posts: CargoPost[];
+  quarries: CargoQuarryRow[];
+  last_event_at: string | null;
+}
+
+export interface DateRangeParams {
+  date_from?: string; // YYYY-MM-DD
+  date_to?: string;
 }
 
 export interface DistrictGeo {
@@ -521,6 +560,18 @@ export const getM1 = (params: Record<string, string> = {}) => {
   const q = new URLSearchParams(params).toString();
   return api.get<M1Response>(`/stats/m1${q ? `?${q}` : ''}`);
 };
+
+const dateRangeQuery = (params: DateRangeParams): string => {
+  const q = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => !!v)) as Record<string, string>,
+  ).toString();
+  return q ? `?${q}` : '';
+};
+
+export const getQuarryStats = (quarryId: string, params: DateRangeParams = {}) =>
+  api.get<QuarryStats>(`/stats/quarries/${quarryId}${dateRangeQuery(params)}`);
+export const getDistrictCargo = (districtId: string, params: DateRangeParams = {}) =>
+  api.get<DistrictCargo>(`/stats/districts/${districtId}/cargo${dateRangeQuery(params)}`);
 
 // ── posts / cameras (superadmin — physical camera topology per quarry) ──────
 // Two fixed posts per quarry: the entrance gate (in/out control) and the

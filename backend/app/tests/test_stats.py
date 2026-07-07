@@ -77,3 +77,88 @@ async def test_dynamics(client: httpx.AsyncClient, seeded: None) -> None:
     resp = await client.get("/api/v1/stats/dynamics", headers=auth_header(token))
     assert resp.status_code == 200
     assert "buckets" in resp.json()
+
+
+@pytest.mark.asyncio
+async def test_overview_camera_split(client: httpx.AsyncClient, seeded: None) -> None:
+    # cameras = cameras_active + cameras_inactive, all non-negative.
+    token = await login(client, "department", "dept123")
+    data = (
+        await client.get("/api/v1/stats/overview", headers=auth_header(token))
+    ).json()
+    assert data["cameras"] == data["cameras_active"] + data["cameras_inactive"]
+    assert data["cameras_active"] >= 0 and data["cameras_inactive"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_quarry_stats(client: httpx.AsyncClient, seeded: None) -> None:
+    token = await login(client, "department", "dept123")
+    me = (await client.get("/api/v1/auth/me", headers=auth_header(token))).json()
+    districts = (
+        await client.get(
+            f"/api/v1/districts?region_id={me['region_id']}", headers=auth_header(token)
+        )
+    ).json()
+    district_ids = {d["id"] for d in districts}
+    quarries = (
+        await client.get("/api/v1/quarries", headers=auth_header(token))
+    ).json()
+    in_region = [q for q in quarries if q["district_id"] in district_ids]
+    assert in_region
+    qid = in_region[0]["id"]
+
+    resp = await client.get(f"/api/v1/stats/quarries/{qid}", headers=auth_header(token))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["cameras"] == data["cameras_active"] + data["cameras_inactive"]
+    # loaded + not_loaded covers every event exactly once.
+    assert data["loaded"] + data["not_loaded"] == data["events"]
+
+    # A period with no events returns clean zeros, not an error.
+    empty = (
+        await client.get(
+            f"/api/v1/stats/quarries/{qid}?date_from=1990-01-01&date_to=1990-01-02",
+            headers=auth_header(token),
+        )
+    ).json()
+    assert empty["events"] == 0
+    assert empty["trucks"] == 0
+    assert empty["last_event_at"] is None
+
+    # Unknown quarry -> 404.
+    missing = await client.get(
+        "/api/v1/stats/quarries/00000000-0000-0000-0000-000000000000",
+        headers=auth_header(token),
+    )
+    assert missing.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_district_cargo(client: httpx.AsyncClient, seeded: None) -> None:
+    token = await login(client, "department", "dept123")
+    me = (await client.get("/api/v1/auth/me", headers=auth_header(token))).json()
+    districts = (
+        await client.get(
+            f"/api/v1/districts?region_id={me['region_id']}", headers=auth_header(token)
+        )
+    ).json()
+    assert districts
+    did = districts[0]["id"]
+
+    resp = await client.get(
+        f"/api/v1/stats/districts/{did}/cargo", headers=auth_header(token)
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["loaded"] + data["not_loaded"] >= data["trucks_total"] >= 0
+    for post in data["posts"]:
+        assert post["cameras"] >= post["cameras_active"] >= 0
+    for quarry in data["quarries"]:
+        assert quarry["count"] >= 0 and quarry["volume"] >= 0
+
+    # Unknown district -> 404.
+    missing = await client.get(
+        "/api/v1/stats/districts/00000000-0000-0000-0000-000000000000/cargo",
+        headers=auth_header(token),
+    )
+    assert missing.status_code == 404

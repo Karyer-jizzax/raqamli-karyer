@@ -9,10 +9,56 @@ class Overview(BaseModel):
     quarries: int
     districts: int
     cameras: int
+    cameras_active: int
+    cameras_inactive: int
     organizations: int
     events: int
     total_volume: float
     avg_confidence: float
+
+
+class QuarryStats(BaseModel):
+    """Per-quarry dashboard numbers (QuarryDetail page)."""
+
+    events: int
+    trucks: int
+    volume: float
+    loaded: int
+    not_loaded: int
+    unidentified: int
+    cameras: int
+    cameras_active: int
+    cameras_inactive: int
+    last_event_at: str | None
+
+
+class CargoPost(BaseModel):
+    id: UUID
+    code: str
+    name: str
+    events: int
+    trucks: int
+    cameras: int
+    cameras_active: int
+
+
+class CargoQuarryRow(BaseModel):
+    id: UUID
+    name: str
+    count: int
+    volume: float
+
+
+class DistrictCargo(BaseModel):
+    """District cargo dashboard: totals + per-post strip + per-quarry table."""
+
+    trucks_total: int
+    loaded: int
+    not_loaded: int
+    unidentified: int
+    posts: list[CargoPost]
+    quarries: list[CargoQuarryRow]
+    last_event_at: str | None
 
 
 class DistrictGeo(BaseModel):

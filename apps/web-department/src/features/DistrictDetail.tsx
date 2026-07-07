@@ -1,7 +1,7 @@
-import { useDistricts, useQuarries, useRegions } from '@karier/api-client';
-import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
+import { type CargoPost, useDistrictCargo, useDistricts, useRegions } from '@karier/api-client';
+import { currentLang, formatDateTime, formatNumber, useTranslation } from '@karier/i18n';
 import { Card } from '@karier/ui';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 function name(d: { name_ru: string; name_uz_cyrl: string; name_uz_latn: string }): string {
@@ -9,38 +9,11 @@ function name(d: { name_ru: string; name_uz_cyrl: string; name_uz_latn: string }
   return l === 'ru' ? d.name_ru : l === 'uz-cyrl' ? d.name_uz_cyrl : d.name_uz_latn;
 }
 
-// ── Mock eco-post monitoring data ────────────────────────────────────────
-// The backend has no per-post traffic/cargo endpoint yet — these numbers are
-// static placeholders so the page layout can be reviewed before that API exists.
-const ECO_POSTS = [
-  { code: '0613-01', events: 626, trucks: 109, cameras: 3 },
-  { code: '0613-02', events: 3287, trucks: 377, cameras: 3 },
-  { code: '0613-03', events: 9340, trucks: 3683, cameras: 3 },
-  { code: '0613-04', events: 18364, trucks: 6942, cameras: 3 },
-  { code: '0613-05', events: 6874, trucks: 640, cameras: 3 },
-  { code: '0613-06', events: 8635, trucks: 2761, cameras: 3 },
-  { code: '0613-07', events: 6436, trucks: 931, cameras: 3 },
-  { code: '0613-08', events: 12564, trucks: 8320, cameras: 3 },
-];
-const CARGO_MOCK = {
-  trucksTotal: ECO_POSTS.reduce((s, p) => s + p.trucks, 0) + 1519,
-  loaded: 17542,
-  notLoaded: 7673,
-  unidentified: 67,
+const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+const DEFAULT_RANGE = {
+  from: `${new Date().getFullYear()}-01-01`,
+  to: isoDay(new Date()),
 };
-const MOCK_UPDATED_AT = '03.04.2026 10:29';
-const MOCK_RANGE = { from: '2026-01-01', to: '2026-04-03' };
-
-// Deterministic per-quarry placeholder count/volume — no per-quarry cargo
-// endpoint exists yet, so numbers are derived from the quarry code rather
-// than a real aggregate.
-function mockQuarryStat(code: string): { count: number; volume: number } {
-  let h = 0;
-  for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) >>> 0;
-  const count = 400 + (h % 4200);
-  const volume = Math.round(count * 24.4);
-  return { count, volume };
-}
 
 const IconHome = (
   <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
@@ -73,7 +46,7 @@ function EcoPostCard({
   t,
   lang,
 }: {
-  post: (typeof ECO_POSTS)[number];
+  post: CargoPost;
   t: (k: string) => string;
   lang: ReturnType<typeof currentLang>;
 }) {
@@ -116,7 +89,13 @@ function EcoPostCard({
         {Array.from({ length: post.cameras }, (_, i) => (
           <span
             key={i}
-            style={{ width: 9, height: 9, borderRadius: '50%', background: '#1fa15a', display: 'inline-block' }}
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: '50%',
+              background: i < post.cameras_active ? '#1fa15a' : '#c0463c',
+              display: 'inline-block',
+            }}
           />
         ))}
       </div>
@@ -225,26 +204,31 @@ export function DistrictDetail() {
 
   const { data: districts } = useDistricts();
   const { data: regions } = useRegions();
-  const { data: quarries } = useQuarries();
+
+  const [range, setRange] = useState(DEFAULT_RANGE);
+  const { data: cargo } = useDistrictCargo(districtId, {
+    date_from: range.from || undefined,
+    date_to: range.to || undefined,
+  });
 
   const district = districts?.find((d) => d.id === districtId);
   const region = regions?.find((r) => r.id === district?.region_id);
-  const districtQuarries = useMemo(
-    () => (quarries ?? []).filter((q) => q.district_id === districtId),
-    [quarries, districtId],
-  );
+  const posts = cargo?.posts ?? [];
   const quarryCargoRows = useMemo(
     () =>
-      districtQuarries.map((q) => {
-        const { count, volume } = mockQuarryStat(q.code);
-        return { id: q.id, label: q.name, count, volume };
-      }),
-    [districtQuarries],
+      (cargo?.quarries ?? []).map((q) => ({
+        id: q.id,
+        label: q.name,
+        count: q.count,
+        volume: q.volume,
+      })),
+    [cargo?.quarries],
   );
 
-  const fn = (v: number) => formatNumber(v, lang);
+  const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
   const regionName = region ? name(region) : '';
   const districtDisplayName = district ? name(district) : t('loading');
+  const updatedAt = cargo?.last_event_at ? formatDateTime(cargo.last_event_at) : '—';
 
   return (
     <div style={{ padding: 24, display: 'grid', gap: 16, maxWidth: 1200, margin: '0 auto' }}>
@@ -256,9 +240,19 @@ export function DistrictDetail() {
       {/* Date range + breadcrumb */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input type="date" defaultValue={MOCK_RANGE.from} style={FILTER_SEL} />
+          <input
+            type="date"
+            value={range.from}
+            onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+            style={FILTER_SEL}
+          />
           <span style={{ color: 'var(--muted-ink)' }}>—</span>
-          <input type="date" defaultValue={MOCK_RANGE.to} style={FILTER_SEL} />
+          <input
+            type="date"
+            value={range.to}
+            onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+            style={FILTER_SEL}
+          />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
           <button
@@ -286,14 +280,17 @@ export function DistrictDetail() {
         </div>
       </div>
       <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--muted-ink)', marginTop: -8 }}>
-        {t('as_updated')}: <b style={{ color: '#1a5cb8' }}>{MOCK_UPDATED_AT}</b>
+        {t('as_updated')}: <b style={{ color: '#1a5cb8' }}>{updatedAt}</b>
       </div>
 
       {/* Eco-post cards strip */}
       <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-        {ECO_POSTS.map((p) => (
-          <EcoPostCard key={p.code} post={p} t={t} lang={lang} />
+        {posts.map((p) => (
+          <EcoPostCard key={p.id} post={p} t={t} lang={lang} />
         ))}
+        {posts.length === 0 && (
+          <p style={{ color: 'var(--muted-ink)', fontSize: 13, margin: 0 }}>{t('q_empty')}</p>
+        )}
       </div>
 
       {/* Jami + cargo breakdown */}
@@ -312,11 +309,11 @@ export function DistrictDetail() {
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#1a5cb8', display: 'inline-block' }} />
             <span style={{ fontWeight: 700, color: '#15273c', fontSize: 13 }}>{t('jami')}</span>
             <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontWeight: 800, fontSize: 17, color: '#15273c' }}>
-              {fn(ECO_POSTS.reduce((s, p) => s + p.trucks, 0))}
+              {fn(posts.reduce((s, p) => s + p.trucks, 0))}
             </span>
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
-            {ECO_POSTS.map((p) => (
+            {posts.map((p) => (
               <div key={p.code} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span
@@ -349,7 +346,7 @@ export function DistrictDetail() {
 
           <div style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 13.5, color: 'var(--muted-ink)' }}>{t('dash_trucks_total')}: </span>
-            <b style={{ fontSize: 19, color: '#1a5cb8', fontFamily: 'var(--mono)' }}>{fn(CARGO_MOCK.trucksTotal)}</b>
+            <b style={{ fontSize: 19, color: '#1a5cb8', fontFamily: 'var(--mono)' }}>{fn(cargo?.trucks_total)}</b>
           </div>
 
           <div
@@ -363,7 +360,7 @@ export function DistrictDetail() {
             }}
           >
             <span style={{ fontSize: 13, color: 'var(--muted-ink)' }}>{t('dash_loaded')}:</span>
-            <b style={{ fontFamily: 'var(--mono)', fontSize: 14 }}>{fn(CARGO_MOCK.loaded)}</b>
+            <b style={{ fontFamily: 'var(--mono)', fontSize: 14 }}>{fn(cargo?.loaded)}</b>
           </div>
 
           {quarryCargoRows.length > 0 ? (
@@ -378,8 +375,8 @@ export function DistrictDetail() {
           )}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-            <StatBox label={t('dash_not_loaded')} value={fn(CARGO_MOCK.notLoaded)} />
-            <StatBox label={t('dash_unidentified')} value={fn(CARGO_MOCK.unidentified)} danger />
+            <StatBox label={t('dash_not_loaded')} value={fn(cargo?.not_loaded)} />
+            <StatBox label={t('dash_unidentified')} value={fn(cargo?.unidentified)} danger />
           </div>
         </Card>
       </div>

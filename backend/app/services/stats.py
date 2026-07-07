@@ -1,9 +1,9 @@
 """Dashboard / M1 / dynamics aggregation."""
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import ColumnElement, Select, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import Event
@@ -65,9 +65,12 @@ async def overview(
         )
         d_stmt = d_stmt.where(District.region_id == region_id)
 
+    cam_active_stmt = cam_stmt.where(Camera.is_active)
+
     quarries = (await db.execute(q_stmt)).scalar() or 0
     districts = (await db.execute(d_stmt)).scalar() or 0
     cameras = (await db.execute(cam_stmt)).scalar() or 0
+    cameras_active = (await db.execute(cam_active_stmt)).scalar() or 0
     organizations = (
         await db.execute(select(func.count()).select_from(Organization))
     ).scalar() or 0
@@ -94,10 +97,162 @@ async def overview(
         "quarries": quarries,
         "districts": districts,
         "cameras": cameras,
+        "cameras_active": cameras_active,
+        "cameras_inactive": cameras - cameras_active,
         "organizations": organizations,
         "events": events or 0,
         "total_volume": round(float(total_volume), 2),
         "avg_confidence": round(float(avg_conf), 2),
+    }
+
+
+def _period_conds(date_from: date | None, date_to: date | None) -> list[ColumnElement[bool]]:
+    """Inclusive [date_from, date_to] filter on Event.occurred_at."""
+    conds: list[ColumnElement[bool]] = []
+    if date_from is not None:
+        conds.append(Event.occurred_at >= datetime.combine(date_from, datetime.min.time()))
+    if date_to is not None:
+        conds.append(
+            Event.occurred_at < datetime.combine(date_to + timedelta(days=1), datetime.min.time())
+        )
+    return conds
+
+
+# Distinct-plate key; empty plate_number (unrecognized) is excluded via FILTER.
+_PLATE = Event.plate_region + Event.plate_number
+
+# Shared aggregate columns for cargo stats (events / trucks / loaded / ...).
+_CARGO_AGGS = (
+    func.count(Event.id).label("events"),
+    func.count(func.distinct(_PLATE)).filter(Event.plate_number != "").label("trucks"),
+    func.coalesce(func.sum(Event.volume_final), 0).label("volume"),
+    func.count(Event.id).filter(Event.is_loaded).label("loaded"),
+    func.count(Event.id).filter(~Event.is_loaded).label("not_loaded"),
+    func.count(Event.id).filter(Event.plate_number == "").label("unidentified"),
+    func.max(Event.occurred_at).label("last_event_at"),
+)
+
+
+async def quarry_stats(
+    db: AsyncSession,
+    *,
+    quarry_id: UUID,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict:
+    """Per-quarry dashboard numbers (QuarryDetail page)."""
+    ev_stmt = select(*_CARGO_AGGS).where(
+        Event.quarry_id == quarry_id, *_period_conds(date_from, date_to)
+    )
+    events, trucks, volume, loaded, not_loaded, unidentified, last_at = (
+        (await db.execute(ev_stmt)).one()
+    )
+
+    cam_stmt = (
+        select(func.count(Camera.id), func.count(Camera.id).filter(Camera.is_active))
+        .join(Post, Post.id == Camera.post_id)
+        .where(Post.quarry_id == quarry_id)
+    )
+    cameras, cameras_active = (await db.execute(cam_stmt)).one()
+
+    return {
+        "events": int(events),
+        "trucks": int(trucks),
+        "volume": round(float(volume), 2),
+        "loaded": int(loaded),
+        "not_loaded": int(not_loaded),
+        "unidentified": int(unidentified),
+        "cameras": int(cameras),
+        "cameras_active": int(cameras_active),
+        "cameras_inactive": int(cameras) - int(cameras_active),
+        "last_event_at": last_at.isoformat() if last_at else None,
+    }
+
+
+async def district_cargo(
+    db: AsyncSession,
+    *,
+    district_id: UUID,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict:
+    """District cargo dashboard: totals + per-post strip + per-quarry table."""
+    period = _period_conds(date_from, date_to)
+
+    totals_stmt = (
+        select(*_CARGO_AGGS)
+        .join(Quarry, Quarry.id == Event.quarry_id)
+        .where(Quarry.district_id == district_id, *period)
+    )
+    _events, trucks, _volume, loaded, not_loaded, unidentified, last_at = (
+        (await db.execute(totals_stmt)).one()
+    )
+
+    # Per-post traffic (posts with no events still listed via outer join).
+    posts_stmt = (
+        select(
+            Post.id,
+            Post.code,
+            Post.name,
+            func.count(Event.id),
+            func.count(func.distinct(_PLATE)).filter(Event.plate_number != ""),
+        )
+        .join(Quarry, Quarry.id == Post.quarry_id)
+        .outerjoin(Event, and_(Event.post_id == Post.id, *period))
+        .where(Quarry.district_id == district_id)
+        .group_by(Post.id, Post.code, Post.name)
+        .order_by(Post.code)
+    )
+    post_rows = (await db.execute(posts_stmt)).all()
+
+    cams_stmt = (
+        select(Post.id, func.count(Camera.id), func.count(Camera.id).filter(Camera.is_active))
+        .join(Quarry, Quarry.id == Post.quarry_id)
+        .outerjoin(Camera, Camera.post_id == Post.id)
+        .where(Quarry.district_id == district_id)
+        .group_by(Post.id)
+    )
+    cams_by_post = {
+        pid: (int(total), int(active)) for pid, total, active in (await db.execute(cams_stmt))
+    }
+
+    # Per-quarry count/volume table (quarries with no events still listed).
+    quarries_stmt = (
+        select(
+            Quarry.id,
+            Quarry.name,
+            func.count(Event.id),
+            func.coalesce(func.sum(Event.volume_final), 0),
+        )
+        .outerjoin(Event, and_(Event.quarry_id == Quarry.id, *period))
+        .where(Quarry.district_id == district_id)
+        .group_by(Quarry.id, Quarry.name)
+        .order_by(Quarry.name)
+    )
+    quarry_rows = (await db.execute(quarries_stmt)).all()
+
+    return {
+        "trucks_total": int(trucks),
+        "loaded": int(loaded),
+        "not_loaded": int(not_loaded),
+        "unidentified": int(unidentified),
+        "posts": [
+            {
+                "id": pid,
+                "code": code,
+                "name": pname,
+                "events": int(ev),
+                "trucks": int(tr),
+                "cameras": cams_by_post.get(pid, (0, 0))[0],
+                "cameras_active": cams_by_post.get(pid, (0, 0))[1],
+            }
+            for pid, code, pname, ev, tr in post_rows
+        ],
+        "quarries": [
+            {"id": qid, "name": qname, "count": int(cnt), "volume": round(float(vol), 2)}
+            for qid, qname, cnt, vol in quarry_rows
+        ],
+        "last_event_at": last_at.isoformat() if last_at else None,
     }
 
 

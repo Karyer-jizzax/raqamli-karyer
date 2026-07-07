@@ -1,7 +1,6 @@
-import { useDistricts, useQuarries, useRegions } from '@karier/api-client';
-import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
+import { useDistricts, useQuarries, useQuarryStats, useRegions } from '@karier/api-client';
+import { currentLang, formatDateTime, formatNumber, useTranslation } from '@karier/i18n';
 import { Card } from '@karier/ui';
-import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { DATA_CSS, M1Table } from './DataM1';
@@ -10,41 +9,6 @@ function name(d: { name_ru: string; name_uz_cyrl: string; name_uz_latn: string }
   const l = currentLang();
   return l === 'ru' ? d.name_ru : l === 'uz-cyrl' ? d.name_uz_cyrl : d.name_uz_latn;
 }
-
-// ── Deterministic per-quarry placeholder stats ───────────────────────────────
-// There is no per-quarry stats endpoint yet, so every number below is derived
-// from the quarry code so the dashboard stays stable between renders. Swap for
-// a real `/stats/quarry/:id` response once the backend exposes one.
-function hash(code: string): number {
-  let h = 0;
-  for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function mockQuarry(code: string) {
-  const h = hash(code);
-  const trucks = 400 + (h % 4200);
-  const volume = Math.round(trucks * 24.4);
-  const events = trucks + ((h >> 3) % 1800);
-  const loaded = Math.round(trucks * 0.68);
-  const notLoaded = trucks - loaded;
-  const unidentified = (h >> 5) % 40;
-  const cameras = 2 + (h % 3);
-  const camerasActive = Math.max(1, cameras - ((h >> 7) % 2));
-  return {
-    trucks,
-    volume,
-    events,
-    loaded,
-    notLoaded,
-    unidentified,
-    cameras,
-    camerasActive,
-    camerasInactive: cameras - camerasActive,
-  };
-}
-
-const MOCK_UPDATED_AT = '03.04.2026 10:29';
 
 const IconHome = (
   <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
@@ -177,9 +141,10 @@ export function QuarryDetail() {
   const district = districts?.find((d) => d.id === (quarry?.district_id ?? districtId));
   const region = regions?.find((r) => r.id === district?.region_id);
 
-  const stat = useMemo(() => mockQuarry(quarry?.code ?? quarryId ?? ''), [quarry?.code, quarryId]);
+  const { data: stat } = useQuarryStats(quarryId);
 
-  const fn = (v: number) => formatNumber(v, lang);
+  const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
+  const updatedAt = stat?.last_event_at ? formatDateTime(stat.last_event_at) : '—';
   const regionName = region ? name(region) : '';
   const districtName = district ? name(district) : '';
   const quarryName = quarry?.name ?? t('loading');
@@ -239,16 +204,16 @@ export function QuarryDetail() {
           <b style={{ color: '#15273c' }}>{quarryName}</b>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted-ink)' }}>
-          {t('as_updated')}: <b style={{ color: '#1a5cb8' }}>{MOCK_UPDATED_AT}</b>
+          {t('as_updated')}: <b style={{ color: '#1a5cb8' }}>{updatedAt}</b>
         </div>
       </div>
 
       {/* Dashboard stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        <StatCard icon={IconVolume} label={t('dash_ore_volume')} value={fn(stat.volume)} unit="m³" />
-        <StatCard icon={IconTruck} label={t('dash_trucks_total')} value={fn(stat.trucks)} />
-        <StatCard icon={IconEvents} label={t('dash_events')} value={fn(stat.events)} />
-        <StatCard icon={IconCamera} label={t('dash_cameras')} value={fn(stat.cameras)} />
+        <StatCard icon={IconVolume} label={t('dash_ore_volume')} value={fn(stat?.volume)} unit="m³" />
+        <StatCard icon={IconTruck} label={t('dash_trucks_total')} value={fn(stat?.trucks)} />
+        <StatCard icon={IconEvents} label={t('dash_events')} value={fn(stat?.events)} />
+        <StatCard icon={IconCamera} label={t('dash_cameras')} value={fn(stat?.cameras)} />
       </div>
 
       {/* Info + cargo breakdown */}
@@ -290,7 +255,7 @@ export function QuarryDetail() {
           <InfoRow label={t('q_district')} value={districtName || '—'} />
           <InfoRow label={t('dash_region')} value={regionName || '—'} />
           <div style={{ marginTop: 10 }}>
-            <StatBox label={t('dash_cameras_active')} value={fn(stat.camerasActive)} />
+            <StatBox label={t('dash_cameras_active')} value={fn(stat?.cameras_active)} />
           </div>
         </Card>
 
@@ -303,7 +268,7 @@ export function QuarryDetail() {
 
           <div style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 13.5, color: 'var(--muted-ink)' }}>{t('dash_trucks_total')}: </span>
-            <b style={{ fontSize: 19, color: '#1a5cb8', fontFamily: 'var(--mono)' }}>{fn(stat.trucks)}</b>
+            <b style={{ fontSize: 19, color: '#1a5cb8', fontFamily: 'var(--mono)' }}>{fn(stat?.trucks)}</b>
           </div>
 
           <div
@@ -317,18 +282,18 @@ export function QuarryDetail() {
             }}
           >
             <span style={{ fontSize: 13, color: 'var(--muted-ink)' }}>{t('dash_loaded')}:</span>
-            <b style={{ fontFamily: 'var(--mono)', fontSize: 14 }}>{fn(stat.loaded)}</b>
+            <b style={{ fontFamily: 'var(--mono)', fontSize: 14 }}>{fn(stat?.loaded)}</b>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-            <StatBox label={t('dash_not_loaded')} value={fn(stat.notLoaded)} />
-            <StatBox label={t('dash_unidentified')} value={fn(stat.unidentified)} danger />
+            <StatBox label={t('dash_not_loaded')} value={fn(stat?.not_loaded)} />
+            <StatBox label={t('dash_unidentified')} value={fn(stat?.unidentified)} danger />
           </div>
 
           <h4 style={{ margin: '16px 0 8px', fontSize: 13, color: '#15273c' }}>{t('dash_cameras')}</h4>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {Array.from({ length: stat.cameras }, (_, i) => {
-              const active = i < stat.camerasActive;
+            {Array.from({ length: stat?.cameras ?? 0 }, (_, i) => {
+              const active = i < (stat?.cameras_active ?? 0);
               return (
                 <span
                   key={i}
