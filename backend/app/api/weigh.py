@@ -21,10 +21,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ValidationError
-from starlette.datastructures import UploadFile as StarletteUploadFile
-from starlette.formparsers import MultiPartException
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import UploadFile as StarletteUploadFile
+from starlette.formparsers import MultiPartException
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -105,7 +105,9 @@ async def ping() -> dict[str, object]:
     return {"ok": True, "server_time": datetime.now(_UZ_TZ).strftime("%Y-%m-%d %H:%M:%S")}
 
 
-async def _extract(request: Request) -> tuple[WeighIn, list[tuple[bytes, str]], tuple[bytes, str] | None]:
+async def _extract(
+    request: Request,
+) -> tuple[WeighIn, list[tuple[bytes, str]], tuple[bytes, str] | None]:
     """Return (payload, [(image_bytes, suffix)], (video_bytes, suffix)|None)."""
     content_type = request.headers.get("content-type", "")
     images: list[tuple[bytes, str]] = []
@@ -157,7 +159,12 @@ async def weigh(request: Request, db: DbDep, _key: ApiKeyDep) -> dict[str, objec
         await db.execute(select(Event).where(Event.event_uid == payload.event_uid))
     ).scalar_one_or_none()
     if existing is not None:
-        return {"ok": True, "id": str(existing.id), "event_uid": payload.event_uid, "duplicate": True}
+        return {
+            "ok": True,
+            "id": str(existing.id),
+            "event_uid": payload.event_uid,
+            "duplicate": True,
+        }
 
     # Resolve the quarry by its code (e.g. "KARYER-01").
     quarry = (
@@ -260,4 +267,6 @@ def _attach_media(
     for p in payload.image_paths:
         db.add(Media(event_id=event_id, kind="photo", path=p, url=p))
     if payload.video_path:
-        db.add(Media(event_id=event_id, kind="video", path=payload.video_path, url=payload.video_path))
+        db.add(
+            Media(event_id=event_id, kind="video", path=payload.video_path, url=payload.video_path)
+        )

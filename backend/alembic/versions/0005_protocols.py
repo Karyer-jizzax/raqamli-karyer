@@ -9,6 +9,7 @@ Create Date: 2026-06-25
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0005_protocols"
@@ -29,7 +30,9 @@ def upgrade() -> None:
         sa.Column("operator_name", sa.String(128), nullable=False),
         sa.Column("driver_name", sa.String(128), nullable=False),
         sa.Column("normative_basis", sa.Text(), nullable=False),
-        sa.Column("issued_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "issued_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint("id", name="pk_protocols"),

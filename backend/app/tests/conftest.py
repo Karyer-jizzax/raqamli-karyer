@@ -40,7 +40,9 @@ async def seeded() -> None:
 
 
 async def login(client: httpx.AsyncClient, username: str, password: str) -> str:
-    resp = await client.post("/api/v1/auth/login", json={"username": username, "password": password})
+    resp = await client.post(
+        "/api/v1/auth/login", json={"username": username, "password": password}
+    )
     assert resp.status_code == 200, resp.text
     return resp.json()["access_token"]
 

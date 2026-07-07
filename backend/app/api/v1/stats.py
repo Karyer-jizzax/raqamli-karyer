@@ -119,7 +119,11 @@ async def report(
         report=f"M{n}",
         dimension=dimension,
         rows=[
-            ReportRow(key=str(r[0]) if r[0] is not None else "—", count=int(r[1]), volume=round(float(r[2]), 2))
+            ReportRow(
+                key=str(r[0]) if r[0] is not None else "—",
+                count=int(r[1]),
+                volume=round(float(r[2]), 2),
+            )
             for r in rows
         ],
     )

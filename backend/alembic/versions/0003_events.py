@@ -9,6 +9,7 @@ Create Date: 2026-06-25
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0003_events"
@@ -51,7 +52,9 @@ def upgrade() -> None:
         sa.Column("plate_number", sa.String(16), nullable=False),
         sa.Column("model", sa.String(64), nullable=False),
         sa.Column("direction", sa.String(8), nullable=False),
-        sa.Column("occurred_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "occurred_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("is_loaded", sa.Boolean(), nullable=False),
         sa.Column("vtype", sa.String(16), nullable=False),
         sa.Column("payer_type", sa.String(16), nullable=False),
@@ -72,15 +75,23 @@ def upgrade() -> None:
         sa.Column("stir", sa.String(20), nullable=False),
         *_ts(),
         sa.PrimaryKeyConstraint("id", name="pk_events"),
-        sa.ForeignKeyConstraint(["quarry_id"], ["quarries.id"], name="fk_events_quarry_id_quarries"),
+        sa.ForeignKeyConstraint(
+            ["quarry_id"], ["quarries.id"], name="fk_events_quarry_id_quarries"
+        ),
         sa.ForeignKeyConstraint(["post_id"], ["posts.id"], name="fk_events_post_id_posts"),
         sa.ForeignKeyConstraint(["camera_id"], ["cameras.id"], name="fk_events_camera_id_cameras"),
-        sa.ForeignKeyConstraint(["vehicle_id"], ["vehicles.id"], name="fk_events_vehicle_id_vehicles"),
         sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], name="fk_events_organization_id_organizations"
+            ["vehicle_id"], ["vehicles.id"], name="fk_events_vehicle_id_vehicles"
+        ),
+        sa.ForeignKeyConstraint(
+            ["organization_id"],
+            ["organizations.id"],
+            name="fk_events_organization_id_organizations",
         ),
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], name="fk_events_created_by_users"),
-        sa.ForeignKeyConstraint(["material_id"], ["materials.id"], name="fk_events_material_id_materials"),
+        sa.ForeignKeyConstraint(
+            ["material_id"], ["materials.id"], name="fk_events_material_id_materials"
+        ),
     )
     op.create_index("ix_events_quarry_id", "events", ["quarry_id"])
     op.create_index("ix_events_occurred_at", "events", ["occurred_at"])

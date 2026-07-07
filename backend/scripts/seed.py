@@ -160,10 +160,30 @@ async def seed() -> None:
             await db.flush()
             db.add_all(
                 [
-                    Camera(post_id=entrance.id, code="P-KIRISH-C1", name="Raqam kamerasi", kind="plate"),
-                    Camera(post_id=entrance.id, code="P-KIRISH-C2", name="Video kamerasi", kind="record"),
-                    Camera(post_id=scale_post.id, code="P-TAROZI-C1", name="Raqam kamerasi", kind="plate"),
-                    Camera(post_id=scale_post.id, code="P-TAROZI-C2", name="Video kamerasi", kind="record"),
+                    Camera(
+                        post_id=entrance.id,
+                        code="P-KIRISH-C1",
+                        name="Raqam kamerasi",
+                        kind="plate",
+                    ),
+                    Camera(
+                        post_id=entrance.id,
+                        code="P-KIRISH-C2",
+                        name="Video kamerasi",
+                        kind="record",
+                    ),
+                    Camera(
+                        post_id=scale_post.id,
+                        code="P-TAROZI-C1",
+                        name="Raqam kamerasi",
+                        kind="plate",
+                    ),
+                    Camera(
+                        post_id=scale_post.id,
+                        code="P-TAROZI-C2",
+                        name="Video kamerasi",
+                        kind="record",
+                    ),
                 ]
             )
 
