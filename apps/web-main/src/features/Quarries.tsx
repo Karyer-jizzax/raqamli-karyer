@@ -41,13 +41,8 @@ import {
   UiButton as Button,
 } from '@karier/ui';
 import {
-  Building2Icon,
   CameraIcon,
-  CircleCheckIcon,
-  type LucideIcon,
-  MapIcon,
   PackageIcon,
-  PauseCircleIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
@@ -55,7 +50,17 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
-import { districtName, Eyebrow, Field, ModalForm, slugCode, StatusDot } from '../shared';
+import {
+  CountPill,
+  districtName,
+  Eyebrow,
+  Field,
+  ModalForm,
+  ROW_ACTION,
+  ROW_ACTION_DANGER,
+  slugCode,
+  StatusDot,
+} from '../shared';
 import { QuarryPostsModal } from './QuarryPosts';
 
 function NewQuarryModal({ onClose }: { onClose: () => void }) {
@@ -299,7 +304,7 @@ function QuarryMaterialsModal({ quarry, onClose }: { quarry: Quarry; onClose: ()
                 className="size-4 accent-primary"
               />
               {districtName(m)}
-              <span className="font-mono text-[11px] text-muted-foreground">{m.id}</span>
+              <span className="text-[11px] text-slate-400 tabular-nums">{m.id}</span>
             </label>
           ))}
         </div>
@@ -308,28 +313,24 @@ function QuarryMaterialsModal({ quarry, onClose }: { quarry: Quarry; onClose: ()
   );
 }
 
-// ── telemetry strip ──────────────────────────────────────────────────────────
-// The signature element: the four headline figures read as a single instrument
-// panel — hairline-divided channels, uppercase labels, monospace tabular figures.
-function Metric({
+// ── stat cards ───────────────────────────────────────────────────────────────
+// Four white cards: small colored square dot + uppercase label, big tabular figure.
+function StatCard({
   label,
   value,
-  icon: Icon,
-  color,
+  dotClass,
 }: {
   label: string;
   value: number;
-  icon: LucideIcon;
-  color: string;
+  dotClass: string;
 }) {
   return (
-    <div className="flex flex-col gap-2.5 bg-card p-4">
-      <div className="flex items-center gap-2">
-        <Icon className="size-3.5" style={{ color }} />
-        <Eyebrow className="text-muted-foreground">{label}</Eyebrow>
+    <div className="rounded-[14px] border bg-card px-[18px] py-4">
+      <div className="mb-3 flex items-center gap-[7px] text-muted-foreground">
+        <span className={cn('size-[7px] rounded-[2px]', dotClass)} aria-hidden />
+        <span className="text-[11px] font-semibold tracking-[0.06em] uppercase">{label}</span>
       </div>
-      <div className="font-mono text-3xl font-bold tracking-tight tabular-nums">{value}</div>
-      <span className="h-0.5 w-8 rounded-full" style={{ background: color }} aria-hidden />
+      <div className="text-[30px] font-bold tracking-[-0.02em] tabular-nums">{value}</div>
     </div>
   );
 }
@@ -339,18 +340,20 @@ function Stats({ quarries, districtCount }: { quarries: Quarry[]; districtCount:
   const active = quarries.filter((q) => q.status === 'active').length;
   const suspended = quarries.length - active;
   return (
-    <div className="overflow-hidden rounded-xl border bg-border shadow-sm">
-      <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
-        <Metric label={t('m_stat_total')} value={quarries.length} icon={Building2Icon} color="#3b6ea5" />
-        <Metric label={t('m_stat_active')} value={active} icon={CircleCheckIcon} color="#13935f" />
-        <Metric label={t('m_stat_suspended')} value={suspended} icon={PauseCircleIcon} color="#b9831a" />
-        <Metric label={t('m_stat_districts')} value={districtCount} icon={MapIcon} color="#4f46e5" />
-      </div>
+    <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+      <StatCard label={t('m_stat_total')} value={quarries.length} dotClass="bg-primary" />
+      <StatCard label={t('m_stat_active')} value={active} dotClass="bg-[#10b981]" />
+      <StatCard label={t('m_stat_suspended')} value={suspended} dotClass="bg-[#f59e0b]" />
+      <StatCard label={t('m_stat_districts')} value={districtCount} dotClass="bg-primary" />
     </div>
   );
 }
 
-const TH = 'text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground';
+const TH =
+  'h-auto px-[18px] py-[11px] text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400';
+
+const PG_BTN =
+  'size-[34px] min-w-[34px] rounded-[9px] border border-[#e2e8f0] bg-white px-0 text-slate-400 hover:bg-[#f8fafc] sm:pl-0 sm:pr-0';
 
 const PAGE_SIZE = 10;
 
@@ -371,8 +374,10 @@ function QuarryTable({
   const [linking, setLinking] = useState<Quarry | null>(null);
   const [managingPosts, setManagingPosts] = useState<Quarry | null>(null);
 
-  if (isLoading) return <p className="text-muted-foreground p-4">{t('loading')}</p>;
-  if (!quarries?.length) return <p className="text-muted-foreground p-4">{t('q_empty')}</p>;
+  if (isLoading)
+    return <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('loading')}</p>;
+  if (!quarries?.length)
+    return <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('q_empty')}</p>;
 
   const q = search.trim().toLowerCase();
   const filtered = quarries.filter((it) => {
@@ -381,7 +386,8 @@ function QuarryTable({
     return it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q);
   });
 
-  if (!filtered.length) return <p className="text-muted-foreground p-4">{t('q_no_match')}</p>;
+  if (!filtered.length)
+    return <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('q_no_match')}</p>;
 
   const pageCount = Math.ceil(filtered.length / PAGE_SIZE);
   const current = Math.min(page, pageCount);
@@ -391,8 +397,8 @@ function QuarryTable({
   return (
     <div>
       <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
+        <TableHeader className="bg-[#fbfcfe] [&_tr]:border-0">
+          <TableRow className="hover:bg-transparent">
             <TableHead className={TH}>{t('q_name')}</TableHead>
             <TableHead className={TH}>{t('q_district')}</TableHead>
             <TableHead className={TH}>{t('q_status')}</TableHead>
@@ -403,17 +409,25 @@ function QuarryTable({
           {slice.map((it) => {
             const d = districtMap.get(it.district_id);
             return (
-              <TableRow key={it.id}>
-                <TableCell className="font-medium">{it.name}</TableCell>
-                <TableCell>{d ? districtName(d) : '—'}</TableCell>
-                <TableCell>
+              <TableRow
+                key={it.id}
+                className="border-t border-b-0 border-[#f1f5f9] hover:bg-[#f8fafc]"
+              >
+                <TableCell className="px-[18px] py-[13px] text-sm font-medium">
+                  {it.name}
+                </TableCell>
+                <TableCell className="px-[18px] py-[13px] text-sm text-[#475569]">
+                  {d ? districtName(d) : '—'}
+                </TableCell>
+                <TableCell className="px-[18px] py-[13px]">
                   <StatusDot active={it.status === 'active'} />
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
+                <TableCell className="px-3.5 py-2 text-right">
+                  <div className="flex justify-end gap-0.5">
                     <Button
                       variant="ghost"
                       size="icon"
+                      className={ROW_ACTION}
                       aria-label={t('mat_link_title', { name: it.name })}
                       onClick={() => setLinking(it)}
                     >
@@ -422,18 +436,24 @@ function QuarryTable({
                     <Button
                       variant="ghost"
                       size="icon"
+                      className={ROW_ACTION}
                       aria-label={t('q_posts_manage', { name: it.name })}
                       onClick={() => setManagingPosts(it)}
                     >
                       <CameraIcon />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setEditing(it)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={ROW_ACTION}
+                      onClick={() => setEditing(it)}
+                    >
                       <PencilIcon />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:text-destructive"
+                      className={ROW_ACTION_DANGER}
                       onClick={() => setDeleting(it)}
                     >
                       <Trash2Icon />
@@ -447,27 +467,37 @@ function QuarryTable({
       </Table>
 
       {pageCount > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f1f5f9] px-[18px] py-[13px]">
+          <span className="text-[12.5px] text-slate-400 tabular-nums">
             {t('pg_info', { from: start + 1, to: start + slice.length, total: filtered.length })}
           </span>
           <Pagination className="mx-0 w-auto justify-end">
-            <PaginationContent>
+            <PaginationContent className="gap-[5px]">
               <PaginationItem>
                 <PaginationPrevious
                   aria-label={t('pg_prev')}
                   disabled={current <= 1}
                   onClick={() => setPage(current - 1)}
+                  className={PG_BTN}
                 />
               </PaginationItem>
               {getPaginationRange(current, pageCount).map((p, i) =>
                 p === 'ellipsis' ? (
                   <PaginationItem key={`e${i}`}>
-                    <PaginationEllipsis />
+                    <PaginationEllipsis className="size-[34px] text-slate-400" />
                   </PaginationItem>
                 ) : (
                   <PaginationItem key={p}>
-                    <PaginationLink isActive={p === current} onClick={() => setPage(p)}>
+                    <PaginationLink
+                      isActive={p === current}
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        'size-[34px] min-w-[34px] rounded-[9px] text-[13px] tabular-nums',
+                        p === current
+                          ? 'border-0 bg-primary font-semibold text-white hover:bg-primary/90 hover:text-white'
+                          : 'border border-[#e2e8f0] bg-white text-slate-700 hover:bg-[#f8fafc]',
+                      )}
+                    >
                       {p}
                     </PaginationLink>
                   </PaginationItem>
@@ -478,6 +508,7 @@ function QuarryTable({
                   aria-label={t('pg_next')}
                   disabled={current >= pageCount}
                   onClick={() => setPage(current + 1)}
+                  className={PG_BTN}
                 />
               </PaginationItem>
             </PaginationContent>
@@ -514,17 +545,15 @@ export function Quarries() {
 
       <Stats quarries={quarries ?? []} districtCount={districts?.length ?? 0} />
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <Eyebrow className="text-muted-foreground">{t('m_registry')}</Eyebrow>
-            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
-              {quarries?.length ?? 0}
-            </span>
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <header className="flex flex-wrap items-center gap-3 border-b border-[#f1f5f9] px-[18px] py-4">
+          <div className="flex items-center gap-[9px]">
+            <Eyebrow className="text-slate-400">{t('m_registry')}</Eyebrow>
+            <CountPill>{quarries?.length ?? 0}</CountPill>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="ml-auto flex flex-wrap items-center gap-2.5">
             <div className="relative">
-              <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

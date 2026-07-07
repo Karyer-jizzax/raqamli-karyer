@@ -13,7 +13,6 @@ import {
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import {
-  Badge,
   Select,
   SelectContent,
   SelectItem,
@@ -169,33 +168,41 @@ function RegionCard({ region, districts }: { region: Region; districts: District
   const [delDistrictItem, setDelDistrictItem] = useState<District | null>(null);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b bg-muted/30 px-5 py-3.5">
+    <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f1f5f9] bg-[#fbfcfe] px-[18px] py-4">
         <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-lg bg-gradient-to-br from-[#3b6ea5] to-[#1d3a5c] ring-1 ring-black/5">
-            <MapPinIcon className="size-5 text-white" />
+          <div className="grid size-10 place-items-center rounded-[11px] bg-primary-tint text-primary">
+            <MapPinIcon className="size-5" strokeWidth={1.8} />
           </div>
           <div className="grid gap-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight">{districtName(region)}</span>
-            </div>
-            <Eyebrow className="text-muted-foreground">
+            <span className="text-base font-semibold">{districtName(region)}</span>
+            <Eyebrow className="text-slate-400">
               {t('geo_districts_n', { n: districts.length })}
             </Eyebrow>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Button variant="outline" size="sm" onClick={() => setNewDistrict(true)}>
+        <div className="flex flex-wrap gap-[7px]">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-[#e2e8f0] text-[13px] font-medium text-slate-700"
+            onClick={() => setNewDistrict(true)}
+          >
             <PlusIcon />
             {t('geo_add_district')}
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setEditRegion(true)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="border-[#e2e8f0] text-slate-400 hover:text-primary"
+            onClick={() => setEditRegion(true)}
+          >
             <PencilIcon />
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="text-destructive hover:text-destructive"
+            className="border-[#e2e8f0] text-[#f43f5e] hover:bg-[#fff1f2] hover:text-[#e11d48]"
             onClick={() => setDelRegionOpen(true)}
           >
             <Trash2Icon />
@@ -203,31 +210,36 @@ function RegionCard({ region, districts }: { region: Region; districts: District
         </div>
       </div>
 
-      <div className="grid gap-1.5 p-4">
+      <div className="flex flex-col gap-[7px] p-4">
         {districts.length === 0 ? (
           <span className="px-1 py-2 text-sm text-muted-foreground">{t('geo_no_districts')}</span>
         ) : (
           districts.map((d) => (
             <div
               key={d.id}
-              className="flex items-center justify-between gap-2.5 rounded-lg border border-transparent bg-muted/50 px-3 py-2 transition-colors hover:border-border hover:bg-muted"
+              className="flex items-center justify-between gap-2.5 rounded-[11px] border border-transparent bg-[#f8fafc] px-3.5 py-3 transition-colors hover:border-[#e2e8f0] hover:bg-[#f1f5f9]"
             >
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{districtName(d)}</span>
+              <div className="flex items-center gap-[9px]">
+                <span className="text-sm font-medium">{districtName(d)}</span>
                 {d.is_capital && (
-                  <Badge variant="outline" className="bg-card">
+                  <span className="rounded-full bg-primary-tint px-[9px] py-0.5 text-[11px] font-semibold text-primary">
                     {t('geo_is_capital')}
-                  </Badge>
+                  </span>
                 )}
               </div>
-              <div className="flex shrink-0 gap-1">
-                <Button variant="ghost" size="icon" onClick={() => setEditDistrict(d)}>
+              <div className="flex shrink-0 gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-[30px] rounded-[7px] text-slate-400 hover:bg-white hover:text-primary"
+                  onClick={() => setEditDistrict(d)}
+                >
                   <PencilIcon />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:text-destructive"
+                  className="size-[30px] rounded-[7px] text-[#f43f5e] hover:bg-[#fff1f2] hover:text-[#e11d48]"
                   onClick={() => setDelDistrictItem(d)}
                 >
                   <Trash2Icon />
@@ -303,11 +315,12 @@ function RegionPicker({
   const index = regions.findIndex((r) => r.id === value);
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 rounded-xl border bg-card p-3 shadow-sm">
-      <Eyebrow className="px-1 text-muted-foreground">{t('geo_region')}</Eyebrow>
+    <div className="flex flex-wrap items-center gap-2.5 rounded-[14px] border bg-card px-3.5 py-3">
+      <Eyebrow className="pl-0.5 text-slate-400">{t('geo_region')}</Eyebrow>
       <Button
         variant="outline"
         size="icon"
+        className="border-[#e2e8f0] text-slate-400"
         disabled={index <= 0}
         onClick={() => {
           const prev = regions[index - 1];
@@ -326,7 +339,7 @@ function RegionPicker({
             <SelectItem key={r.id} value={r.id}>
               <span className="flex items-center gap-2">
                 {districtName(r)}
-                <span className="font-mono text-[11px] text-muted-foreground">
+                <span className="text-[11px] text-slate-400 tabular-nums">
                   {t('geo_districts_n', { n: counts.get(r.id)?.length ?? 0 })}
                 </span>
               </span>
@@ -337,6 +350,7 @@ function RegionPicker({
       <Button
         variant="outline"
         size="icon"
+        className="border-[#e2e8f0] text-slate-400"
         disabled={index >= regions.length - 1}
         onClick={() => {
           const next = regions[index + 1];
@@ -346,7 +360,7 @@ function RegionPicker({
       >
         <ChevronRightIcon />
       </Button>
-      <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+      <span className="ml-auto text-[12.5px] text-slate-400 tabular-nums">
         {index + 1} / {regions.length}
       </span>
     </div>
@@ -384,10 +398,10 @@ export function Geo() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">{t('loading')}</p>
+        <p className="text-sm text-muted-foreground">{t('loading')}</p>
       ) : !regions?.length ? (
-        <div className="bg-card rounded-xl border p-5 shadow-sm">
-          <p className="text-muted-foreground">{t('geo_no_regions')}</p>
+        <div className="rounded-2xl border bg-card p-5">
+          <p className="text-sm text-muted-foreground">{t('geo_no_regions')}</p>
         </div>
       ) : (
         selected && (

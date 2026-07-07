@@ -137,7 +137,7 @@ export function RequireAuth({
 function LoginScreen({
   allowedRoles,
   appKey,
-  accent = '#1d3a5c',
+  accent = '#4f46e5',
 }: {
   allowedRoles?: Role[];
   appKey?: string;
@@ -172,56 +172,75 @@ function LoginScreen({
     }
   }
 
+  const tint = `color-mix(in srgb, ${accent} 8%, #ffffff)`;
+
   return (
-    <div
-      className="fixed inset-0 grid place-items-center p-5"
-      style={{
-        background: `linear-gradient(140deg, ${accent} 0%, ${accent}cc 45%, ${accent}88)`,
-      }}
-    >
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto bg-background p-5">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-2xl"
-        style={{ borderTop: `5px solid ${accent}` }}
+        className="w-full max-w-[400px] rounded-[20px] border bg-card px-8 py-[34px] shadow-[0_1px_2px_rgba(15,23,42,.04),0_12px_34px_rgba(15,23,42,.06)]"
       >
+        <div className="mb-5 flex items-center gap-3">
+          <div
+            className="grid h-[38px] w-[38px] place-items-center rounded-[11px] text-[17px] font-bold text-white"
+            style={{ background: accent }}
+          >
+            K
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-bold tracking-wide text-foreground">
+              KARIER KONTROL
+            </span>
+            <span className="text-[11.5px] text-slate-400">{t('login_subtitle')}</span>
+          </div>
+        </div>
+
         {appTitle && (
           <span
-            className="mb-3.5 inline-block rounded-full px-3 py-1 text-xs font-bold"
-            style={{ background: `${accent}1a`, color: accent }}
+            className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold"
+            style={{ background: tint, color: accent }}
           >
             {appTitle}
           </span>
         )}
-        <h2 className="mb-1 text-xl font-semibold text-foreground">{t('login_title')}</h2>
-        <p className="text-muted-foreground mb-6 text-sm">{t('login_subtitle')}</p>
+        <h2 className="mb-6 text-[22px] font-semibold tracking-tight text-foreground">
+          {t('login_title')}
+        </h2>
 
         <div className="grid gap-1.5">
           <Label htmlFor="login-user">{t('login_user')}</Label>
           <Input
             id="login-user"
+            className="h-11 rounded-[11px]"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoFocus
           />
         </div>
-        <div className="mt-3 grid gap-1.5">
+        <div className="mt-4 grid gap-1.5">
           <Label htmlFor="login-pass">{t('login_pass')}</Label>
           <Input
             id="login-pass"
             type="password"
+            className="h-11 rounded-[11px]"
             value={pass}
             onChange={(e) => setPass(e.target.value)}
           />
         </div>
 
         {err && <div className="text-destructive mt-2.5 text-sm">{err}</div>}
-        <Button type="submit" disabled={busy} className="mt-5 w-full">
+        <Button
+          type="submit"
+          disabled={busy}
+          className="mt-6 h-[46px] w-full rounded-xl text-[15px] font-semibold"
+        >
           {busy ? t('loading') : t('login_btn')}
         </Button>
-        <div className="mt-4 flex justify-center">
+        <div className="mt-5 flex justify-center">
           <LangSwitcher />
         </div>
       </form>
+      <p className="text-xs text-slate-300">© 2026 Karier Kontrol</p>
     </div>
   );
 }

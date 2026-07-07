@@ -9,9 +9,9 @@ const STATUS_LABEL: Record<string, string> = {
   inspect: 'TEKSHIRUVGA',
 };
 const STATUS_COLOR: Record<string, string> = {
-  confirm: 'var(--green)',
-  flagged: 'var(--amber)',
-  inspect: 'var(--red)',
+  confirm: '#059669',
+  flagged: '#d97706',
+  inspect: '#e11d48',
 };
 
 /** Full-screen overlay that generates (idempotent) + shows a protocol for an event. */
@@ -65,17 +65,17 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
 
       <div className="kk-protocol">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', borderBottom: '2px solid var(--brand)', paddingBottom: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', borderBottom: '2px solid #0f172a', paddingBottom: 10 }}>
           <div>
-            <h1 style={{ fontSize: 20, color: 'var(--brand)' }}>{doc.organization}</h1>
-            <div style={{ fontSize: 12, color: 'var(--muted-ink)' }}>
+            <h1 style={{ fontSize: 20, color: '#0f172a' }}>{doc.organization}</h1>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
               {doc.region_name_uz_latn} · {doc.district_name_uz_latn} · {doc.quarry_name}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 800 }}>O'LCHOV BAYONNOMASI</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>№ {p.number}</div>
-            <div style={{ fontSize: 11, color: 'var(--muted-ink)' }}>{issued}</div>
+            <div style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: 13 }}>№ {p.number}</div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>{issued}</div>
           </div>
         </div>
 
@@ -85,7 +85,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
             margin: '12px 0',
             padding: '8px 14px',
             borderRadius: 8,
-            background: 'var(--soft)',
+            background: '#f1f5f9',
             borderLeft: `5px solid ${STATUS_COLOR[e.status]}`,
             fontWeight: 800,
             color: STATUS_COLOR[e.status],
@@ -100,7 +100,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
           <tbody>
             <tr>
               <th style={{ width: '25%' }}>Davlat raqami</th>
-              <td style={{ fontFamily: 'var(--mono)' }}>{e.plate_region} {e.plate_number}</td>
+              <td style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>{e.plate_region} {e.plate_number}</td>
               <th style={{ width: '25%' }}>Model</th>
               <td>{e.model}</td>
             </tr>
@@ -114,7 +114,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
               <th>Egasi</th>
               <td>{e.owner_name || '—'}</td>
               <th>STIR</th>
-              <td style={{ fontFamily: 'var(--mono)' }}>{e.stir || '—'}</td>
+              <td style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>{e.stir || '—'}</td>
             </tr>
           </tbody>
         </table>
@@ -125,7 +125,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
           <tbody>
             <tr>
               <th>Tarozi hajmi (vazn÷zichlik)</th>
-              <td style={{ fontFamily: 'var(--mono)' }}>
+              <td style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>
                 {e.volume_final} m³ ({e.weight_kg} kg ÷ {e.density})
               </td>
             </tr>
@@ -135,7 +135,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
             </tr>
             <tr>
               <th>Yakuniy hajm + ishonch</th>
-              <td style={{ fontFamily: 'var(--mono)', fontWeight: 800 }}>
+              <td style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontWeight: 800 }}>
                 {e.volume_final} m³ · {e.volume_confidence}%
               </td>
             </tr>
@@ -143,7 +143,7 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
         </table>
 
         {/* Method + normative */}
-        <p style={{ fontSize: 11.5, color: 'var(--muted-ink)', marginTop: 16, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 11.5, color: '#64748b', marginTop: 16, lineHeight: 1.5 }}>
           {p.normative_basis}
         </p>
 
@@ -159,13 +159,13 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
                 <span style={{ fontSize: 12 }}>
                   {role}: <b>{name || '—'}</b>
                 </span>
-                <span style={{ borderBottom: '1px solid var(--ink)', height: 16 }} />
+                <span style={{ borderBottom: '1px solid #0f172a', height: 16 }} />
               </div>
             ))}
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ width: 96, height: 96 }} dangerouslySetInnerHTML={{ __html: doc.qr_svg }} />
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted-ink)', marginTop: 4 }}>
+            <div style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: 10, color: '#64748b', marginTop: 4 }}>
               {p.verification_code}
             </div>
           </div>

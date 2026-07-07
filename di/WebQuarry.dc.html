@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #0f172a; background: #f8fafc; font-size: 15px; }
+  a { color: #16a34a; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  input:focus, select:focus { outline: none; border-color: #16a34a !important; box-shadow: 0 0 0 3px #f0fdf4; }
+  .qi { height: 48px; border: 1px solid #dbe2ea; border-radius: 11px; padding: 0 14px; font-size: 15.5px; font-family: inherit; background: #fff; color: #0f172a; width: 100%; }
+  .rowh:hover { background: #f8fafc; }
+  @keyframes recpulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+
+  <!-- HEADER -->
+  <header style="height:60px;display:flex;align-items:center;gap:12px;padding:0 28px;background:#fff;border-bottom:1px solid #e8edf3;">
+    <div style="width:32px;height:32px;border-radius:9px;background:#16a34a;color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;">K</div>
+    <strong style="font-size:16px;font-weight:600;">Karier Kontrol <span style="color:#94a3b8;font-weight:500;">— Karyer</span></strong>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <div style="display:inline-flex;background:#f1f5f9;border-radius:9px;padding:3px;gap:2px;">
+        <span style="padding:6px 12px;border-radius:7px;font-size:12.5px;font-weight:600;background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.08);">UZ</span>
+        <span style="padding:6px 12px;border-radius:7px;font-size:12.5px;font-weight:600;color:#94a3b8;">ЎЗ</span>
+        <span style="padding:6px 12px;border-radius:7px;font-size:12.5px;font-weight:600;color:#94a3b8;">RU</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;border:1px solid #e8edf3;border-radius:999px;padding:5px 14px 5px 5px;">
+        <span style="width:30px;height:30px;border-radius:50%;background:#16a34a;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600;">O</span>
+        <span style="font-size:14px;font-weight:500;">Operator · Zomin Granit</span>
+      </div>
+    </div>
+  </header>
+
+  <div style="flex:1;padding:26px;display:grid;grid-template-columns:440px 1fr;gap:22px;align-items:start;max-width:1260px;width:100%;margin:0 auto;">
+
+    <!-- ===== LEFT: REGISTER FORM ===== -->
+    <div style="background:#fff;border:1px solid #e8edf3;border-radius:18px;padding:22px;">
+      <h2 style="margin:0 0 14px;font-size:19px;font-weight:600;">Video tahlili</h2>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin-bottom:14px;">
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:13px;color:#64748b;">Post</span>
+          <div style="height:40px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:150px;border:1px solid #dbe2ea;border-radius:10px;padding:0 12px;font-size:14.5px;background:#fff;cursor:pointer;">0613-01<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+        <span style="font-size:13.5px;color:#64748b;padding-bottom:10px;">Kamera: <b style="color:#334155;">R-1-KA№1</b></span>
+      </div>
+
+      <!-- AI STAGE -->
+      <div style="position:relative;background:#171717;border-radius:14px;overflow:hidden;aspect-ratio:16/10;margin-bottom:14px;background-image:repeating-linear-gradient(135deg,#1c1c1c 0 14px,#191919 14px 28px);">
+        <!-- REC badge -->
+        <span style="position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;color:#fff;letter-spacing:.04em;"><span style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:recpulse 1.4s infinite;"></span>REC</span>
+        <!-- camera hint -->
+        <span style="position:absolute;top:12px;left:14px;font-size:11.5px;color:#71717a;letter-spacing:.02em;">jonli oqim · 1920×1080</span>
+        <!-- detection frame -->
+        <div style="position:absolute;left:20%;top:34%;width:52%;height:44%;border:2.5px solid #22c55e;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);">
+          <span style="position:absolute;top:-26px;left:-2px;background:#16a34a;color:#fff;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;">80 R548SA · 96%</span>
+        </div>
+        <span style="position:absolute;bottom:12px;left:14px;font-size:12px;color:#a1a1aa;">Rasm yuklang yoki AI tahlilni boshlang</span>
+      </div>
+
+      <div style="display:flex;gap:9px;margin-bottom:20px;">
+        <button style="flex:1;height:46px;border:1px solid #dbe2ea;background:#fff;border-radius:11px;color:#334155;font-family:inherit;font-size:14.5px;font-weight:500;cursor:pointer;">Rasm yuklash</button>
+        <button style="flex:1;height:46px;border:none;background:#16a34a;color:#fff;border-radius:11px;font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;">AI tahlil</button>
+        <button style="flex:1;height:46px;border:1px solid #dbe2ea;background:#fff;border-radius:11px;color:#334155;font-family:inherit;font-size:14.5px;font-weight:500;cursor:pointer;">Avto-saqlash</button>
+      </div>
+
+      <h2 style="margin:0 0 14px;font-size:19px;font-weight:600;">Hodisa qayd etish</h2>
+      <div style="display:flex;flex-direction:column;gap:13px;">
+        <div style="display:grid;grid-template-columns:96px 1fr;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Viloyat kodi</label><input value="80" class="qi tnum" /></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Davlat raqami</label><input value="R 548 SA" class="qi" /></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Model</label><input value="HOWO SINOTRUK" class="qi" /></div>
+        <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Material</label><div class="qi" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">Qum-shag'al aralashmasi<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div></div>
+        <div style="display:grid;grid-template-columns:1.4fr auto 1fr;gap:10px;align-items:end;">
+          <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Vazn (kg)</label><input value="77000" class="qi tnum" /></div>
+          <button style="height:48px;border:1px solid #dbe2ea;background:#fff;border-radius:11px;color:#16a34a;font-family:inherit;font-size:14px;font-weight:600;padding:0 14px;cursor:pointer;white-space:nowrap;">Tarozidan</button>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Zichlik</label><input value="1.55" class="qi tnum" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">Egasi (F.I.SH.)</label><input value="Aliyev A." class="qi" /></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;color:#64748b;">STIR</label><input value="305012345" class="qi tnum" /></div>
+        </div>
+
+        <!-- BIG PREVIEW STAT BLOCK -->
+        <div style="margin-top:6px;border:1px solid #e8edf3;border-radius:14px;overflow:hidden;">
+          <div style="padding:9px 16px;background:#f0fdf4;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#15803d;">Hisob (preview)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;">
+            <div style="padding:16px 18px;border-right:1px solid #f1f5f9;">
+              <div style="font-size:12.5px;color:#64748b;margin-bottom:4px;">Yakuniy hajm</div>
+              <div class="tnum" style="font-size:32px;font-weight:700;letter-spacing:-0.02em;">44.8 <span style="font-size:16px;font-weight:500;color:#94a3b8;">m³</span></div>
+            </div>
+            <div style="padding:16px 18px;">
+              <div style="font-size:12.5px;color:#64748b;margin-bottom:4px;">Ishonch</div>
+              <div class="tnum" style="font-size:32px;font-weight:700;letter-spacing:-0.02em;color:#16a34a;">96<span style="font-size:16px;font-weight:500;color:#94a3b8;">%</span></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid #f1f5f9;">
+            <span style="font-size:13.5px;color:#64748b;">Holati</span>
+            <span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;color:#059669;background:#ecfdf5;">Tasdiq</span>
+          </div>
+        </div>
+
+        <button style="height:52px;border:none;background:#16a34a;color:#fff;border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;margin-top:4px;">Saqlash</button>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT: EVENT LIST ===== -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+      <h1 style="margin:0;font-size:20px;font-weight:600;">Hodisalar</h1>
+      <div style="background:#fff;border:1px solid #e8edf3;border-radius:18px;overflow:hidden;">
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:640px;">
+          <thead>
+            <tr style="background:#fbfcfe;">
+              <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;">Davlat raqami</th>
+              <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;">Model</th>
+              <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;">Yakuniy hajm</th>
+              <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;">Ishonch</th>
+              <th style="text-align:left;padding:13px 20px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;">Holati</th>
+              <th style="padding:13px 20px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ events }}" as="e" hint-placeholder-count="7">
+              <tr class="rowh" style="border-top:1px solid #f1f5f9;">
+                <td class="tnum" style="padding:15px 20px;font-size:15px;font-weight:600;">{{ e.plate }}</td>
+                <td style="padding:15px 20px;font-size:14.5px;color:#475569;">{{ e.model }}</td>
+                <td class="tnum" style="padding:15px 20px;font-size:14.5px;">{{ e.vol }} m³</td>
+                <td class="tnum" style="padding:15px 20px;font-size:14.5px;color:#475569;">{{ e.conf }}%</td>
+                <td style="padding:15px 20px;"><span style="{{ e.badge }}">{{ e.status }}</span></td>
+                <td style="padding:11px 20px;text-align:right;"><button style="height:38px;border:1px solid #e2e8f0;background:#fff;border-radius:10px;color:#16a34a;font-family:inherit;font-size:13.5px;font-weight:600;padding:0 15px;cursor:pointer;">Bayonnoma</button></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const EVENTS = [
+  ['80 R548SA', 'HOWO SINOTRUK', '44.8', '96', 'confirm'],
+  ['01 A730BC', 'SHACMAN X3000', '58.1', '94', 'confirm'],
+  ['80 H904PT', 'ISUZU FORWARD', '61.5', '71', 'inspect'],
+  ['25 B118LC', 'HOWO SINOTRUK', '49.0', '82', 'flagged'],
+  ['80 K212MN', 'DONGFENG', '0.0', '90', 'confirm'],
+  ['80 R548SA', 'HOWO SINOTRUK', '51.0', '95', 'confirm'],
+  ['01 A730BC', 'SHACMAN X3000', '55.2', '93', 'confirm'],
+];
+
+const STATUS = {
+  confirm: ['Tasdiq', '#059669', '#ecfdf5'],
+  flagged: ['Belgilandi', '#d97706', '#fffbeb'],
+  inspect: ['Tekshiruvga', '#e11d48', '#fff1f2'],
+};
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      events: EVENTS.map(([plate, model, vol, conf, st]) => {
+        const [label, color, bg] = STATUS[st];
+        return { plate, model, vol, conf, status: label,
+          badge: `display:inline-block;padding:4px 12px;border-radius:999px;font-size:13px;font-weight:600;color:${color};background:${bg};` };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { type DistrictGeo, useOverview, useRegionGeo, useRegions } from '@karier/api-client';
 import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
-import { Card, JizzaxMap, useAuth } from '@karier/ui';
+import { Card, cn, JizzaxMap, useAuth } from '@karier/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,112 +12,72 @@ function districtName(d: DistrictGeo): string {
 function StatRow({
   label,
   value,
-  accent,
   icon,
+  last,
 }: {
   label: string;
   value: string;
-  accent?: boolean;
   icon?: React.ReactNode;
+  last?: boolean;
 }) {
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '9px 0',
-        borderBottom: '1px solid var(--line)',
-        gap: 8,
-      }}
+      className={cn(
+        'flex items-center justify-between gap-2 py-[11px]',
+        !last && 'border-b border-b-[#f1f5f9]',
+      )}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        {icon && (
-          <span style={{ color: '#1a5cb8', flexShrink: 0, display: 'flex' }}>{icon}</span>
-        )}
-        <span
-          style={{
-            fontSize: 13,
-            color: accent ? '#1a5cb8' : 'var(--muted-ink)',
-            fontWeight: accent ? 700 : 400,
-            lineHeight: 1.3,
-          }}
-        >
-          {label}
-        </span>
-      </div>
-      <b
-        style={{
-          fontFamily: 'var(--mono)',
-          fontSize: accent ? 15 : 13,
-          color: accent ? '#1a5cb8' : '#15273c',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}
-      >
-        {value}
-      </b>
+      <span className="flex min-w-0 items-center gap-[9px] text-[13.5px] leading-tight font-semibold text-[#0f766e]">
+        {icon && <span className="flex shrink-0 text-primary">{icon}</span>}
+        {label}
+      </span>
+      <b className="shrink-0 text-[15px] whitespace-nowrap text-[#0f766e] tabular-nums">{value}</b>
     </div>
   );
 }
 
 function SubRow({ label, value }: { label: string; value: string }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '5px 0 5px 28px',
-        gap: 8,
-      }}
-    >
-      <span style={{ fontSize: 12, color: 'var(--muted-ink)', lineHeight: 1.3 }}>{label}</span>
-      <b style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#15273c', whiteSpace: 'nowrap', flexShrink: 0 }}>
-        {value}
-      </b>
+    <div className="flex items-center justify-between gap-2 py-[5px] pl-[26px]">
+      <span className="text-[12.5px] leading-tight text-muted-foreground">{label}</span>
+      <b className="shrink-0 text-[12.5px] whitespace-nowrap tabular-nums">{value}</b>
     </div>
   );
 }
 
-// Simple SVG icons
+// Simple SVG icons (teal, 1.6px stroke — per mockup)
 const IconQuarry = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-    <rect x="3" y="10" width="14" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M6 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M10 13v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <rect x="3" y="10" width="14" height="8" rx="1" />
+    <path d="M6 10V7a4 4 0 0 1 8 0v3" />
   </svg>
 );
 const IconVolume = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-    <rect x="2" y="12" width="5" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
-    <rect x="7.5" y="8" width="5" height="10" rx="1" stroke="currentColor" strokeWidth="1.5" />
-    <rect x="13" y="4" width="5" height="14" rx="1" stroke="currentColor" strokeWidth="1.5" />
+  <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <rect x="2" y="12" width="5" height="6" rx="1" />
+    <rect x="7.5" y="8" width="5" height="10" rx="1" />
+    <rect x="13" y="4" width="5" height="14" rx="1" />
   </svg>
 );
 const IconCamera = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-    <rect x="2" y="6" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" />
-    <circle cx="10" cy="11.5" r="3" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M7 6l1.5-3h3L13 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <rect x="2" y="6" width="16" height="11" rx="2" />
+    <circle cx="10" cy="11.5" r="3" />
   </svg>
 );
 const IconHome = (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-    <path
-      d="M3 9.5 10 3l7 6.5"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M5 8.5V16a1 1 0 0 0 1 1h3v-4.5h2V17h3a1 1 0 0 0 1-1V8.5"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+  <svg
+    width="17"
+    height="17"
+    viewBox="0 0 20 20"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 9.5 10 3l7 6.5" />
+    <path d="M5 8.5V16a1 1 0 0 0 1 1h3v-4.5h2V17h3a1 1 0 0 0 1-1V8.5" />
   </svg>
 );
 
@@ -163,150 +123,101 @@ export function Dashboard() {
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
 
   return (
-    <div style={{ padding: 24, display: 'grid', gap: 16, maxWidth: 1200, margin: '0 auto' }}>
+    <div className="mx-auto flex max-w-[1160px] flex-col gap-4 p-6">
       {/* Filters */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
-          <label style={FILTER_LBL}>
-            {t('as_year')}
-            <select
-              style={FILTER_SEL}
-              value={period.year}
-              onChange={(e) => setPeriod((p) => ({ ...p, year: e.target.value }))}
-            >
-              {[thisYear, thisYear - 1, thisYear - 2].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={FILTER_LBL}>
-            {t('as_month')}
-            <select
-              style={FILTER_SEL}
-              value={period.month}
-              onChange={(e) => setPeriod((p) => ({ ...p, month: e.target.value }))}
-            >
-              <option value="">{t('as_all')}</option>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {monthName(m)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+      <div className="flex flex-wrap gap-3">
+        <label className="flex flex-col gap-[5px]">
+          <span className="text-xs text-muted-foreground">{t('as_year')}</span>
+          <select
+            className="h-[38px] min-w-[120px] cursor-pointer rounded-[9px] border border-input bg-white px-3 text-[13.5px]"
+            value={period.year}
+            onChange={(e) => setPeriod((p) => ({ ...p, year: e.target.value }))}
+          >
+            {[thisYear, thisYear - 1, thisYear - 2].map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-[5px]">
+          <span className="text-xs text-muted-foreground">{t('as_month')}</span>
+          <select
+            className="h-[38px] min-w-[140px] cursor-pointer rounded-[9px] border border-input bg-white px-3 text-[13.5px]"
+            value={period.month}
+            onChange={(e) => setPeriod((p) => ({ ...p, month: e.target.value }))}
+          >
+            <option value="">{t('as_all')}</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m}>
+                {monthName(m)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Main 2-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, alignItems: 'start' }}>
+      <div className="grid items-start gap-4 md:grid-cols-[296px_1fr]">
         {/* LEFT: Stats panel */}
-        <Card>
+        <Card className="px-5 py-[18px]">
           {regionTitle && (
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#15273c',
-                marginBottom: 8,
-                paddingBottom: 8,
-                borderBottom: '2px solid #1a5cb8',
-              }}
-            >
+            <div className="mb-1.5 border-b-2 border-b-primary pb-2.5 text-sm font-semibold">
               {regionTitle}
             </div>
           )}
 
-          <StatRow
-            icon={IconQuarry}
-            label={t('dash_quarries')}
-            value={fn(overview?.quarries)}
-            accent
-          />
-
+          <StatRow icon={IconQuarry} label={t('dash_quarries')} value={fn(overview?.quarries)} />
           <StatRow
             icon={IconVolume}
             label={t('dash_ore_volume')}
             value={`${fn(overview?.total_volume)} m³`}
-            accent
           />
-
-          <StatRow
-            icon={IconCamera}
-            label={t('dash_cameras')}
-            value={fn(overview?.cameras)}
-            accent
-          />
+          <StatRow icon={IconCamera} label={t('dash_cameras')} value={fn(overview?.cameras)} last />
           <SubRow label={t('dash_cameras_active')} value={fn(overview?.cameras_active)} />
-          <div style={{ borderBottom: 'none' }}>
-            <SubRow label={t('dash_cameras_inactive')} value={fn(overview?.cameras_inactive)} />
-          </div>
+          <SubRow label={t('dash_cameras_inactive')} value={fn(overview?.cameras_inactive)} />
         </Card>
 
         {/* RIGHT: Map + selected district info */}
-        <div style={{ display: 'grid', gap: 16 }}>
-          <Card>
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                title={t('dash_all_quarries')}
-                onClick={() => setSelected(null)}
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  zIndex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  border: '1px solid var(--line)',
-                  background: selected ? '#1a5cb8' : '#fff',
-                  color: selected ? '#fff' : '#1a5cb8',
-                  cursor: 'pointer',
-                }}
-              >
-                {IconHome}
-              </button>
-              {geo ? (
-                <JizzaxMap
-                  districts={geo.districts}
-                  viewHeight={geo.view_height}
-                  selectedId={selected}
-                  onSelect={(id) => setSelected((s) => (s === id ? null : id))}
-                  onActivate={(id) => navigate(`/dashboard/districts/${id}`)}
-                  maxHeight={500}
-                />
-              ) : (
-                <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
+        <div className="grid gap-4">
+          <Card className="relative p-3.5">
+            <button
+              type="button"
+              title={t('dash_all_quarries')}
+              onClick={() => setSelected(null)}
+              className={cn(
+                'absolute top-3.5 right-3.5 z-[1] grid size-[34px] cursor-pointer place-items-center rounded-[9px] border border-[#e2e8f0]',
+                selected ? 'bg-primary text-white' : 'bg-white text-primary',
               )}
+            >
+              {IconHome}
+            </button>
+            {geo ? (
+              <JizzaxMap
+                districts={geo.districts}
+                viewHeight={geo.view_height}
+                selectedId={selected}
+                onSelect={(id) => setSelected((s) => (s === id ? null : id))}
+                onActivate={(id) => navigate(`/dashboard/districts/${id}`)}
+                maxHeight={500}
+              />
+            ) : (
+              <div className="grid h-[420px] place-items-center text-[13px] text-slate-400">
+                {t('loading')}
+              </div>
+            )}
+            <div className="mt-1.5 flex items-center justify-center gap-3.5 border-t border-t-[#f1f5f9] pt-2">
+              <span className="text-[11.5px] text-slate-400">Kam</span>
+              <div className="h-[9px] w-[150px] rounded-full bg-[linear-gradient(90deg,#e6f7f4,#0d9488)]" />
+              <span className="text-[11.5px] text-slate-400">Ko'p karyer</span>
             </div>
           </Card>
 
           {selectedDistrict && (
             <Card>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                  marginBottom: 10,
-                }}
-              >
-                <h3 style={{ margin: 0 }}>{districtName(selectedDistrict)}</h3>
-                <span style={{ fontSize: 11.5, color: 'var(--muted-ink)' }}>
+              <div className="mb-2.5 flex items-center justify-between gap-2">
+                <h3 className="m-0 text-[15px] font-semibold">{districtName(selectedDistrict)}</h3>
+                <span className="text-[11.5px] text-muted-foreground">
                   {t('dash_dblclick_hint')}
                 </span>
               </div>
@@ -321,26 +232,11 @@ export function Dashboard() {
   );
 }
 
-const FILTER_LBL: React.CSSProperties = {
-  display: 'grid',
-  gap: 4,
-  fontSize: 12,
-  color: 'var(--muted-ink)',
-};
-const FILTER_SEL: React.CSSProperties = {
-  padding: '8px 10px',
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-  background: '#fff',
-  fontFamily: 'inherit',
-  fontSize: 13,
-};
-
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-      <span style={{ color: 'var(--muted-ink)' }}>{k}</span>
-      <b style={{ fontFamily: 'var(--mono)' }}>{v}</b>
+    <div className="flex justify-between py-1.5 text-sm">
+      <span className="text-muted-foreground">{k}</span>
+      <b className="tabular-nums">{v}</b>
     </div>
   );
 }

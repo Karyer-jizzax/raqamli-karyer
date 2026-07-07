@@ -21,7 +21,15 @@ import {
 import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 
-import { districtName, Eyebrow, Field, ModalForm } from '../shared';
+import {
+  CountPill,
+  districtName,
+  Eyebrow,
+  Field,
+  ModalForm,
+  ROW_ACTION,
+  ROW_ACTION_DANGER,
+} from '../shared';
 
 type MaterialForm = {
   id: string;
@@ -171,7 +179,8 @@ function ConfirmDeleteModal({ material, onClose }: { material: Material; onClose
   );
 }
 
-const TH = 'text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground';
+const TH =
+  'h-auto px-[18px] py-[11px] text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400';
 
 export function Materials() {
   const { t } = useTranslation();
@@ -195,17 +204,15 @@ export function Materials() {
     <div className="grid gap-5">
       <p className="text-muted-foreground text-sm">{t('mat_subtitle')}</p>
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <Eyebrow className="text-muted-foreground">{t('mat_registry')}</Eyebrow>
-            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
-              {materials?.length ?? 0}
-            </span>
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <header className="flex flex-wrap items-center gap-3 border-b border-[#f1f5f9] px-[18px] py-4">
+          <div className="flex items-center gap-[9px]">
+            <Eyebrow className="text-slate-400">{t('mat_registry')}</Eyebrow>
+            <CountPill>{materials?.length ?? 0}</CountPill>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="ml-auto flex flex-wrap items-center gap-2.5">
             <div className="relative">
-              <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -221,15 +228,15 @@ export function Materials() {
         </header>
 
         {isLoading ? (
-          <p className="text-muted-foreground p-4">{t('loading')}</p>
+          <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('loading')}</p>
         ) : !materials?.length ? (
-          <p className="text-muted-foreground p-4">{t('mat_empty')}</p>
+          <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('mat_empty')}</p>
         ) : !filtered.length ? (
-          <p className="text-muted-foreground p-4">{t('mat_no_match')}</p>
+          <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('mat_no_match')}</p>
         ) : (
           <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
+            <TableHeader className="bg-[#fbfcfe] [&_tr]:border-0">
+              <TableRow className="hover:bg-transparent">
                 <TableHead className={TH}>{t('mat_id')}</TableHead>
                 <TableHead className={TH}>{t('q_name')}</TableHead>
                 <TableHead className={TH}>{t('mat_density_default')}</TableHead>
@@ -239,22 +246,36 @@ export function Materials() {
             </TableHeader>
             <TableBody>
               {filtered.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{m.id}</TableCell>
-                  <TableCell className="font-medium">{districtName(m)}</TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums">
+                <TableRow
+                  key={m.id}
+                  className="border-t border-b-0 border-[#f1f5f9] hover:bg-[#f8fafc]"
+                >
+                  <TableCell className="px-[18px] py-[13px] text-[12.5px] text-slate-400 tabular-nums">
+                    {m.id}
+                  </TableCell>
+                  <TableCell className="px-[18px] py-[13px] text-sm font-medium">
+                    {districtName(m)}
+                  </TableCell>
+                  <TableCell className="px-[18px] py-[13px] text-[13.5px] text-[#475569] tabular-nums">
                     {m.default_density} ({m.density_min}–{m.density_max})
                   </TableCell>
-                  <TableCell>{m.is_tent ? t('q_yes') : t('q_no')}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setEditing(m)}>
+                  <TableCell className="px-[18px] py-[13px] text-[13.5px] text-[#475569]">
+                    {m.is_tent ? t('q_yes') : t('q_no')}
+                  </TableCell>
+                  <TableCell className="px-3.5 py-2 text-right">
+                    <div className="flex justify-end gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={ROW_ACTION}
+                        onClick={() => setEditing(m)}
+                      >
                         <PencilIcon />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive hover:text-destructive"
+                        className={ROW_ACTION_DANGER}
                         onClick={() => setDeleting(m)}
                       >
                         <Trash2Icon />

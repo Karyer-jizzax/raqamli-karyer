@@ -12,34 +12,36 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  --background: oklch(0.99 0.002 250);
-  --foreground: oklch(0.21 0.02 256);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.02 256);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.02 256);
-  /* Brand navy (#1d3a5c) */
-  --primary: oklch(0.36 0.058 252);
-  --primary-foreground: oklch(0.98 0.003 250);
-  --secondary: oklch(0.967 0.004 250);
-  --secondary-foreground: oklch(0.3 0.03 256);
-  --muted: oklch(0.967 0.004 250);
-  --muted-foreground: oklch(0.52 0.02 256);
-  --accent: oklch(0.95 0.012 250);
-  --accent-foreground: oklch(0.3 0.03 256);
-  --destructive: oklch(0.58 0.19 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.91 0.005 256);
-  --input: oklch(0.91 0.005 256);
-  --ring: oklch(0.36 0.058 252);
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  /* Per-app accent: each app overrides --primary/--ring/--primary-tint in its
+     own stylesheet (web-main: indigo, web-department: teal, web-quarry: green). */
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --primary-tint: #eef2ff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #334155;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #334155;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #e8edf3;
+  --input: #dbe2ea;
+  --ring: #4f46e5;
 
-  --chart-1: oklch(0.36 0.058 252);
-  --chart-2: oklch(0.6 0.118 184);
-  --chart-3: oklch(0.55 0.14 145);
-  --chart-4: oklch(0.7 0.16 70);
-  --chart-5: oklch(0.58 0.19 25);
+  --chart-1: var(--primary);
+  --chart-2: #0d9488;
+  --chart-3: #16a34a;
+  --chart-4: #f59e0b;
+  --chart-5: #e11d48;
 }
 
 .dark {
@@ -84,6 +86,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-primary-tint: var(--primary-tint);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -96,7 +99,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --font-sans:
-    'Inter', 'Segoe UI', system-ui, Roboto, Arial, sans-serif;
+    'Geist', 'Inter', 'Segoe UI', system-ui, Roboto, Arial, sans-serif;
   --font-mono:
     ui-monospace, 'Cascadia Mono', Consolas, 'Roboto Mono', monospace;
 }
@@ -104,5 +107,12 @@
 @layer base {
   * {
     border-color: var(--border);
+  }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 }

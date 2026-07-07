@@ -29,27 +29,42 @@ export function slugCode(name: string): string {
   return (base || 'X') + suffix;
 }
 
-/**
- * Uppercase instrument label — the unifying typographic device across the
- * command-console chrome (sidebar sections, panel titles, table headers, stats).
- */
-export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+/** 32px ghost icon button used in table rows and list rows. */
+export const ROW_ACTION =
+  'size-8 rounded-lg text-slate-400 hover:bg-[#f1f5f9] hover:text-primary';
+export const ROW_ACTION_DANGER =
+  'size-8 rounded-lg text-[#f43f5e] hover:bg-[#fff1f2] hover:text-[#e11d48]';
+
+/** Count pill shown next to registry eyebrows in table-card headers. */
+export function CountPill({ children }: { children: ReactNode }) {
   return (
-    <span className={cn('text-[10px] font-semibold tracking-[0.18em] uppercase', className)}>
+    <span className="rounded-full bg-secondary px-[9px] py-0.5 text-xs font-semibold text-muted-foreground tabular-nums">
       {children}
     </span>
   );
 }
 
-/** Status read-out: a colored signal dot plus its label, as on a control panel. */
+/**
+ * Uppercase eyebrow label — used where the mockup shows one: table-card
+ * registry headers and modal headers.
+ */
+export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={cn('text-[11px] font-semibold tracking-[0.09em] uppercase', className)}>
+      {children}
+    </span>
+  );
+}
+
+/** Status read-out: colored 8px dot with a soft glow ring plus its label. */
 export function StatusDot({ active }: { active: boolean }) {
   const { t } = useTranslation();
   return (
-    <span className="inline-flex items-center gap-2 text-sm font-medium">
+    <span className="inline-flex items-center gap-2 text-[13.5px] text-slate-700">
       <span
         className={cn(
-          'size-2 rounded-full ring-2',
-          active ? 'bg-emerald-500 ring-emerald-500/20' : 'bg-amber-500 ring-amber-500/20',
+          'size-2 rounded-full ring-[3px]',
+          active ? 'bg-[#10b981] ring-[#10b981]/15' : 'bg-[#f59e0b] ring-[#f59e0b]/15',
         )}
         aria-hidden
       />
@@ -81,7 +96,9 @@ export function Field({
   const id = useId();
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className="text-[13px] font-medium text-slate-700">
+        {label}
+      </Label>
       <Input
         id={id}
         value={value}
@@ -91,7 +108,7 @@ export function Field({
         required={required}
         readOnly={readOnly}
         placeholder={placeholder}
-        className={readOnly ? 'bg-muted text-muted-foreground' : undefined}
+        className={cn('h-[42px]', readOnly && 'bg-muted text-muted-foreground')}
       />
     </div>
   );
@@ -122,21 +139,27 @@ export function ModalForm({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader className="gap-1">
-          <Eyebrow className="text-muted-foreground">{t('nav_section')}</Eyebrow>
-          <DialogTitle>{title}</DialogTitle>
+          <Eyebrow className="text-slate-400">{t('nav_section')}</Eyebrow>
+          <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="grid gap-3">
+        <form onSubmit={onSubmit} className="grid gap-3.5">
           {children}
           {err && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-[10px] border border-[#fecdd3] bg-[#fff1f2] px-3 py-2 text-sm text-[#e11d48]">
               {err}
             </div>
           )}
           <DialogFooter className="mt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={pending}
+              className="h-[42px] px-[18px] text-sm font-medium"
+            >
               {cancelLabel ?? t('q_cancel')}
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending} className="h-[42px] px-5">
               {submitLabel}
             </Button>
           </DialogFooter>

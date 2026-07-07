@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #0f172a; background: #f8fafc; }
+  a { color: #0d9488; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .m1 td, .m1 th { border: 1px solid #eef2f6; padding: 9px 11px; white-space: nowrap; }
+  .m1 tbody tr:hover { background: #f6fefd; }
+  .m1 .ctr { text-align: center; }
+  .m1 .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mp:hover path { filter: brightness(0.94); }
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;">
+
+  <!-- HEADER -->
+  <header style="height:56px;display:flex;align-items:center;gap:12px;padding:0 26px;background:#fff;border-bottom:1px solid #e8edf3;">
+    <div style="width:30px;height:30px;border-radius:8px;background:#0d9488;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;">K</div>
+    <strong style="font-size:15px;font-weight:600;color:#0f172a;">Karier Kontrol <span style="color:#94a3b8;font-weight:500;">— Departament</span></strong>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <div style="display:inline-flex;background:#f1f5f9;border-radius:9px;padding:3px;gap:2px;">
+        <span style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.08);">UZ</span>
+        <span style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;color:#94a3b8;">ЎЗ</span>
+        <span style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;color:#94a3b8;">RU</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid #e8edf3;border-radius:999px;padding:4px 12px 4px 4px;">
+        <span style="width:28px;height:28px;border-radius:50%;background:#0d9488;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600;">D</span>
+        <span style="font-size:13px;font-weight:500;">Departament</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAV -->
+  <nav style="display:flex;gap:26px;padding:0 26px;background:#fff;border-bottom:1px solid #e8edf3;overflow-x:auto;">
+    <button onClick="{{ goDash }}" style="{{ tabDash }}">Asosiy oyna</button>
+    <button onClick="{{ goData }}" style="{{ tabData }}">Ma'lumotlar</button>
+    <button onClick="{{ goProto }}" style="{{ tabProto }}">O'lchov bayonnomasi</button>
+    <button onClick="{{ goDyn }}" style="{{ tabDyn }}">Dinamika</button>
+  </nav>
+
+  <main style="flex:1;">
+
+    <!-- ===== DASHBOARD ===== -->
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:24px;max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Yil</span><div style="height:38px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:120px;border:1px solid #dbe2ea;border-radius:9px;padding:0 12px;font-size:13.5px;background:#fff;cursor:pointer;">2026<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Oy</span><div style="height:38px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:140px;border:1px solid #dbe2ea;border-radius:9px;padding:0 12px;font-size:13.5px;background:#fff;cursor:pointer;">Barchasi<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:296px 1fr;gap:16px;align-items:start;">
+        <!-- stat card -->
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;padding:18px 20px;">
+          <div style="font-size:14px;font-weight:600;padding-bottom:10px;margin-bottom:6px;border-bottom:2px solid #0d9488;">Jizzax viloyati</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:#0f766e;"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#0d9488" stroke-width="1.6"><rect x="3" y="10" width="14" height="8" rx="1"/><path d="M6 10V7a4 4 0 0 1 8 0v3"/></svg>Karyerlar</span>
+            <b class="tnum" style="font-size:15px;color:#0f766e;">86</b>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:#0f766e;"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#0d9488" stroke-width="1.6"><rect x="2" y="12" width="5" height="6" rx="1"/><rect x="7.5" y="8" width="5" height="10" rx="1"/><rect x="13" y="4" width="5" height="14" rx="1"/></svg>Karyerdan chiqarilgan ruda</span>
+            <b class="tnum" style="font-size:15px;color:#0f766e;">248 630 m³</b>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 0;">
+            <span style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;color:#0f766e;"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#0d9488" stroke-width="1.6"><rect x="2" y="6" width="16" height="11" rx="2"/><circle cx="10" cy="11.5" r="3"/></svg>Kameralar soni</span>
+            <b class="tnum" style="font-size:15px;color:#0f766e;">172</b>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0 5px 26px;"><span style="font-size:12.5px;color:#64748b;">Aktiv</span><b class="tnum" style="font-size:12.5px;">164</b></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0 5px 26px;"><span style="font-size:12.5px;color:#64748b;">Nofaol</span><b class="tnum" style="font-size:12.5px;">8</b></div>
+        </div>
+
+        <!-- map -->
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;padding:14px;position:relative;">
+          <button style="position:absolute;top:14px;right:14px;z-index:1;width:34px;height:34px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;color:#0d9488;display:grid;place-items:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 10 3l7 6.5"/><path d="M5 8.5V16a1 1 0 0 0 1 1h3v-4.5h2V17h3a1 1 0 0 0 1-1V8.5"/></svg></button>
+          <sc-if value="{{ hasMap }}" hint-placeholder-val="{{ false }}">
+          <svg viewBox="{{ mapViewBox }}" style="width:100%;height:auto;display:block;max-height:520px;">
+            <sc-for list="{{ mapDistricts }}" as="d" hint-placeholder-count="13">
+              <path class="mp" d="{{ d.path }}" fill="{{ d.fill }}" stroke="#fff" stroke-width="1.4"></path>
+            </sc-for>
+            <sc-for list="{{ mapLabels }}" as="d" hint-placeholder-count="13">
+              <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="15" fill="#fff" stroke="#0d9488" stroke-width="1.4" opacity="0.96"></circle>
+              <text x="{{ d.cx }}" y="{{ d.cyNum }}" text-anchor="middle" font-size="14" font-weight="700" fill="#0f766e">{{ d.count }}</text>
+              <text x="{{ d.cx }}" y="{{ d.cyName }}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#334155">{{ d.name }}</text>
+            </sc-for>
+          </svg>
+          </sc-if>
+          <sc-if value="{{ loadingMap }}" hint-placeholder-val="{{ true }}"><div style="height:420px;display:grid;place-items:center;color:#94a3b8;font-size:13px;">Xarita yuklanmoqda…</div></sc-if>
+          <div style="display:flex;align-items:center;gap:14px;justify-content:center;padding-top:8px;border-top:1px solid #f1f5f9;margin-top:6px;">
+            <span style="font-size:11.5px;color:#94a3b8;">Kam</span>
+            <div style="width:150px;height:9px;border-radius:999px;background:linear-gradient(90deg,#e6f7f4,#0d9488);"></div>
+            <span style="font-size:11.5px;color:#94a3b8;">Ko'p karyer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===== DATA M1 ===== -->
+    <sc-if value="{{ isData }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <h1 style="font-size:17px;margin:0 0 4px;font-weight:600;">M1. Avtomatik raqam aniqlash kameralari orqali qayd etilgan hodisalar MA'LUMOTI</h1>
+        <div style="font-size:12.5px;color:#64748b;">Jizzax viloyati / <b style="color:#334155;">Zomin tumani</b></div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Post raqami</span><div style="height:38px;min-width:130px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #dbe2ea;border-radius:9px;padding:0 11px;font-size:13px;background:#fff;color:#64748b;">Hammasi<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Kameralar</span><div style="height:38px;min-width:130px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #dbe2ea;border-radius:9px;padding:0 11px;font-size:13px;background:#fff;color:#64748b;">Hammasi<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Yo'nalish</span><div style="height:38px;min-width:120px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #dbe2ea;border-radius:9px;padding:0 11px;font-size:13px;background:#fff;color:#64748b;">Hammasi<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Holati</span><div style="height:38px;min-width:120px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #dbe2ea;border-radius:9px;padding:0 11px;font-size:13px;background:#fff;color:#64748b;">Hammasi<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:12px;color:#64748b;">Davlat raqami</span><input placeholder="80 ..." style="height:38px;min-width:130px;border:1px solid #dbe2ea;border-radius:9px;padding:0 11px;font-size:13px;font-family:inherit;background:#fff;" /></div>
+        <button style="height:38px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#64748b;font-family:inherit;font-size:13px;font-weight:500;padding:0 15px;cursor:pointer;">Tozalash</button>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:14px 16px;">
+        <div style="font-size:11.5px;color:#94a3b8;text-align:center;margin-bottom:8px;">← jadvalni yoniga surib ko'ring →</div>
+        <div style="overflow-x:auto;">
+          <table class="m1" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+            <thead>
+              <tr style="background:#f6fbfb;color:#334155;">
+                <th rowspan="2" style="font-weight:700;">№</th>
+                <th rowspan="2" style="font-weight:700;">Post</th>
+                <th rowspan="2" style="font-weight:700;">Kamera</th>
+                <th rowspan="2" style="font-weight:700;">Davlat raqami</th>
+                <th colspan="5" style="font-weight:700;">Aniqlangan hodisalar</th>
+                <th rowspan="2" style="font-weight:700;">Yuk mavjudligi</th>
+                <th colspan="2" style="font-weight:700;background:#ecfdf5;">Yuk haqida (AI)</th>
+                <th colspan="1" style="font-weight:700;background:#fff7ed;">Qazilma turi</th>
+                <th colspan="2" style="font-weight:700;background:#f1f5f9;">Egasi</th>
+              </tr>
+              <tr style="background:#f6fbfb;color:#475569;font-size:11.5px;">
+                <th style="font-weight:600;">Turi</th>
+                <th style="font-weight:600;">Yo'nalish</th>
+                <th style="font-weight:600;">Vaqti</th>
+                <th style="font-weight:600;">Rasmi</th>
+                <th style="font-weight:600;">Video</th>
+                <th style="font-weight:600;background:#ecfdf5;">kub.metr</th>
+                <th style="font-weight:600;background:#ecfdf5;">tonna</th>
+                <th style="font-weight:600;background:#fff7ed;">Nomi</th>
+                <th style="font-weight:600;background:#f1f5f9;">STIR</th>
+                <th style="font-weight:600;background:#f1f5f9;">F.I.SH.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ m1rows }}" as="r" hint-placeholder-count="6">
+                <tr>
+                  <td class="ctr">{{ r.no }}</td>
+                  <td class="ctr">{{ r.post }}</td>
+                  <td class="ctr">{{ r.camera }}</td>
+                  <td class="ctr">
+                    <span style="display:inline-flex;align-items:stretch;border:1.5px solid #1e293b;border-radius:5px;overflow:hidden;font-weight:700;font-size:11.5px;line-height:1;">
+                      <span style="background:#1e293b;color:#fff;padding:4px 5px;">{{ r.reg }}</span>
+                      <span style="padding:4px 6px;color:#0f172a;">{{ r.plate }}</span>
+                      <span style="background:#0d9488;color:#fff;padding:4px 4px;font-size:8.5px;display:flex;align-items:center;">UZ</span>
+                    </span>
+                  </td>
+                  <td class="ctr">{{ r.vtype }}</td>
+                  <td class="ctr"><span style="{{ r.dirStyle }}">{{ r.dir }}</span></td>
+                  <td class="ctr" style="color:#64748b;">{{ r.date }}<br/>{{ r.time }}</td>
+                  <td class="ctr"><span style="width:28px;height:28px;border:1px solid #e2e8f0;border-radius:7px;display:inline-grid;place-items:center;color:#0d9488;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span></td>
+                  <td class="ctr"><span style="width:28px;height:28px;border:1px solid #e2e8f0;border-radius:7px;display:inline-grid;place-items:center;color:#0d9488;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4v16l14-8z"/></svg></span></td>
+                  <td><span style="{{ r.loadStyle }}">{{ r.load }}</span></td>
+                  <td class="num">{{ r.m3 }}</td>
+                  <td class="num">{{ r.ton }}</td>
+                  <td>{{ r.material }}</td>
+                  <td class="ctr">{{ r.stir }}</td>
+                  <td>{{ r.owner }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+            <tfoot>
+              <tr style="background:#ecfdf5;font-weight:700;">
+                <td class="ctr" colspan="10" style="border-top:2px solid #d1fae5;">Jami (6)</td>
+                <td class="num" style="border-top:2px solid #d1fae5;">312.4</td>
+                <td colspan="4" style="border-top:2px solid #d1fae5;"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div style="margin-top:10px;font-size:13px;color:#64748b;">Jami hodisalar: <b style="color:#0f172a;">6</b> · Jami hajm: <b class="tnum" style="color:#0f172a;">312.40 m³</b></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===== PROTOCOLS ===== -->
+    <sc-if value="{{ isProto }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px;max-width:900px;margin:0 auto;">
+      <h1 style="font-size:17px;margin:0 0 14px;font-weight:600;">O'lchov bayonnomasi</h1>
+      <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#fbfcfe;">
+              <th style="text-align:left;padding:12px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Davlat raqami</th>
+              <th style="text-align:left;padding:12px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Yakuniy hajm</th>
+              <th style="text-align:left;padding:12px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Holati</th>
+              <th style="padding:12px 18px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ protoRows }}" as="p" hint-placeholder-count="6">
+              <tr style="border-top:1px solid #f1f5f9;">
+                <td class="tnum" style="padding:13px 18px;font-size:13.5px;font-weight:500;">{{ p.plate }}</td>
+                <td class="tnum" style="padding:13px 18px;font-size:13.5px;color:#475569;">{{ p.vol }} m³</td>
+                <td style="padding:13px 18px;"><span style="{{ p.badge }}">{{ p.status }}</span></td>
+                <td style="padding:9px 18px;text-align:right;"><button style="height:34px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#0d9488;font-family:inherit;font-size:13px;font-weight:600;padding:0 14px;cursor:pointer;">Bayonnoma</button></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===== DYNAMICS ===== -->
+    <sc-if value="{{ isDyn }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;"><div style="font-size:12px;color:#64748b;font-weight:500;margin-bottom:8px;">Jami hodisalar</div><div class="tnum" style="font-size:28px;font-weight:700;letter-spacing:-0.02em;">4 218</div></div>
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;"><div style="font-size:12px;color:#64748b;font-weight:500;margin-bottom:8px;">O'rtacha aniqlash %</div><div class="tnum" style="font-size:28px;font-weight:700;letter-spacing:-0.02em;color:#0d9488;">93%</div></div>
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;"><div style="font-size:12px;color:#64748b;font-weight:500;margin-bottom:8px;">Yil</div><div class="tnum" style="font-size:28px;font-weight:700;letter-spacing:-0.02em;">2026</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;padding:22px 20px;">
+        <div style="display:flex;align-items:flex-end;gap:14px;height:250px;padding:10px 4px;">
+          <sc-for list="{{ dynBars }}" as="b" hint-placeholder-count="12">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;">
+              <div class="tnum" style="font-size:10.5px;color:#94a3b8;">{{ b.pct }}</div>
+              <div style="width:64%;border-radius:7px 7px 0 0;background:#0d9488;height:{{ b.h }};" title="{{ b.total }}"></div>
+              <div style="font-size:11px;color:#64748b;">{{ b.month }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MONTHS = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
+const MAP_WIDTH = 640;
+
+const M1 = [
+  ['1','0613-01','R-1-KA№1','80','R548SA','Yuk avtomobili','exit','07.07.2026','09:12:44','yes','42.8','66.3','Qum-shag\u2018al','305012345','Aliyev A.'],
+  ['2','0613-01','R-1-KA№1','01','A730BC','Yuk avtomobili','exit','07.07.2026','09:40:02','yes','58.1','92.0',"Shag\u2018al",'207845112','Karimov B.'],
+  ['3','0613-02','R-2-KA№1','80','K212MN','Yuk avtomobili','enter','07.07.2026','10:05:19','no','-','-','-','—','—'],
+  ['4','0613-01','R-1-KA№1','80','H904PT','Yuk avtomobili','exit','07.07.2026','10:33:51','yes','61.5','98.4','Ohaktosh','305447821','Toshpo\u2018lat SH.'],
+  ['5','0613-02','R-2-KA№1','25','B118LC','Yuk avtomobili','exit','07.07.2026','11:02:07','yes','49.0','76.5','Qum','—','Rustamov Q.'],
+  ['6','0613-01','R-1-KA№1','80','R548SA','Yuk avtomobili','exit','07.07.2026','11:44:28','yes','51.0','79.1','Qum-shag\u2018al','305012345','Aliyev A.'],
+];
+
+const PROTO = [
+  ['80 R548SA', '42.8', 'confirm'],
+  ['01 A730BC', '58.1', 'confirm'],
+  ['80 H904PT', '61.5', 'inspect'],
+  ['25 B118LC', '49.0', 'flagged'],
+  ['80 R548SA', '51.0', 'confirm'],
+  ['01 A730BC', '55.2', 'confirm'],
+];
+
+const STATUS = {
+  confirm: ['Tasdiq', '#059669', '#ecfdf5'],
+  flagged: ['Belgilandi', '#d97706', '#fffbeb'],
+  inspect: ['Tekshiruvga', '#e11d48', '#fff1f2'],
+};
+
+const DYN = [320,280,410,505,470,540,610,580,505,430,360,208];
+const DYN_PCT = [88,90,91,94,92,95,96,95,93,92,90,89];
+
+class Component extends DCLogic {
+  state = { tab: 'dashboard', map: null };
+
+  componentDidMount() {
+    fetch('jizzax_map.json').then(r => r.json()).then(d => this.setState({ map: d })).catch(() => {});
+  }
+
+  tabStyle(key) {
+    const active = this.state.tab === key;
+    const base = 'border:none;background:none;padding:16px 2px;font-family:inherit;font-size:14px;white-space:nowrap;cursor:pointer;font-weight:600;border-bottom:3px solid transparent;';
+    return active ? base + 'color:#0d9488;border-bottom-color:#0d9488;' : base + 'color:#64748b;font-weight:500;';
+  }
+
+  renderVals() {
+    const map = this.state.map;
+    let mapDistricts = [], mapLabels = [], viewBox = `0 0 ${MAP_WIDTH} 586`;
+    if (map) {
+      const maxC = map.d.reduce((m, d) => Math.max(m, d.c), 0);
+      viewBox = `0 0 ${MAP_WIDTH} ${map.H}`;
+      mapDistricts = map.d.map(d => {
+        const t = maxC > 0 ? d.c / maxC : 0;
+        const light = 94 - Math.round(t * 46);
+        return { path: d.d, fill: `hsl(174 42% ${light}%)` };
+      });
+      mapLabels = map.d.map(d => ({
+        cx: d.cx, cy: d.cy, cyNum: d.cy + 5, cyName: d.cy + 28,
+        count: String(d.c), name: d.n['uz-latn'],
+      }));
+    }
+
+    const dirStyle = (dir) => 'font-weight:600;color:' + (dir === 'exit' ? '#059669' : '#d97706') + ';';
+    const loadStyle = (yes) => 'font-weight:600;color:' + (yes ? '#059669' : '#94a3b8') + ';';
+
+    const m1rows = M1.map(r => ({
+      no: r[0], post: r[1], camera: r[2], reg: r[3], plate: r[4], vtype: r[5],
+      dir: r[6] === 'exit' ? 'Chiqish' : 'Kirish', dirStyle: dirStyle(r[6]),
+      date: r[7], time: r[8],
+      load: r[9] === 'yes' ? 'Yuk ortilgan' : "Bo'sh", loadStyle: loadStyle(r[9] === 'yes'),
+      m3: r[10], ton: r[11], material: r[12], stir: r[13], owner: r[14],
+    }));
+
+    const protoRows = PROTO.map(([plate, vol, st]) => {
+      const [label, color, bg] = STATUS[st];
+      return { plate, vol, status: label, badge: `display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;color:${color};background:${bg};` };
+    });
+
+    const maxDyn = Math.max(...DYN);
+    const dynBars = DYN.map((total, i) => ({
+      month: MONTHS[i], total: String(total), pct: DYN_PCT[i] + '%',
+      h: Math.max(4, Math.round((total / maxDyn) * 200)) + 'px',
+    }));
+
+    return {
+      isDash: this.state.tab === 'dashboard',
+      isData: this.state.tab === 'data',
+      isProto: this.state.tab === 'protocol',
+      isDyn: this.state.tab === 'dynamics',
+      tabDash: this.tabStyle('dashboard'),
+      tabData: this.tabStyle('data'),
+      tabProto: this.tabStyle('protocol'),
+      tabDyn: this.tabStyle('dynamics'),
+      goDash: () => this.setState({ tab: 'dashboard' }),
+      goData: () => this.setState({ tab: 'data' }),
+      goProto: () => this.setState({ tab: 'protocol' }),
+      goDyn: () => this.setState({ tab: 'dynamics' }),
+      hasMap: !!map, loadingMap: !map,
+      mapViewBox: viewBox, mapDistricts, mapLabels,
+      m1rows, protoRows, dynBars,
+    };
+  }
+}
+</script>
+</body>
+</html>

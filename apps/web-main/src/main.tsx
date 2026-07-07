@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setupI18n } from '@karier/i18n';
 import { AuthProvider } from '@karier/ui';
 import '@karier/ui/globals.css';
+import './theme.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 

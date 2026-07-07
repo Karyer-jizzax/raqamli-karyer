@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #0f172a; background: #f8fafc; }
+  a { color: #4f46e5; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  input:focus { outline: none; border-color: #4f46e5 !important; box-shadow: 0 0 0 3px #eef2ff; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .rowh:hover { background: #f8fafc; }
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;">
+
+  <!-- SIDEBAR -->
+  <aside style="width:248px;flex-shrink:0;background:#fff;border-right:1px solid #e8edf3;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;">
+    <div style="height:58px;display:flex;align-items:center;gap:11px;padding:0 20px;border-bottom:1px solid #f1f5f9;">
+      <div style="width:32px;height:32px;border-radius:9px;background:#4f46e5;color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;">K</div>
+      <div style="display:flex;flex-direction:column;line-height:1.15;">
+        <span style="font-size:13.5px;font-weight:700;letter-spacing:.02em;">KARIER KONTROL</span>
+        <span style="font-size:10.5px;color:#94a3b8;letter-spacing:.02em;">Boshqaruv</span>
+      </div>
+    </div>
+    <nav style="flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:3px;">
+      <span style="font-size:10.5px;font-weight:600;letter-spacing:.11em;color:#94a3b8;padding:8px 12px 4px;">BOSHQARUV</span>
+      <button onClick="{{ goQuarries }}" style="{{ navQuarries }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>
+        Karyerlar
+      </button>
+      <button onClick="{{ goMaterials }}" style="{{ navMaterials }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+        Mahsulotlar
+      </button>
+      <button onClick="{{ goGeo }}" style="{{ navGeo }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0zM15 5.764V21M9 3.236V16.5"/></svg>
+        Hududlar
+      </button>
+    </nav>
+    <div style="padding:14px 20px;border-top:1px solid #f1f5f9;">
+      <span style="font-size:10.5px;font-weight:600;letter-spacing:.11em;color:#cbd5e1;">SUPERADMIN</span>
+    </div>
+  </aside>
+
+  <!-- MAIN COLUMN -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+    <!-- TOPBAR -->
+    <header style="height:58px;display:flex;align-items:center;gap:10px;padding:0 26px;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid #e8edf3;position:sticky;top:0;z-index:20;">
+      <span style="font-size:12px;color:#94a3b8;">Boshqaruv</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      <h1 style="margin:0;font-size:15.5px;font-weight:600;letter-spacing:-0.01em;">{{ title }}</h1>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+        <div style="display:inline-flex;background:#f1f5f9;border-radius:9px;padding:3px;gap:2px;">
+          <span style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.08);">UZ</span>
+          <span style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;color:#94a3b8;">ЎЗ</span>
+          <span style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;color:#94a3b8;">RU</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;border:1px solid #e8edf3;border-radius:999px;padding:4px 12px 4px 4px;">
+          <span style="width:28px;height:28px;border-radius:50%;background:#4f46e5;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600;">A</span>
+          <span style="font-size:13px;font-weight:500;">Administrator</span>
+        </div>
+      </div>
+    </header>
+
+    <main style="flex:1;padding:26px;max-width:1080px;width:100%;margin:0 auto;">
+
+      <!-- ===== QUARRIES ===== -->
+      <sc-if value="{{ isQuarries }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <p style="margin:0;font-size:14px;color:#64748b;">Karyerlar va operatorlarni boshqarish</p>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+          <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;gap:7px;color:#64748b;margin-bottom:12px;"><span style="width:7px;height:7px;border-radius:2px;background:#4f46e5;"></span><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Jami karyerlar</span></div>
+            <div class="tnum" style="font-size:30px;font-weight:700;letter-spacing:-0.02em;">86</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;gap:7px;color:#64748b;margin-bottom:12px;"><span style="width:7px;height:7px;border-radius:2px;background:#10b981;"></span><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Faol</span></div>
+            <div class="tnum" style="font-size:30px;font-weight:700;letter-spacing:-0.02em;">78</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;gap:7px;color:#64748b;margin-bottom:12px;"><span style="width:7px;height:7px;border-radius:2px;background:#f59e0b;"></span><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">To'xtatilgan</span></div>
+            <div class="tnum" style="font-size:30px;font-weight:700;letter-spacing:-0.02em;">8</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;gap:7px;color:#64748b;margin-bottom:12px;"><span style="width:7px;height:7px;border-radius:2px;background:#4f46e5;"></span><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Tumanlar</span></div>
+            <div class="tnum" style="font-size:30px;font-weight:700;letter-spacing:-0.02em;">13</div>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;overflow:hidden;">
+          <header style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #f1f5f9;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.09em;color:#94a3b8;text-transform:uppercase;">Karyerlar registri</span>
+              <span class="tnum" style="background:#f1f5f9;color:#64748b;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">{{ quarryTotal }}</span>
+            </div>
+            <div style="margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+              <div style="position:relative;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Qidirish (nomi yoki kodi)…" style="height:40px;width:240px;border:1px solid #dbe2ea;border-radius:10px;padding:0 12px 0 36px;font-size:13.5px;font-family:inherit;background:#fff;" />
+              </div>
+              <div style="height:40px;display:inline-flex;align-items:center;gap:7px;border:1px solid #dbe2ea;border-radius:10px;padding:0 12px;font-size:13.5px;color:#334155;background:#fff;cursor:pointer;">Barcha tumanlar<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+              <button onClick="{{ openModal }}" style="height:40px;display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;background:#4f46e5;color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;padding:0 15px;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>Yangi karyer</button>
+            </div>
+          </header>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#fbfcfe;">
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Nomi</th>
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Tuman</th>
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Holati</th>
+                <th style="text-align:right;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Amallar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ quarries }}" as="q" hint-placeholder-count="8">
+                <tr class="rowh" style="border-top:1px solid #f1f5f9;">
+                  <td style="padding:13px 18px;font-size:14px;font-weight:500;">{{ q.name }}</td>
+                  <td style="padding:13px 18px;font-size:14px;color:#475569;">{{ q.district }}</td>
+                  <td style="padding:13px 18px;">
+                    <span style="{{ q.dotStyle }}"></span><span style="font-size:13.5px;color:#334155;">{{ q.statusLabel }}</span>
+                  </td>
+                  <td style="padding:9px 14px;">
+                    <div style="display:flex;justify-content:flex-end;gap:2px;">
+                      <button style="width:32px;height:32px;border:none;background:transparent;border-radius:8px;color:#94a3b8;display:grid;place-items:center;cursor:pointer;" style-hover="width:32px;height:32px;border:none;background:#f1f5f9;border-radius:8px;color:#4f46e5;display:grid;place-items:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg></button>
+                      <button style="width:32px;height:32px;border:none;background:transparent;border-radius:8px;color:#94a3b8;display:grid;place-items:center;cursor:pointer;" style-hover="width:32px;height:32px;border:none;background:#f1f5f9;border-radius:8px;color:#4f46e5;display:grid;place-items:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 12a2 2 0 0 0-2 2 2 2 0 0 0-2-2 2 2 0 0 0 2-2 2 2 0 0 0 2 2Z"/><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M7 6l1-2h8l1 2"/></svg></button>
+                      <button style="width:32px;height:32px;border:none;background:transparent;border-radius:8px;color:#94a3b8;display:grid;place-items:center;cursor:pointer;" style-hover="width:32px;height:32px;border:none;background:#f1f5f9;border-radius:8px;color:#4f46e5;display:grid;place-items:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                      <button style="width:32px;height:32px;border:none;background:transparent;border-radius:8px;color:#cbaccf;display:grid;place-items:center;cursor:pointer;color:#f43f5e;" style-hover="width:32px;height:32px;border:none;background:#fff1f2;border-radius:8px;color:#e11d48;display:grid;place-items:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;border-top:1px solid #f1f5f9;">
+            <span class="tnum" style="font-size:12.5px;color:#94a3b8;">1–{{ quarryTotal }} / 86</span>
+            <div style="display:flex;gap:5px;align-items:center;">
+              <button style="min-width:34px;height:34px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#94a3b8;cursor:pointer;font-family:inherit;">‹</button>
+              <button style="min-width:34px;height:34px;border:none;background:#4f46e5;color:#fff;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:600;">1</button>
+              <button style="min-width:34px;height:34px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#334155;cursor:pointer;font-family:inherit;">2</button>
+              <button style="min-width:34px;height:34px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#334155;cursor:pointer;font-family:inherit;">›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== MATERIALS ===== -->
+      <sc-if value="{{ isMaterials }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <p style="margin:0;font-size:14px;color:#64748b;">Qazilma mahsulotlarini boshqarish</p>
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;overflow:hidden;">
+          <header style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #f1f5f9;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.09em;color:#94a3b8;text-transform:uppercase;">Mahsulotlar registri</span>
+              <span class="tnum" style="background:#f1f5f9;color:#64748b;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">6</span>
+            </div>
+            <div style="margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+              <div style="position:relative;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input placeholder="Qidirish (ID yoki nomi)…" style="height:40px;width:240px;border:1px solid #dbe2ea;border-radius:10px;padding:0 12px 0 36px;font-size:13.5px;font-family:inherit;background:#fff;" />
+              </div>
+              <button style="height:40px;display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;background:#4f46e5;color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;padding:0 15px;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>Yangi mahsulot</button>
+            </div>
+          </header>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#fbfcfe;">
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">ID (kodi)</th>
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Nomi</th>
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Standart zichlik (t/m³)</th>
+                <th style="text-align:left;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Tent</th>
+                <th style="text-align:right;padding:11px 18px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Amallar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ materials }}" as="m" hint-placeholder-count="6">
+                <tr class="rowh" style="border-top:1px solid #f1f5f9;">
+                  <td class="tnum" style="padding:13px 18px;font-size:12.5px;color:#94a3b8;">{{ m.id }}</td>
+                  <td style="padding:13px 18px;font-size:14px;font-weight:500;">{{ m.name }}</td>
+                  <td class="tnum" style="padding:13px 18px;font-size:13.5px;color:#475569;">{{ m.density }}</td>
+                  <td style="padding:13px 18px;font-size:13.5px;color:#475569;">{{ m.tent }}</td>
+                  <td style="padding:9px 14px;">
+                    <div style="display:flex;justify-content:flex-end;gap:2px;">
+                      <button style="width:32px;height:32px;border:none;background:transparent;border-radius:8px;color:#94a3b8;display:grid;place-items:center;cursor:pointer;" style-hover="width:32px;height:32px;border:none;background:#f1f5f9;border-radius:8px;color:#4f46e5;display:grid;place-items:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                      <button style="width:32px;height:32px;border:none;background:transparent;border-radius:8px;color:#f43f5e;display:grid;place-items:center;cursor:pointer;" style-hover="width:32px;height:32px;border:none;background:#fff1f2;border-radius:8px;color:#e11d48;display:grid;place-items:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== GEO ===== -->
+      <sc-if value="{{ isGeo }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+          <p style="margin:0;font-size:14px;color:#64748b;">Shaharlar, viloyatlar va tumanlarni boshqarish</p>
+          <button style="height:40px;display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;background:#4f46e5;color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;padding:0 15px;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>Shahar / viloyat</button>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid #e8edf3;border-radius:14px;padding:12px 14px;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:.09em;color:#94a3b8;text-transform:uppercase;padding-left:2px;">Hudud</span>
+          <button style="width:36px;height:36px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#94a3b8;cursor:pointer;">‹</button>
+          <div style="flex:1;min-width:200px;max-width:300px;height:40px;display:inline-flex;align-items:center;justify-content:space-between;gap:7px;border:1px solid #dbe2ea;border-radius:10px;padding:0 12px;font-size:14px;color:#0f172a;background:#fff;cursor:pointer;">Jizzax viloyati<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+          <button style="width:36px;height:36px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#94a3b8;cursor:pointer;">›</button>
+          <span class="tnum" style="margin-left:auto;font-size:12.5px;color:#94a3b8;">1 / 1</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e8edf3;border-radius:16px;overflow:hidden;">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #f1f5f9;background:#fbfcfe;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:40px;border-radius:11px;background:#eef2ff;color:#4f46e5;display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></div>
+              <div>
+                <div style="font-size:16px;font-weight:600;">Jizzax viloyati</div>
+                <span style="font-size:11px;font-weight:600;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase;">13 ta tuman</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:7px;">
+              <button style="height:36px;display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#334155;font-family:inherit;font-size:13px;font-weight:500;padding:0 12px;cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></svg>Tuman</button>
+              <button style="width:36px;height:36px;border:1px solid #e2e8f0;background:#fff;border-radius:9px;color:#94a3b8;display:grid;place-items:center;cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+            </div>
+          </div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:7px;">
+            <sc-for list="{{ districts }}" as="d" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f8fafc;border:1px solid transparent;border-radius:11px;padding:11px 14px;" style-hover="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:11px;padding:11px 14px;">
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <span style="font-size:14px;font-weight:500;">{{ d.name }}</span>
+                  <sc-if value="{{ d.capital }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;border-radius:999px;padding:2px 9px;">Shahar markazi</span></sc-if>
+                </div>
+                <div style="display:flex;gap:2px;">
+                  <button style="width:30px;height:30px;border:none;background:transparent;border-radius:7px;color:#94a3b8;display:grid;place-items:center;cursor:pointer;" style-hover="width:30px;height:30px;border:none;background:#fff;border-radius:7px;color:#4f46e5;display:grid;place-items:center;cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button style="width:30px;height:30px;border:none;background:transparent;border-radius:7px;color:#f43f5e;display:grid;place-items:center;cursor:pointer;" style-hover="width:30px;height:30px;border:none;background:#fff1f2;border-radius:7px;color:#e11d48;display:grid;place-items:center;cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </main>
+  </div>
+
+  <!-- MODAL -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(15,23,42,.42);backdrop-filter:blur(2px);display:grid;place-items:center;padding:20px;z-index:60;">
+    <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(15,23,42,.28);overflow:hidden;">
+      <div style="padding:20px 24px 8px;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:.09em;color:#94a3b8;text-transform:uppercase;">Boshqaruv</span>
+        <h2 style="margin:4px 0 0;font-size:18px;font-weight:600;">Yangi karyer qo'shish</h2>
+      </div>
+      <div style="padding:14px 24px 4px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;font-weight:500;color:#334155;">Nomi</label><input style="height:42px;border:1px solid #dbe2ea;border-radius:10px;padding:0 13px;font-size:14px;font-family:inherit;" /></div>
+        <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;font-weight:500;color:#334155;">Login</label><input style="height:42px;border:1px solid #dbe2ea;border-radius:10px;padding:0 13px;font-size:14px;font-family:inherit;" /></div>
+        <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;font-weight:500;color:#334155;">Parol</label><input type="password" style="height:42px;border:1px solid #dbe2ea;border-radius:10px;padding:0 13px;font-size:14px;font-family:inherit;" /></div>
+        <div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:13px;font-weight:500;color:#334155;">Tuman</label><div style="height:42px;display:flex;align-items:center;justify-content:space-between;border:1px solid #dbe2ea;border-radius:10px;padding:0 13px;font-size:14px;color:#0f172a;cursor:pointer;">Jizzax sh.<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding:18px 24px 22px;">
+        <button onClick="{{ closeModal }}" style="height:42px;border:1px solid #e2e8f0;background:#fff;border-radius:10px;color:#334155;font-family:inherit;font-size:14px;font-weight:500;padding:0 18px;cursor:pointer;">Bekor qilish</button>
+        <button onClick="{{ closeModal }}" style="height:42px;border:none;background:#4f46e5;color:#fff;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;padding:0 20px;cursor:pointer;">Yaratish</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const DISTRICTS = ['Arnasoy','Baxmal',"Do'stlik",'Forish',"G'allaorol",'Sharof Rashidov',"Mirzacho'l",'Paxtakor','Yangiobod','Zomin','Zafarobod','Zarbdor','Jizzax sh.'];
+
+const QUARRIES = [
+  ['Zomin Granit', 'Zomin', 1],
+  ['Forish Qum karyeri', 'Forish', 1],
+  ["G'allaorol Shag'al", "G'allaorol", 1],
+  ['Baxmal Ohaktosh', 'Baxmal', 0],
+  ['Paxtakor Qurilish toshi', 'Paxtakor', 1],
+  ['Zarbdor Qum-shagal', 'Zarbdor', 1],
+  ["Mirzacho'l Karyer-2", "Mirzacho'l", 1],
+  ['Yangiobod Granit', 'Yangiobod', 0],
+  ["Do'stlik Qum", "Do'stlik", 1],
+  ['Arnasoy Shagal', 'Arnasoy', 1],
+];
+
+const MATERIALS = [
+  ['qum', 'Qum', '1.55 (1.40–1.70)', "Yo'q"],
+  ['shagal', "Shag'al", '1.65 (1.50–1.80)', "Yo'q"],
+  ['qumshagal', "Qum-shag'al aralashmasi", '1.80 (1.65–1.95)', "Yo'q"],
+  ['ohaktosh', 'Ohaktosh', '1.40 (1.30–1.55)', 'Ha'],
+  ['granit', 'Granit (shag\u2018al)', '1.70 (1.55–1.85)', "Yo'q"],
+  ['qurilish', 'Qurilish toshi', '1.60 (1.45–1.75)', 'Ha'],
+];
+
+const CAPITALS = new Set(['Jizzax sh.']);
+
+class Component extends DCLogic {
+  state = { tab: 'quarries', modal: false, search: '' };
+
+  nav(key) {
+    const active = this.state.tab === key;
+    const base = 'display:flex;align-items:center;gap:11px;border:none;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:left;transition:all .12s;position:relative;';
+    return active
+      ? base + 'background:#eef2ff;color:#4f46e5;font-weight:600;'
+      : base + 'background:transparent;color:#64748b;';
+  }
+
+  renderVals() {
+    const q = this.state.search.trim().toLowerCase();
+    const quarries = QUARRIES.filter(r => !q || r[0].toLowerCase().includes(q) || r[1].toLowerCase().includes(q))
+      .map(([name, district, active]) => ({
+        name, district,
+        statusLabel: active ? 'Faol' : "To'xtatilgan",
+        dotStyle: `display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle;background:${active ? '#10b981' : '#f59e0b'};box-shadow:0 0 0 3px ${active ? 'rgba(16,185,129,.15)' : 'rgba(245,158,11,.15)'};`,
+      }));
+
+    const titles = { quarries: 'Karyerlar', materials: 'Mahsulotlar', geo: 'Hududlar' };
+
+    return {
+      title: titles[this.state.tab],
+      isQuarries: this.state.tab === 'quarries',
+      isMaterials: this.state.tab === 'materials',
+      isGeo: this.state.tab === 'geo',
+      navQuarries: this.nav('quarries'),
+      navMaterials: this.nav('materials'),
+      navGeo: this.nav('geo'),
+      goQuarries: () => this.setState({ tab: 'quarries' }),
+      goMaterials: () => this.setState({ tab: 'materials' }),
+      goGeo: () => this.setState({ tab: 'geo' }),
+      quarries,
+      quarryTotal: quarries.length,
+      materials: MATERIALS.map(([id, name, density, tent]) => ({ id, name, density, tent })),
+      districts: DISTRICTS.map(name => ({ name, capital: CAPITALS.has(name) })),
+      search: this.state.search,
+      onSearch: (e) => this.setState({ search: e.target.value }),
+      modalOpen: this.state.modal,
+      openModal: () => this.setState({ modal: true }),
+      closeModal: () => this.setState({ modal: false }),
+      stop: (e) => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

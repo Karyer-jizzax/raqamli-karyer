@@ -1,48 +1,29 @@
 import { type M1Row, type Material, mediaUrl, useM1, useMaterials } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { Card } from '@karier/ui';
+import { Card, cn } from '@karier/ui';
 import { useMemo, useState } from 'react';
-
-// Table chrome that can't be expressed inline (sticky-ish header, hover, group
-// tints, control styling). Injected once.
-export const DATA_CSS = `
-.m1-table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
-.m1-table th,.m1-table td{border:1px solid var(--line);padding:7px 9px}
-.m1-table thead th{background:#f4f7fb;color:#2a3f57;font-weight:700;font-size:11.5px;text-align:center}
-.m1-table thead .grp-ai{background:#eef5fc}
-.m1-table thead .grp-mat{background:#fff6ea}
-.m1-table thead .grp-yhxx{background:#f0f1f6}
-.m1-table tbody tr:hover{background:#f8fbff}
-.m1-table td.ctr{text-align:center}
-.m1-table td.num{text-align:right;font-family:var(--mono)}
-.m1-table tfoot td{background:#eef5fc;font-weight:800;border-top:2px solid var(--line)}
-.m1-ic{width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:8px;display:inline-grid;place-items:center;cursor:pointer;color:var(--brand)}
-.m1-ic:hover{border-color:var(--brand)}
-.m1-fctrl{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:#fff;font-family:inherit}
-.m1-fctrl:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(30,95,168,.13)}
-.m1-plate{display:inline-flex;align-items:stretch;border:1.5px solid #2b2b2b;border-radius:5px;overflow:hidden;font-family:var(--mono);font-weight:700;font-size:12px;line-height:1}
-.m1-plate .reg{background:#2b2b2b;color:#fff;padding:3px 5px}
-.m1-plate .nm{padding:3px 6px;color:#15273c}
-.m1-plate .uz{background:#1565c0;color:#fff;padding:3px 4px;font-size:9px;display:flex;align-items:center}
-.m1-mwrap{position:fixed;inset:0;z-index:120;background:rgba(7,13,20,.6);display:grid;place-items:center;padding:20px}
-.m1-mcard{background:#fff;border-radius:14px;overflow:hidden;max-width:640px;width:100%;box-shadow:0 24px 60px rgba(8,25,50,.4)}
-.m1-mhead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700}
-.m1-mx{border:none;background:#f0f3f8;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px}
-.m1-plate-btn{border:none;background:none;padding:0;cursor:pointer}
-.m1-plate-btn:hover .m1-plate{box-shadow:0 0 0 2px rgba(30,95,168,.35)}
-.m1-hist-card{max-width:820px}
-.m1-ic:disabled{opacity:.32;cursor:default}
-.m1-ic:disabled:hover{border-color:var(--line)}
-.m1-gal{display:grid;gap:6px;max-height:70vh;overflow:auto;background:#000}
-.m1-gal img{width:100%;display:block}
-.m1-mempty{margin:0;padding:48px 16px;text-align:center;color:var(--muted-ink);background:#f7f9fc}
-`;
 
 const STATUSES = ['confirm', 'flagged', 'inspect'] as const;
 const DIRECTIONS = ['exit', 'enter'] as const;
 const LOADS = ['yes', 'no'] as const;
 
 type Lang = ReturnType<typeof currentLang>;
+
+// Shared M-1 table cell chrome (mockup: 1px #eef2f6 grid, compact, no wrap).
+const CELL = 'border border-[#eef2f6] px-3 py-2 whitespace-nowrap';
+const CTR = cn(CELL, 'text-center');
+const NUM = cn(CELL, 'text-right tabular-nums');
+// Group tints
+const AI = 'bg-[#ecfdf5]';
+const MAT = 'bg-[#fff7ed]';
+const OWN = 'bg-[#f1f5f9]';
+// Filter controls (38px, teal focus ring)
+const FCTRL =
+  'h-[38px] rounded-[9px] border border-input bg-white px-[11px] text-[13px] font-[inherit] focus:border-primary focus:ring-[3px] focus:ring-primary/15 focus:outline-none';
+const FLBL = 'flex flex-col gap-[5px] text-xs text-muted-foreground';
+// Icon buttons (photo/video)
+const ICBTN =
+  'inline-grid size-7 cursor-pointer place-items-center rounded-[7px] border border-[#e2e8f0] bg-white text-primary hover:enabled:border-primary disabled:cursor-default disabled:opacity-30';
 
 function materialName(m: Material | undefined, lang: Lang): string {
   if (!m) return '-';
@@ -67,8 +48,8 @@ function Glyph({ path }: { path: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width={16}
-      height={16}
+      width={15}
+      height={15}
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
@@ -81,18 +62,17 @@ function Glyph({ path }: { path: string }) {
 
 function Plate({ row }: { row: M1Row }) {
   return (
-    <span className="m1-plate">
-      <span className="reg">{row.plate_region}</span>
-      <span className="nm">{row.plate_number}</span>
-      <span className="uz">UZ</span>
+    <span className="inline-flex items-stretch overflow-hidden rounded-[5px] border-[1.5px] border-[#1e293b] text-[11.5px] leading-none font-bold">
+      <span className="bg-[#1e293b] px-[5px] py-1 text-white">{row.plate_region}</span>
+      <span className="px-1.5 py-1 text-foreground">{row.plate_number}</span>
+      <span className="flex items-center bg-primary px-1 text-[8.5px] text-white">UZ</span>
     </span>
   );
 }
 
 export function DataM1() {
   return (
-    <div style={{ padding: 24, display: 'grid', gap: 14 }}>
-      <style>{DATA_CSS}</style>
+    <div className="flex flex-col gap-3.5 p-6">
       <M1Table />
     </div>
   );
@@ -171,53 +151,45 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const year = new Date().getFullYear();
 
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div className="flex flex-col gap-3.5">
       {/* Title + scope (skipped when embedded on the quarry detail page — that
           page already has its own title/breadcrumb) */}
       {!quarryId && (
         <div>
-          <h1 style={{ fontSize: 17, margin: '0 0 4px', color: '#15273c' }}>{t('m1_title')}</h1>
-          <div style={{ fontSize: 12.5, color: 'var(--muted-ink)' }}>
-            {t('region')} / <b style={{ color: '#2a3f57' }}>{t('district')}</b>
+          <h1 className="mb-1 text-[17px] font-semibold">{t('m1_title')}</h1>
+          <div className="text-[12.5px] text-muted-foreground">
+            {t('region')} / <b className="text-[#334155]">{t('district')}</b>
           </div>
         </div>
       )}
 
       {/* Period (display-only) + updated stamp */}
-      <Card>
-        <div
-          style={{
-            display: 'flex',
-            gap: 14,
-            flexWrap: 'wrap',
-            alignItems: 'end',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <label style={lblStyle}>
+      <Card className="rounded-[14px] px-4 py-3.5">
+        <div className="flex flex-wrap items-end justify-between gap-3.5">
+          <div className="flex flex-wrap gap-3">
+            <label className={FLBL}>
               {t('as_month')}
-              <select className="m1-fctrl" defaultValue="all">
+              <select className={cn(FCTRL, 'min-w-[130px]')} defaultValue="all">
                 <option value="all">{t('as_all')}</option>
               </select>
             </label>
-            <label style={lblStyle}>
+            <label className={FLBL}>
               {t('as_year')}
-              <select className="m1-fctrl" defaultValue={year}>
+              <select className={cn(FCTRL, 'min-w-[110px]')} defaultValue={year}>
                 <option value={year}>{year}</option>
                 <option value={year - 1}>{year - 1}</option>
               </select>
             </label>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted-ink)' }}>
-            {t('as_updated')}: <b style={{ color: '#2a3f57' }}>—</b>
+          <div className="text-xs text-muted-foreground">
+            {t('as_updated')}: <b className="text-[#334155]">—</b>
           </div>
         </div>
       </Card>
 
       {/* Filters */}
-      <Card>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'end' }}>
+      <Card className="rounded-[14px] px-4 py-3.5">
+        <div className="flex flex-wrap items-end gap-3">
           <Sel label={t('filt_post')} value={f.post} onChange={set('post')} t={t}
             opts={postOpts.map((p) => [p, p])} />
           <Sel label={t('filt_camera')} value={f.camera} onChange={set('camera')} t={t}
@@ -232,10 +204,10 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
             opts={LOADS.map((l) => [l, t(`load_${l === 'yes' ? 'yes' : 'no'}`)])} />
           <Sel label={t('flt_material')} value={f.material_id} onChange={set('material_id')} t={t}
             opts={(materials ?? []).map((m) => [m.id, materialName(m, lang)])} />
-          <label style={lblStyle}>
+          <label className={FLBL}>
             {t('filt_plate')}
             <input
-              className="m1-fctrl"
+              className={cn(FCTRL, 'min-w-[130px]')}
               placeholder={t('filt_plate_ph')}
               value={f.plate ?? ''}
               onChange={(e) => set('plate')(e.target.value)}
@@ -243,60 +215,50 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
           </label>
           <button
             onClick={() => setF({})}
-            style={{
-              padding: '8px 14px',
-              border: '1px solid var(--line)',
-              borderRadius: 8,
-              background: '#fff',
-              cursor: 'pointer',
-              color: 'var(--muted-ink)',
-              fontWeight: 600,
-            }}
+            className="h-[38px] cursor-pointer rounded-[9px] border border-[#e2e8f0] bg-white px-[15px] text-[13px] font-medium text-muted-foreground"
           >
             {t('flt_clear')}
           </button>
         </div>
       </Card>
 
-      <Card>
+      <Card className="rounded-[14px] px-4 py-3.5">
         {isLoading ? (
-          <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
+          <p className="text-muted-foreground">{t('loading')}</p>
         ) : (
           <>
-            <div style={{ fontSize: 11, color: 'var(--muted-ink)', marginBottom: 6, textAlign: 'center' }}>
-              {t('scrollhint')}
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="m1-table">
+            <div className="mb-2 text-center text-[11.5px] text-slate-400">{t('scrollhint')}</div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[12.5px]">
                 <thead>
-                  <tr>
-                    <th rowSpan={2}>{t('th_no')}</th>
-                    <th rowSpan={2}>{t('th_post')}</th>
-                    <th rowSpan={2}>{t('th_camera')}</th>
-                    <th rowSpan={2}>{t('th_plate')}</th>
-                    <th colSpan={5}>{t('grp_events')}</th>
-                    <th rowSpan={2}>{t('th_load')}</th>
-                    <th className="grp-ai" colSpan={2}>{t('grp_ai')}</th>
-                    <th className="grp-mat" colSpan={1}>{t('grp_mat')}</th>
-                    <th className="grp-yhxx" colSpan={2}>{t('grp_yhxx')}</th>
+                  <tr className="bg-[#f6fbfb] text-[#334155]">
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_no')}</th>
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_post')}</th>
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
+                    <th colSpan={5} className={cn(CELL, 'font-bold')}>{t('grp_events')}</th>
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
+                    <th colSpan={2} className={cn(CELL, AI, 'font-bold')}>{t('grp_ai')}</th>
+                    <th colSpan={1} className={cn(CELL, MAT, 'font-bold')}>{t('grp_mat')}</th>
+                    <th colSpan={2} className={cn(CELL, OWN, 'font-bold')}>{t('grp_yhxx')}</th>
                   </tr>
-                  <tr>
-                    <th>{t('th_type')}</th>
-                    <th>{t('th_dir')}</th>
-                    <th>{t('th_time')}</th>
-                    <th>{t('th_photo')}</th>
-                    <th>{t('th_video')}</th>
-                    <th className="grp-ai">{t('th_m3')}</th>
-                    <th className="grp-ai">{t('th_ton')}</th>
-                    <th className="grp-mat">{t('th_matname')}</th>
-                    <th className="grp-yhxx">{t('th_stir')}</th>
-                    <th className="grp-yhxx">{t('th_owner')}</th>
+                  <tr className="bg-[#f6fbfb] text-[11.5px] text-[#475569]">
+                    <th className={cn(CELL, 'font-semibold')}>{t('th_type')}</th>
+                    <th className={cn(CELL, 'font-semibold')}>{t('th_dir')}</th>
+                    <th className={cn(CELL, 'font-semibold')}>{t('th_time')}</th>
+                    <th className={cn(CELL, 'font-semibold')}>{t('th_photo')}</th>
+                    <th className={cn(CELL, 'font-semibold')}>{t('th_video')}</th>
+                    <th className={cn(CELL, AI, 'font-semibold')}>{t('th_m3')}</th>
+                    <th className={cn(CELL, AI, 'font-semibold')}>{t('th_ton')}</th>
+                    <th className={cn(CELL, MAT, 'font-semibold')}>{t('th_matname')}</th>
+                    <th className={cn(CELL, OWN, 'font-semibold')}>{t('th_stir')}</th>
+                    <th className={cn(CELL, OWN, 'font-semibold')}>{t('th_owner')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={15} style={{ textAlign: 'center', color: 'var(--muted-ink)', padding: 22 }}>
+                      <td colSpan={15} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -307,34 +269,39 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                       const hasPhoto = (r.image_urls?.length ?? 0) > 0;
                       const hasVideo = Boolean(r.video_url);
                       return (
-                        <tr key={r.id}>
-                          <td className="ctr">{i + 1}</td>
-                          <td className="ctr">{r.post_code ?? '—'}</td>
-                          <td className="ctr">{r.camera_label ?? '—'}</td>
-                          <td className="ctr">
+                        <tr key={r.id} className="hover:bg-[#f6fefd]">
+                          <td className={CTR}>{i + 1}</td>
+                          <td className={CTR}>{r.post_code ?? '—'}</td>
+                          <td className={CTR}>{r.camera_label ?? '—'}</td>
+                          <td className={CTR}>
                             <button
                               type="button"
-                              className="m1-plate-btn"
+                              className="cursor-pointer border-none bg-transparent p-0 hover:[&>span]:shadow-[0_0_0_2px_rgba(13,148,136,.35)]"
                               title={t('veh_history_hint')}
                               onClick={() => setHistory({ plate_region: r.plate_region, plate_number: r.plate_number })}
                             >
                               <Plate row={r} />
                             </button>
                           </td>
-                          <td className="ctr">{vtypeLabel(r.vtype)}</td>
-                          <td className="ctr">
-                            <span style={{ color: r.direction === 'exit' ? '#15835a' : '#9a6a00', fontWeight: 600 }}>
+                          <td className={CTR}>{vtypeLabel(r.vtype)}</td>
+                          <td className={CTR}>
+                            <span
+                              className={cn(
+                                'font-semibold',
+                                r.direction === 'exit' ? 'text-[#059669]' : 'text-[#d97706]',
+                              )}
+                            >
                               {t(`dir_${r.direction}`)}
                             </span>
                           </td>
-                          <td className="ctr">
+                          <td className={cn(CTR, 'text-muted-foreground')}>
                             {dt.date}
                             <br />
-                            <span style={{ color: 'var(--muted-ink)' }}>{dt.time}</span>
+                            {dt.time}
                           </td>
-                          <td className="ctr">
+                          <td className={CTR}>
                             <button
-                              className="m1-ic"
+                              className={ICBTN}
                               disabled={!hasPhoto}
                               onClick={() => setMedia({ row: r, mode: 'photo' })}
                               title={t('th_photo')}
@@ -342,9 +309,9 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                               <Glyph path={EYE} />
                             </button>
                           </td>
-                          <td className="ctr">
+                          <td className={CTR}>
                             <button
-                              className="m1-ic"
+                              className={ICBTN}
                               disabled={!hasVideo}
                               onClick={() => setMedia({ row: r, mode: 'video' })}
                               title={t('th_video')}
@@ -352,39 +319,41 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                               <Glyph path={PLAY} />
                             </button>
                           </td>
-                          <td>
+                          <td className={CELL}>
                             {r.is_loaded ? (
-                              <span style={{ color: '#15835a', fontWeight: 600 }}>{t('load_yes')}</span>
+                              <span className="font-semibold text-[#059669]">{t('load_yes')}</span>
                             ) : (
-                              <span style={{ color: 'var(--muted-ink)' }}>{t('load_no')}</span>
+                              <span className="font-semibold text-slate-400">{t('load_no')}</span>
                             )}
                           </td>
-                          <td className="num">{loaded ? f1(r.volume_final) : '-'}</td>
-                          <td className="num">{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
-                          <td>{r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}</td>
-                          <td className="ctr">{r.stir || '—'}</td>
-                          <td>{r.owner_name || '—'}</td>
+                          <td className={NUM}>{loaded ? f1(r.volume_final) : '-'}</td>
+                          <td className={NUM}>{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
+                          <td className={CELL}>
+                            {r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}
+                          </td>
+                          <td className={CTR}>{r.stir || '—'}</td>
+                          <td className={CELL}>{r.owner_name || '—'}</td>
                         </tr>
                       );
                     })
                   )}
                 </tbody>
                 <tfoot>
-                  <tr>
-                    <td className="ctr" colSpan={10}>
+                  <tr className="bg-[#ecfdf5] font-bold">
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={10}>
                       {t('jami')} ({filtered.length})
                     </td>
-                    <td className="num">{f1(totalVol)}</td>
-                    <td colSpan={4} />
+                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>
+                    <td className={cn(CELL, 'border-t-2 border-t-[#d1fae5]')} colSpan={4} />
                   </tr>
                 </tfoot>
               </table>
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 13, color: 'var(--muted-ink)' }}>
-              {t('total_events')}: <b style={{ color: '#15273c' }}>{filtered.length}</b> ·{' '}
+            <div className="mt-2.5 text-[13px] text-muted-foreground">
+              {t('total_events')}: <b className="text-foreground">{filtered.length}</b> ·{' '}
               {t('total_vol')}:{' '}
-              <b style={{ color: '#15273c', fontFamily: 'var(--mono)' }}>
+              <b className="text-foreground tabular-nums">
                 {f2(totalVol)} {t('vol_unit')}
               </b>
             </div>
@@ -393,35 +362,44 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
       </Card>
 
       {history && (
-        <div className="m1-mwrap" onClick={() => setHistory(null)}>
-          <div className="m1-mcard m1-hist-card" onClick={(e) => e.stopPropagation()}>
-            <div className="m1-mhead">
+        <div
+          className="fixed inset-0 z-[120] grid place-items-center bg-[#070d14]/60 p-5"
+          onClick={() => setHistory(null)}
+        >
+          <div
+            className="w-full max-w-[820px] overflow-hidden rounded-[14px] bg-white shadow-[0_24px_60px_rgba(8,25,50,.4)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3 font-bold">
               <span>
                 {t('veh_history_title')} ·{' '}
-                <span style={{ fontFamily: 'var(--mono)' }}>
+                <span className="tabular-nums">
                   {history.plate_region} {history.plate_number}
                 </span>
               </span>
-              <button className="m1-mx" onClick={() => setHistory(null)}>
+              <button
+                className="size-[30px] cursor-pointer rounded-lg border-none bg-[#f0f3f8] text-[15px]"
+                onClick={() => setHistory(null)}
+              >
                 ✕
               </button>
             </div>
-            <div style={{ padding: 14, maxHeight: '70vh', overflow: 'auto' }}>
+            <div className="max-h-[70vh] overflow-auto p-3.5">
               {historyRows.length === 0 ? (
-                <p style={{ color: 'var(--muted-ink)', margin: 0 }}>{t('veh_history_empty')}</p>
+                <p className="m-0 text-muted-foreground">{t('veh_history_empty')}</p>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="m1-table">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-[12.5px]">
                     <thead>
-                      <tr>
-                        <th>{t('th_time')}</th>
-                        <th>{t('th_post')}</th>
-                        <th>{t('th_camera')}</th>
-                        <th>{t('th_dir')}</th>
-                        <th>{t('th_load')}</th>
-                        <th>{t('th_m3')}</th>
-                        <th>{t('th_ton')}</th>
-                        <th>{t('grp_mat')}</th>
+                      <tr className="bg-[#f6fbfb] text-[#334155]">
+                        <th className={cn(CELL, 'font-bold')}>{t('th_time')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('th_post')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('th_dir')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('th_m3')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('th_ton')}</th>
+                        <th className={cn(CELL, 'font-bold')}>{t('grp_mat')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -429,29 +407,36 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                         const dt = fmtDateTime(r.occurred_at);
                         const loaded = r.volume_final > 0;
                         return (
-                          <tr key={r.id}>
-                            <td className="ctr">
+                          <tr key={r.id} className="hover:bg-[#f6fefd]">
+                            <td className={CTR}>
                               {dt.date}
                               <br />
-                              <span style={{ color: 'var(--muted-ink)' }}>{dt.time}</span>
+                              <span className="text-muted-foreground">{dt.time}</span>
                             </td>
-                            <td className="ctr">{r.post_code ?? '—'}</td>
-                            <td className="ctr">{r.camera_label ?? '—'}</td>
-                            <td className="ctr">
-                              <span style={{ color: r.direction === 'exit' ? '#15835a' : '#9a6a00', fontWeight: 600 }}>
+                            <td className={CTR}>{r.post_code ?? '—'}</td>
+                            <td className={CTR}>{r.camera_label ?? '—'}</td>
+                            <td className={CTR}>
+                              <span
+                                className={cn(
+                                  'font-semibold',
+                                  r.direction === 'exit' ? 'text-[#059669]' : 'text-[#d97706]',
+                                )}
+                              >
                                 {t(`dir_${r.direction}`)}
                               </span>
                             </td>
-                            <td className="ctr">
+                            <td className={CTR}>
                               {r.is_loaded ? (
-                                <span style={{ color: '#15835a', fontWeight: 600 }}>{t('load_yes')}</span>
+                                <span className="font-semibold text-[#059669]">{t('load_yes')}</span>
                               ) : (
-                                <span style={{ color: 'var(--muted-ink)' }}>{t('load_no')}</span>
+                                <span className="font-semibold text-slate-400">{t('load_no')}</span>
                               )}
                             </td>
-                            <td className="num">{loaded ? f1(r.volume_final) : '-'}</td>
-                            <td className="num">{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
-                            <td>{r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}</td>
+                            <td className={NUM}>{loaded ? f1(r.volume_final) : '-'}</td>
+                            <td className={NUM}>{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
+                            <td className={CELL}>
+                              {r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}
+                            </td>
                           </tr>
                         );
                       })}
@@ -459,8 +444,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                   </table>
                 </div>
               )}
-              <div style={{ marginTop: 10, fontSize: 13, color: 'var(--muted-ink)' }}>
-                {t('veh_history_total')}: <b style={{ color: '#15273c' }}>{historyRows.length}</b>
+              <div className="mt-2.5 text-[13px] text-muted-foreground">
+                {t('veh_history_total')}: <b className="text-foreground">{historyRows.length}</b>
               </div>
             </div>
           </div>
@@ -468,14 +453,23 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
       )}
 
       {media && (
-        <div className="m1-mwrap" onClick={() => setMedia(null)}>
-          <div className="m1-mcard" onClick={(e) => e.stopPropagation()}>
-            <div className="m1-mhead">
+        <div
+          className="fixed inset-0 z-[120] grid place-items-center bg-[#070d14]/60 p-5"
+          onClick={() => setMedia(null)}
+        >
+          <div
+            className="w-full max-w-[640px] overflow-hidden rounded-[14px] bg-white shadow-[0_24px_60px_rgba(8,25,50,.4)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3 font-bold">
               <span>
                 {media.mode === 'photo' ? t('th_photo') : t('th_video')} · {media.row.plate_region}{' '}
                 {media.row.plate_number}
               </span>
-              <button className="m1-mx" onClick={() => setMedia(null)}>
+              <button
+                className="size-[30px] cursor-pointer rounded-lg border-none bg-[#f0f3f8] text-[15px]"
+                onClick={() => setMedia(null)}
+              >
                 ✕
               </button>
             </div>
@@ -489,21 +483,25 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                   loop
                   playsInline
                   poster={mediaUrl(media.row.image_urls?.[0])}
-                  style={{ width: '100%', display: 'block', background: '#000' }}
+                  className="block w-full bg-black"
                 >
                   <source src={mediaUrl(media.row.video_url)} type="video/mp4" />
                 </video>
               ) : (
-                <p className="m1-mempty">{t('vid_no_image')}</p>
+                <p className="m-0 bg-[#f7f9fc] px-4 py-12 text-center text-muted-foreground">
+                  {t('vid_no_image')}
+                </p>
               )
             ) : (media.row.image_urls?.length ?? 0) > 0 ? (
-              <div className="m1-gal">
+              <div className="grid max-h-[70vh] gap-1.5 overflow-auto bg-black">
                 {(media.row.image_urls ?? []).map((u, idx) => (
-                  <img key={idx} src={mediaUrl(u)} alt="" />
+                  <img key={idx} src={mediaUrl(u)} alt="" className="block w-full" />
                 ))}
               </div>
             ) : (
-              <p className="m1-mempty">{t('vid_no_image')}</p>
+              <p className="m-0 bg-[#f7f9fc] px-4 py-12 text-center text-muted-foreground">
+                {t('vid_no_image')}
+              </p>
             )}
           </div>
         </div>
@@ -511,13 +509,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
     </div>
   );
 }
-
-const lblStyle: React.CSSProperties = {
-  display: 'grid',
-  gap: 4,
-  fontSize: 12,
-  color: 'var(--muted-ink)',
-};
 
 function Sel({
   label,
@@ -533,9 +524,13 @@ function Sel({
   t: (k: string) => string;
 }) {
   return (
-    <label style={lblStyle}>
+    <label className={FLBL}>
       {label}
-      <select className="m1-fctrl" value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+      <select
+        className={cn(FCTRL, 'min-w-[120px] cursor-pointer')}
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+      >
         <option value="">{t('flt_all')}</option>
         {opts.map(([v, lbl]) => (
           <option key={v} value={v}>

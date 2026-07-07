@@ -1,17 +1,9 @@
 import type { Lang, StatusKey } from '@karier/types';
 import { LANGS } from '@karier/types';
 import { currentLang, setLang, useTranslation } from '@karier/i18n';
-import { CheckIcon, ChevronDownIcon, GlobeIcon } from 'lucide-react';
 import { type ButtonHTMLAttributes, type ReactNode, useState } from 'react';
 
-import { Badge } from './ui/badge';
 import { Button as UIButton } from './ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 import { cn } from './lib/utils';
 
 /**
@@ -35,29 +27,30 @@ export function Button({
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      className={cn(
-        'bg-card text-card-foreground rounded-xl border p-5 shadow-sm',
-        className,
-      )}
-    >
+    <div className={cn('bg-card text-card-foreground rounded-2xl border p-5', className)}>
       {children}
     </div>
   );
 }
 
-const STATUS_VARIANT: Record<StatusKey, 'success' | 'warning' | 'destructive'> = {
-  confirm: 'success',
-  flagged: 'warning',
-  inspect: 'destructive',
+/** Soft pastel status badges (confirm / flagged / inspect). */
+const STATUS_CLASSES: Record<StatusKey, string> = {
+  confirm: 'bg-[#ecfdf5] text-[#059669]',
+  flagged: 'bg-[#fffbeb] text-[#d97706]',
+  inspect: 'bg-[#fff1f2] text-[#e11d48]',
 };
 
 export function StatusPill({ status }: { status: StatusKey }) {
   const { t } = useTranslation();
   return (
-    <Badge variant={STATUS_VARIANT[status]} className="rounded-full">
+    <span
+      className={cn(
+        'inline-block rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap',
+        STATUS_CLASSES[status],
+      )}
+    >
       {t(`status_${status}`)}
-    </Badge>
+    </span>
   );
 }
 
@@ -67,42 +60,30 @@ const LANG_LABELS: Record<Lang, string> = {
   ru: 'RU',
 };
 
-const LANG_NAMES: Record<Lang, string> = {
-  'uz-latn': "O'zbekcha",
-  'uz-cyrl': 'Ўзбекча',
-  ru: 'Русский',
-};
-
+/** Segmented language pills (UZ / ЎЗ / RU) used in headers and the login card. */
 export function LangSwitcher() {
   const [lang, setLangState] = useState<Lang>(currentLang());
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <UIButton variant="outline" size="sm" className="font-semibold">
-          <GlobeIcon className="text-muted-foreground" />
-          {LANG_LABELS[lang]}
-          <ChevronDownIcon className="text-muted-foreground" />
-        </UIButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-40">
-        {LANGS.map((l) => (
-          <DropdownMenuItem
-            key={l}
-            onSelect={() => {
-              setLang(l);
-              setLangState(l);
-            }}
-            className={cn('justify-between', l === lang && 'font-semibold')}
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-muted-foreground w-6 text-xs">{LANG_LABELS[l]}</span>
-              {LANG_NAMES[l]}
-            </span>
-            {l === lang && <CheckIcon className="size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="inline-flex gap-0.5 rounded-[9px] bg-secondary p-[3px]">
+      {LANGS.map((l) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => {
+            setLang(l);
+            setLangState(l);
+          }}
+          className={cn(
+            'cursor-pointer rounded-[7px] border-none px-3 py-1.5 text-xs font-semibold transition-colors',
+            l === lang
+              ? 'bg-white text-foreground shadow-[0_1px_2px_rgba(15,23,42,.08)]'
+              : 'text-slate-400 hover:text-slate-600',
+          )}
+        >
+          {LANG_LABELS[l]}
+        </button>
+      ))}
+    </div>
   );
 }

@@ -3,53 +3,50 @@ import { useTranslation } from '@karier/i18n';
 import { Card, ProtocolViewer, StatusPill } from '@karier/ui';
 import { useState } from 'react';
 
+const TH =
+  'px-[18px] py-3 text-left text-[10.5px] font-semibold tracking-[.08em] uppercase text-slate-400';
+
 export function Protocols() {
   const { t } = useTranslation();
   const { data: events, isLoading } = useEvents();
   const [protoEvent, setProtoEvent] = useState<string | null>(null);
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="mx-auto max-w-[900px] p-6">
       {protoEvent && <ProtocolViewer eventId={protoEvent} onClose={() => setProtoEvent(null)} />}
-      <h2 style={{ margin: '0 0 12px' }}>{t('nav_protocol')}</h2>
-      <Card>
+      <h2 className="mb-3.5 text-[17px] font-semibold">{t('nav_protocol')}</h2>
+      <Card className="overflow-hidden p-0">
         {isLoading ? (
-          <p style={{ color: 'var(--muted-ink)' }}>{t('loading')}</p>
+          <p className="m-0 p-5 text-muted-foreground">{t('loading')}</p>
         ) : !events?.length ? (
-          <p style={{ color: 'var(--muted-ink)' }}>{t('ev_empty')}</p>
+          <p className="m-0 p-5 text-muted-foreground">{t('ev_empty')}</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--muted-ink)', fontSize: 11 }}>
-                  <th style={th}>{t('ev_plate_number')}</th>
-                  <th style={th}>{t('ev_vol_final')}</th>
-                  <th style={th}>{t('q_status')}</th>
-                  <th style={th}></th>
+                <tr className="bg-[#fbfcfe]">
+                  <th className={TH}>{t('ev_plate_number')}</th>
+                  <th className={TH}>{t('ev_vol_final')}</th>
+                  <th className={TH}>{t('q_status')}</th>
+                  <th className="px-[18px] py-3" />
                 </tr>
               </thead>
               <tbody>
                 {events.map((e) => (
-                  <tr key={e.id} style={{ borderTop: '1px solid var(--line)' }}>
-                    <td style={{ ...td, fontFamily: 'var(--mono)' }}>
+                  <tr key={e.id} className="border-t border-t-[#f1f5f9]">
+                    <td className="px-[18px] py-[13px] text-[13.5px] font-medium tabular-nums">
                       {e.plate_region} {e.plate_number}
                     </td>
-                    <td style={{ ...td, fontFamily: 'var(--mono)' }}>{e.volume_final} m³</td>
-                    <td style={td}>
+                    <td className="px-[18px] py-[13px] text-[13.5px] text-[#475569] tabular-nums">
+                      {e.volume_final} m³
+                    </td>
+                    <td className="px-[18px] py-[13px]">
                       <StatusPill status={e.status} />
                     </td>
-                    <td style={td}>
+                    <td className="px-[18px] py-[9px] text-right">
                       <button
                         onClick={() => setProtoEvent(e.id)}
-                        style={{
-                          border: '1px solid var(--line)',
-                          background: '#fff',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          color: 'var(--brand)',
-                          fontWeight: 700,
-                        }}
+                        className="h-[34px] cursor-pointer rounded-[9px] border border-[#e2e8f0] bg-white px-3.5 text-[13px] font-semibold text-primary"
                       >
                         {t('protocol_open')}
                       </button>
@@ -64,6 +61,3 @@ export function Protocols() {
     </div>
   );
 }
-
-const th: React.CSSProperties = { padding: '6px 10px', fontWeight: 600 };
-const td: React.CSSProperties = { padding: '9px 10px' };

@@ -9,10 +9,10 @@ function name(d: DistrictGeo): string {
 }
 
 function fillFor(count: number, max: number, selected: boolean): string {
-  if (selected) return '#1d3a5c';
+  if (selected) return '#0f766e';
   const t = max > 0 ? count / max : 0;
-  const light = 92 - Math.round(t * 42);
-  return `hsl(212 40% ${light}%)`;
+  const light = 94 - Math.round(t * 46);
+  return `hsl(174 42% ${light}%)`;
 }
 
 export function JizzaxMap({
@@ -60,7 +60,7 @@ export function JizzaxMap({
       {districts.map((d) => {
         if (d.center_x == null || d.center_y == null) return null;
         const selected = d.id === selectedId;
-        const labelFill = selected ? '#fff' : '#1d3a5c';
+        const labelFill = selected ? '#fff' : '#334155';
         return (
           <g key={`b-${d.id}`} pointerEvents="none">
             <circle
@@ -68,7 +68,7 @@ export function JizzaxMap({
               cy={d.center_y}
               r={17}
               fill="#fff"
-              stroke="#1d3a5c"
+              stroke="#0d9488"
               strokeWidth={1.4}
               opacity={0.95}
             />
@@ -78,7 +78,7 @@ export function JizzaxMap({
               textAnchor="middle"
               fontSize={15}
               fontWeight={800}
-              fill="#1d3a5c"
+              fill="#0f766e"
             >
               {d.quarry_count}
             </text>
@@ -89,7 +89,7 @@ export function JizzaxMap({
               fontSize={11}
               fontWeight={800}
               fill={labelFill}
-              stroke={selected ? '#1d3a5c' : 'none'}
+              stroke={selected ? '#0f766e' : 'none'}
               strokeWidth={selected ? 2.5 : 0}
               paintOrder="stroke"
               opacity={0.95}

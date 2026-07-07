@@ -1,5 +1,5 @@
 import { useTranslation } from '@karier/i18n';
-import { LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
+import { cn, LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
 import { Dashboard } from './features/Dashboard';
@@ -18,21 +18,22 @@ const NAV = [
 
 function Header() {
   const { t } = useTranslation();
+  // "Karier Kontrol — Departament" → render the suffix (from the dash) muted.
+  const title = t('app_department');
+  const dashIdx = title.indexOf('—');
+  const main = dashIdx > 0 ? title.slice(0, dashIdx).trim() : title;
+  const suffix = dashIdx > 0 ? title.slice(dashIdx) : '';
+
   return (
-    <header
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        padding: '11px 24px',
-        background: '#fff',
-        borderBottom: '1px solid var(--line)',
-        flexWrap: 'wrap',
-      }}
-    >
-      <strong style={{ fontSize: 16, color: 'var(--brand)' }}>{t('app_department')}</strong>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+    <header className="flex h-14 flex-wrap items-center gap-3 border-b bg-white px-[26px] max-md:h-auto max-md:py-2">
+      <div className="grid size-[30px] place-items-center rounded-[8px] bg-primary text-sm font-bold text-white">
+        K
+      </div>
+      <strong className="text-[15px] font-semibold text-foreground">
+        {main}
+        {suffix && <span className="font-medium text-slate-400"> {suffix}</span>}
+      </strong>
+      <div className="ml-auto flex items-center gap-3.5">
         <LangSwitcher />
         <ProfileMenu />
       </div>
@@ -43,28 +44,19 @@ function Header() {
 function Nav() {
   const { t } = useTranslation();
   return (
-    <nav
-      style={{
-        display: 'flex',
-        gap: 22,
-        padding: '0 24px',
-        background: '#fff',
-        borderBottom: '1px solid var(--line)',
-        overflowX: 'auto',
-      }}
-    >
+    <nav className="flex gap-[26px] overflow-x-auto border-b bg-white px-[26px]">
       {NAV.map((n) => (
         <NavLink
           key={n.to}
           to={n.to}
-          style={({ isActive }) => ({
-            padding: '14px 2px',
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            textDecoration: 'none',
-            color: isActive ? 'var(--brand)' : 'var(--muted-ink)',
-            borderBottom: `3px solid ${isActive ? 'var(--brand)' : 'transparent'}`,
-          })}
+          className={({ isActive }) =>
+            cn(
+              'whitespace-nowrap border-b-[3px] px-0.5 py-4 text-sm no-underline',
+              isActive
+                ? 'border-primary font-semibold text-primary'
+                : 'border-transparent font-medium text-muted-foreground',
+            )
+          }
         >
           {t(n.key)}
         </NavLink>
@@ -75,7 +67,7 @@ function Nav() {
 
 export function App() {
   return (
-    <RequireAuth allowedRoles={['department', 'superadmin']} appKey="app_department" accent="#1f7d68">
+    <RequireAuth allowedRoles={['department', 'superadmin']} appKey="app_department" accent="#0d9488">
       <Header />
       <Nav />
       <Routes>

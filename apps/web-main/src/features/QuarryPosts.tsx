@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 
-import { Eyebrow, ModalForm, slugCode } from '../shared';
+import { Eyebrow, ModalForm, ROW_ACTION, ROW_ACTION_DANGER, slugCode } from '../shared';
 
 const CAMERA_KIND_LABEL: Record<CameraKind, string> = {
   plate: 'camera_kind_plate',
@@ -250,7 +250,7 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
 
   if (editing) {
     return (
-      <div className="grid gap-2 rounded-lg border bg-muted/30 p-2.5 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="grid gap-2 rounded-[11px] border border-[#f1f5f9] bg-[#f8fafc] p-2.5 sm:grid-cols-[1fr_1fr_auto]">
         <Input value={name} onChange={(e) => setName(e.target.value)} />
         <Input
           value={streamUrl}
@@ -270,15 +270,15 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[11px] border border-transparent bg-[#f8fafc] px-3.5 py-2.5 transition-colors hover:bg-[#f1f5f9]">
       <div className="flex min-w-0 items-center gap-2">
         <Icon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="truncate font-medium">{camera.name}</span>
+        <span className="truncate text-sm font-medium">{camera.name}</span>
         <Badge variant="outline" className="bg-card">
           {t(CAMERA_KIND_LABEL[camera.kind])}
         </Badge>
         {camera.stream_url && (
-          <span className="hidden truncate font-mono text-[11px] text-muted-foreground sm:inline">
+          <span className="hidden truncate text-[11px] text-slate-400 sm:inline">
             {camera.stream_url}
           </span>
         )}
@@ -293,14 +293,20 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
           />
           {t('camera_active')}
         </label>
-        <Button type="button" size="icon" variant="ghost" onClick={() => setEditing(true)}>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className={ROW_ACTION}
+          onClick={() => setEditing(true)}
+        >
           <PencilIcon />
         </Button>
         <Button
           type="button"
           size="icon"
           variant="ghost"
-          className="text-destructive hover:text-destructive"
+          className={ROW_ACTION_DANGER}
           onClick={() => setDeleting(true)}
         >
           <Trash2Icon />
@@ -329,8 +335,8 @@ function PostCard({ post, quarryId }: { post: Post; quarryId: string }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-3">
+    <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f1f5f9] bg-[#fbfcfe] px-4 py-3">
         {editing ? (
           <div className="flex flex-1 items-center gap-2">
             <Input value={name} onChange={(e) => setName(e.target.value)} className="max-w-64" />
@@ -344,19 +350,25 @@ function PostCard({ post, quarryId }: { post: Post; quarryId: string }) {
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <MapPinIcon className="size-4 text-muted-foreground" />
-              <span className="font-semibold">{post.name}</span>
-              <span className="font-mono text-[11px] text-muted-foreground">{post.code}</span>
+              <MapPinIcon className="size-4 text-primary" />
+              <span className="text-sm font-semibold">{post.name}</span>
+              <span className="text-[11px] text-slate-400">{post.code}</span>
             </div>
-            <div className="flex gap-1">
-              <Button type="button" size="icon" variant="ghost" onClick={() => setEditing(true)}>
+            <div className="flex gap-0.5">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className={ROW_ACTION}
+                onClick={() => setEditing(true)}
+              >
                 <PencilIcon />
               </Button>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="text-destructive hover:text-destructive"
+                className={ROW_ACTION_DANGER}
                 onClick={() => setDeleting(true)}
               >
                 <Trash2Icon />
@@ -408,8 +420,10 @@ export function QuarryPostsModal({ quarry, onClose }: { quarry: Quarry; onClose:
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader className="gap-1">
-          <Eyebrow className="text-muted-foreground">{t('q_posts_title')}</Eyebrow>
-          <DialogTitle>{t('q_posts_manage', { name: quarry.name })}</DialogTitle>
+          <Eyebrow className="text-slate-400">{t('q_posts_title')}</Eyebrow>
+          <DialogTitle className="text-lg font-semibold">
+            {t('q_posts_manage', { name: quarry.name })}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid max-h-[60vh] gap-3 overflow-y-auto py-1">

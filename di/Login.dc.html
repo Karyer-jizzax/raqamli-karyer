@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #0f172a; }
+  a { color: #4f46e5; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  input:focus { outline: none; }
+</style>
+</helmet>
+<div style="min-height:100vh;width:100%;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;gap:22px;">
+
+  <!-- accent / app switcher (preview aid) -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:9px;">
+    <span style="font-size:11px;font-weight:600;letter-spacing:.04em;color:#94a3b8;">ILOVANI TANLANG</span>
+    <div style="display:inline-flex;background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:4px;gap:3px;box-shadow:0 1px 2px rgba(15,23,42,.04);">
+      <button onClick="{{ pickIndigo }}" style="{{ segIndigo }}">web-main · Boshqaruv</button>
+      <button onClick="{{ pickTeal }}" style="{{ segTeal }}">web-department · Departament</button>
+      <button onClick="{{ pickGreen }}" style="{{ segGreen }}">web-quarry · Karyer</button>
+    </div>
+  </div>
+
+  <!-- login card -->
+  <form style="width:100%;max-width:400px;background:#fff;border:1px solid #e8edf3;border-radius:20px;padding:34px 32px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 34px rgba(15,23,42,.06);">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:22px;">
+      <div style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:17px;background:{{ accent }};">K</div>
+      <div style="display:flex;flex-direction:column;line-height:1.15;">
+        <span style="font-size:14px;font-weight:700;letter-spacing:.02em;color:#0f172a;">KARIER KONTROL</span>
+        <span style="font-size:11.5px;color:#94a3b8;">Jizzax viloyati · 13 tuman</span>
+      </div>
+    </div>
+
+    <span style="display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:16px;color:{{ accent }};background:{{ tint }};">{{ appLabel }}</span>
+
+    <h1 style="margin:0 0 5px;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#0f172a;">Tizimga kirish</h1>
+    <p style="margin:0 0 24px;font-size:13.5px;color:#64748b;line-height:1.5;">Karyerlar nazorati avtomatlashtirilgan tizimi</p>
+
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+      <label style="font-size:13px;font-weight:500;color:#334155;">Login</label>
+      <input value="{{ demoUser }}" style="height:44px;border:1px solid #dbe2ea;border-radius:11px;padding:0 14px;font-size:14.5px;font-family:inherit;color:#0f172a;background:#fff;transition:border-color .12s,box-shadow .12s;" style-focus="height:44px;border:1px solid {{ accent }};border-radius:11px;padding:0 14px;font-size:14.5px;font-family:inherit;color:#0f172a;background:#fff;box-shadow:0 0 0 3px {{ tint }};" />
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:24px;">
+      <label style="font-size:13px;font-weight:500;color:#334155;">Parol</label>
+      <input type="password" value="password" style="height:44px;border:1px solid #dbe2ea;border-radius:11px;padding:0 14px;font-size:14.5px;font-family:inherit;color:#0f172a;background:#fff;transition:border-color .12s,box-shadow .12s;" style-focus="height:44px;border:1px solid {{ accent }};border-radius:11px;padding:0 14px;font-size:14.5px;font-family:inherit;color:#0f172a;background:#fff;box-shadow:0 0 0 3px {{ tint }};" />
+    </div>
+
+    <button type="button" style="width:100%;height:46px;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;color:#fff;cursor:pointer;transition:filter .12s;background:{{ accent }};" style-hover="width:100%;height:46px;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;color:#fff;cursor:pointer;filter:brightness(1.07);background:{{ accent }};">Kirish</button>
+
+    <div style="display:flex;justify-content:center;margin-top:20px;">
+      <div style="display:inline-flex;background:#f1f5f9;border-radius:9px;padding:3px;gap:2px;">
+        <button type="button" onClick="{{ pickLatn }}" style="{{ langLatn }}">UZ</button>
+        <button type="button" onClick="{{ pickCyrl }}" style="{{ langCyrl }}">ЎЗ</button>
+        <button type="button" onClick="{{ pickRu }}" style="{{ langRu }}">RU</button>
+      </div>
+    </div>
+  </form>
+
+  <p style="font-size:12px;color:#cbd5e1;margin:0;">© 2026 Karier Kontrol</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const ACCENTS = {
+  indigo: { c: '#4f46e5', tint: '#eef2ff', label: 'Boshqaruv paneli', user: 'admin' },
+  teal:   { c: '#0d9488', tint: '#f0fdfa', label: 'Viloyat departamenti', user: 'department' },
+  green:  { c: '#16a34a', tint: '#f0fdf4', label: 'Karyer operatori', user: 'operator' },
+};
+
+class Component extends DCLogic {
+  state = { accent: 'indigo', lang: 'latn' };
+
+  seg(key) {
+    const active = this.state.accent === key;
+    const a = ACCENTS[key];
+    const base = 'border:none;border-radius:8px;padding:8px 13px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .12s;';
+    return active
+      ? base + `background:${a.tint};color:${a.c};`
+      : base + 'background:transparent;color:#94a3b8;';
+  }
+
+  lang(key) {
+    const active = this.state.lang === key;
+    const base = 'border:none;border-radius:7px;padding:6px 13px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .12s;';
+    return active
+      ? base + 'background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.08);'
+      : base + 'background:transparent;color:#94a3b8;';
+  }
+
+  renderVals() {
+    const a = ACCENTS[this.state.accent];
+    return {
+      accent: a.c,
+      tint: a.tint,
+      appLabel: a.label,
+      demoUser: a.user,
+      segIndigo: this.seg('indigo'),
+      segTeal: this.seg('teal'),
+      segGreen: this.seg('green'),
+      pickIndigo: () => this.setState({ accent: 'indigo' }),
+      pickTeal: () => this.setState({ accent: 'teal' }),
+      pickGreen: () => this.setState({ accent: 'green' }),
+      langLatn: this.lang('latn'),
+      langCyrl: this.lang('cyrl'),
+      langRu: this.lang('ru'),
+      pickLatn: () => this.setState({ lang: 'latn' }),
+      pickCyrl: () => this.setState({ lang: 'cyrl' }),
+      pickRu: () => this.setState({ lang: 'ru' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

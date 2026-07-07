@@ -1,6 +1,6 @@
 import { type CargoPost, useDistrictCargo, useDistricts, useRegions } from '@karier/api-client';
 import { currentLang, formatDateTime, formatNumber, useTranslation } from '@karier/i18n';
-import { Card } from '@karier/ui';
+import { Card, cn } from '@karier/ui';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -15,16 +15,22 @@ const DEFAULT_RANGE = {
   to: isoDay(new Date()),
 };
 
+const DATE_INPUT =
+  'h-[38px] rounded-[9px] border border-input bg-white px-[11px] text-[13px] font-[inherit]';
+
 const IconHome = (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-    <path d="M3 9.5 10 3l7 6.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    <path
-      d="M5 8.5V16a1 1 0 0 0 1 1h3v-4.5h2V17h3a1 1 0 0 0 1-1V8.5"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 20 20"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 9.5 10 3l7 6.5" />
+    <path d="M5 8.5V16a1 1 0 0 0 1 1h3v-4.5h2V17h3a1 1 0 0 0 1-1V8.5" />
   </svg>
 );
 const IconEvents = (
@@ -51,51 +57,27 @@ function EcoPostCard({
   lang: ReturnType<typeof currentLang>;
 }) {
   return (
-    <div
-      style={{
-        minWidth: 132,
-        flexShrink: 0,
-        border: '1px solid var(--line)',
-        borderRadius: 10,
-        padding: '10px 12px',
-        background: '#fff',
-      }}
-    >
-      <div
-        style={{
-          display: 'inline-block',
-          background: '#eaf1fb',
-          color: '#1a5cb8',
-          fontFamily: 'var(--mono)',
-          fontSize: 11.5,
-          fontWeight: 700,
-          padding: '2px 8px',
-          borderRadius: 999,
-          marginBottom: 8,
-        }}
-      >
+    <div className="min-w-[132px] shrink-0 rounded-[10px] border bg-white px-3 py-2.5">
+      <div className="mb-2 inline-block rounded-full bg-primary-tint px-2 py-0.5 text-[11.5px] font-bold text-primary tabular-nums">
         {post.code}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: '#15273c', marginBottom: 3 }}>
-        <span style={{ color: '#1a5cb8', display: 'flex' }}>{IconEvents}</span>
-        <b style={{ fontFamily: 'var(--mono)' }}>{formatNumber(post.events, lang)}</b>
+      <div className="mb-[3px] flex items-center gap-[5px] text-[12.5px] text-foreground">
+        <span className="flex text-primary">{IconEvents}</span>
+        <b className="tabular-nums">{formatNumber(post.events, lang)}</b>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: '#15273c', marginBottom: 8 }}>
-        <span style={{ color: '#1a5cb8', display: 'flex' }}>{IconTruck}</span>
-        <b style={{ fontFamily: 'var(--mono)' }}>{formatNumber(post.trucks, lang)}</b>
+      <div className="mb-2 flex items-center gap-[5px] text-[12.5px] text-foreground">
+        <span className="flex text-primary">{IconTruck}</span>
+        <b className="tabular-nums">{formatNumber(post.trucks, lang)}</b>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--muted-ink)', marginBottom: 4 }}>{t('dash_cameras')}:</div>
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div className="mb-1 text-[11px] text-muted-foreground">{t('dash_cameras')}:</div>
+      <div className="flex gap-1">
         {Array.from({ length: post.cameras }, (_, i) => (
           <span
             key={i}
-            style={{
-              width: 9,
-              height: 9,
-              borderRadius: '50%',
-              background: i < post.cameras_active ? '#1fa15a' : '#c0463c',
-              display: 'inline-block',
-            }}
+            className={cn(
+              'inline-block size-[9px] rounded-full',
+              i < post.cameras_active ? 'bg-[#059669]' : 'bg-[#e11d48]',
+            )}
           />
         ))}
       </div>
@@ -114,36 +96,29 @@ function CargoTable({
   rows: { id: string; label: string; count: number; volume: number }[];
   onRowClick?: (id: string) => void;
 }) {
-  const th: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 700,
-    color: 'var(--muted-ink)',
-    padding: '4px 8px',
-    textAlign: 'center',
-    borderBottom: '1px solid var(--line)',
-  };
-  const td: React.CSSProperties = { padding: '8px', fontSize: 13, borderBottom: '1px solid var(--line)' };
-  const tdNum: React.CSSProperties = { ...td, textAlign: 'center', fontFamily: 'var(--mono)', fontWeight: 700 };
-  const tdMuted: React.CSSProperties = { ...tdNum, color: 'var(--muted-ink)', fontWeight: 400 };
+  const th = 'border-b px-2 py-1 text-center text-[11px] font-bold text-muted-foreground';
+  const td = 'border-b border-b-[#f1f5f9] p-2 text-[13px]';
+  const tdNum = cn(td, 'text-center font-bold tabular-nums');
+  const tdMuted = cn(td, 'text-center font-normal text-muted-foreground tabular-nums');
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6 }}>
+    <table className="mt-1.5 w-full border-collapse">
       <thead>
         <tr>
-          <th style={th} />
-          <th style={th} colSpan={2}>
+          <th className={th} />
+          <th className={th} colSpan={2}>
             {t('dash_ettyu')}
           </th>
-          <th style={th} colSpan={2}>
+          <th className={th} colSpan={2}>
             {t('dash_diff')}
           </th>
         </tr>
         <tr>
-          <th style={th} />
-          <th style={th}>{t('rep_count')}</th>
-          <th style={th}>{t('rep_vol')}</th>
-          <th style={th}>{t('rep_count')}</th>
-          <th style={th}>{t('rep_vol')}</th>
+          <th className={th} />
+          <th className={th}>{t('rep_count')}</th>
+          <th className={th}>{t('rep_vol')}</th>
+          <th className={th}>{t('rep_count')}</th>
+          <th className={th}>{t('rep_vol')}</th>
         </tr>
       </thead>
       <tbody>
@@ -152,22 +127,21 @@ function CargoTable({
             key={r.id}
             onClick={onRowClick ? () => onRowClick(r.id) : undefined}
             title={onRowClick ? t('q_open_hint') : undefined}
-            style={onRowClick ? { cursor: 'pointer' } : undefined}
+            className={cn(onRowClick && 'cursor-pointer hover:bg-[#f6fefd]')}
           >
             <td
-              style={{
-                ...td,
-                fontWeight: 600,
-                color: onRowClick ? '#1a5cb8' : '#15273c',
-                textDecoration: onRowClick ? 'underline' : undefined,
-              }}
+              className={cn(
+                td,
+                'font-semibold',
+                onRowClick ? 'text-primary underline' : 'text-foreground',
+              )}
             >
               {r.label}
             </td>
-            <td style={tdNum}>{fn(r.count)}</td>
-            <td style={tdNum}>{fn(r.volume)}</td>
-            <td style={tdMuted}>-</td>
-            <td style={tdMuted}>-</td>
+            <td className={tdNum}>{fn(r.count)}</td>
+            <td className={tdNum}>{fn(r.volume)}</td>
+            <td className={tdMuted}>-</td>
+            <td className={tdMuted}>-</td>
           </tr>
         ))}
       </tbody>
@@ -178,20 +152,17 @@ function CargoTable({
 function StatBox({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <div
-      style={{
-        flex: 1,
-        padding: '9px 12px',
-        borderRadius: 8,
-        border: '1px solid var(--line)',
-        background: danger ? '#fdeceb' : '#f6f9fc',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-      }}
+      className={cn(
+        'flex flex-1 items-center justify-between gap-2 rounded-lg border px-3 py-[9px]',
+        danger ? 'bg-[#fff1f2]' : 'bg-slate-50',
+      )}
     >
-      <span style={{ fontSize: 12.5, color: danger ? '#c0463c' : 'var(--muted-ink)' }}>{label}:</span>
-      <b style={{ fontFamily: 'var(--mono)', fontSize: 14, color: danger ? '#c0463c' : '#15273c' }}>{value}</b>
+      <span className={cn('text-[12.5px]', danger ? 'text-[#e11d48]' : 'text-muted-foreground')}>
+        {label}:
+      </span>
+      <b className={cn('text-sm tabular-nums', danger ? 'text-[#e11d48]' : 'text-foreground')}>
+        {value}
+      </b>
     </div>
   );
 }
@@ -231,105 +202,77 @@ export function DistrictDetail() {
   const updatedAt = cargo?.last_event_at ? formatDateTime(cargo.last_event_at) : '—';
 
   return (
-    <div style={{ padding: 24, display: 'grid', gap: 16, maxWidth: 1200, margin: '0 auto' }}>
+    <div className="mx-auto flex max-w-[1160px] flex-col gap-4 p-6">
       {/* Title */}
-      <h1 style={{ fontSize: 16, margin: 0, color: '#15273c', fontWeight: 800, textAlign: 'center' }}>
+      <h1 className="m-0 text-center text-base font-semibold text-foreground">
         {t('dash_detail_title', { region: regionName, district: districtDisplayName })}
       </h1>
 
       {/* Date range + breadcrumb */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <input
             type="date"
             value={range.from}
             onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
-            style={FILTER_SEL}
+            className={DATE_INPUT}
           />
-          <span style={{ color: 'var(--muted-ink)' }}>—</span>
+          <span className="text-muted-foreground">—</span>
           <input
             type="date"
             value={range.to}
             onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
-            style={FILTER_SEL}
+            className={DATE_INPUT}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+        <div className="flex items-center gap-2 text-[12.5px]">
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
             title={t('dash_back')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              border: '1px solid var(--line)',
-              borderRadius: 8,
-              background: '#fff',
-              color: '#1a5cb8',
-              cursor: 'pointer',
-            }}
+            className="grid size-7 cursor-pointer place-items-center rounded-lg border border-[#e2e8f0] bg-white text-primary"
           >
             {IconHome}
           </button>
-          <span style={{ color: 'var(--muted-ink)' }}>{regionName}</span>
-          <span style={{ color: 'var(--muted-ink)' }}>/</span>
-          <b style={{ color: '#15273c' }}>{districtDisplayName}</b>
+          <span className="text-muted-foreground">{regionName}</span>
+          <span className="text-muted-foreground">/</span>
+          <b className="text-foreground">{districtDisplayName}</b>
         </div>
       </div>
-      <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--muted-ink)', marginTop: -8 }}>
-        {t('as_updated')}: <b style={{ color: '#1a5cb8' }}>{updatedAt}</b>
+      <div className="-mt-2 text-right text-xs text-muted-foreground">
+        {t('as_updated')}: <b className="text-[#0f766e]">{updatedAt}</b>
       </div>
 
       {/* Eco-post cards strip */}
-      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+      <div className="flex gap-2.5 overflow-x-auto pb-1">
         {posts.map((p) => (
           <EcoPostCard key={p.id} post={p} t={t} lang={lang} />
         ))}
         {posts.length === 0 && (
-          <p style={{ color: 'var(--muted-ink)', fontSize: 13, margin: 0 }}>{t('q_empty')}</p>
+          <p className="m-0 text-[13px] text-muted-foreground">{t('q_empty')}</p>
         )}
       </div>
 
       {/* Jami + cargo breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, alignItems: 'start' }}>
+      <div className="grid items-start gap-4 md:grid-cols-[280px_1fr]">
         <Card>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginBottom: 10,
-              paddingBottom: 10,
-              borderBottom: '1px solid var(--line)',
-            }}
-          >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#1a5cb8', display: 'inline-block' }} />
-            <span style={{ fontWeight: 700, color: '#15273c', fontSize: 13 }}>{t('jami')}</span>
-            <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontWeight: 800, fontSize: 17, color: '#15273c' }}>
+          <div className="mb-2.5 flex items-center gap-2 border-b border-b-[#f1f5f9] pb-2.5">
+            <span className="inline-block size-2 rounded-full bg-primary" />
+            <span className="text-[13px] font-bold text-foreground">{t('jami')}</span>
+            <span className="ml-auto text-[17px] font-bold text-foreground tabular-nums">
               {fn(posts.reduce((s, p) => s + p.trucks, 0))}
             </span>
           </div>
-          <div style={{ display: 'grid', gap: 10 }}>
+          <div className="grid gap-2.5">
             {posts.map((p) => (
-              <div key={p.code} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      width: 9,
-                      height: 9,
-                      borderRadius: '50%',
-                      border: '1.5px solid var(--line)',
-                      display: 'inline-block',
-                    }}
-                  />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#15273c' }}>{p.code}</span>
+              <div key={p.code} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block size-[9px] rounded-full border-[1.5px]" />
+                  <span className="text-[13px] font-semibold text-foreground">{p.code}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <b style={{ fontFamily: 'var(--mono)', fontSize: 13.5, color: '#1a5cb8' }}>{fn(p.trucks)}</b>
-                  <span style={{ color: '#1a5cb8', display: 'flex' }}>{IconTruck}</span>
+                <div className="flex items-center gap-1.5">
+                  <b className="text-[13.5px] text-[#0f766e] tabular-nums">{fn(p.trucks)}</b>
+                  <span className="flex text-primary">{IconTruck}</span>
                 </div>
               </div>
             ))}
@@ -337,30 +280,21 @@ export function DistrictDetail() {
         </Card>
 
         <Card>
-          <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#15273c' }}>
+          <h3 className="mb-3 text-[15px] font-semibold text-foreground">
             {t('dash_cargo_info')}{' '}
-            <span style={{ fontWeight: 400, fontSize: 12.5, color: 'var(--muted-ink)' }}>
+            <span className="text-[12.5px] font-normal text-muted-foreground">
               ({t('dash_trucks_plural')})
             </span>
           </h3>
 
-          <div style={{ marginBottom: 12 }}>
-            <span style={{ fontSize: 13.5, color: 'var(--muted-ink)' }}>{t('dash_trucks_total')}: </span>
-            <b style={{ fontSize: 19, color: '#1a5cb8', fontFamily: 'var(--mono)' }}>{fn(cargo?.trucks_total)}</b>
+          <div className="mb-3">
+            <span className="text-[13.5px] text-muted-foreground">{t('dash_trucks_total')}: </span>
+            <b className="text-[19px] text-[#0f766e] tabular-nums">{fn(cargo?.trucks_total)}</b>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              padding: '8px 0',
-              borderTop: '1px solid var(--line)',
-              borderBottom: '1px solid var(--line)',
-              marginBottom: 4,
-            }}
-          >
-            <span style={{ fontSize: 13, color: 'var(--muted-ink)' }}>{t('dash_loaded')}:</span>
-            <b style={{ fontFamily: 'var(--mono)', fontSize: 14 }}>{fn(cargo?.loaded)}</b>
+          <div className="mb-1 flex justify-between border-y border-y-[#f1f5f9] py-2">
+            <span className="text-[13px] text-muted-foreground">{t('dash_loaded')}:</span>
+            <b className="text-sm tabular-nums">{fn(cargo?.loaded)}</b>
           </div>
 
           {quarryCargoRows.length > 0 ? (
@@ -371,10 +305,10 @@ export function DistrictDetail() {
               onRowClick={(id) => navigate(`/dashboard/districts/${districtId}/quarries/${id}`)}
             />
           ) : (
-            <p style={{ color: 'var(--muted-ink)', fontSize: 13, margin: '10px 0 0' }}>{t('q_empty')}</p>
+            <p className="mt-2.5 mb-0 text-[13px] text-muted-foreground">{t('q_empty')}</p>
           )}
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+          <div className="mt-3.5 flex flex-wrap gap-2.5">
             <StatBox label={t('dash_not_loaded')} value={fn(cargo?.not_loaded)} />
             <StatBox label={t('dash_unidentified')} value={fn(cargo?.unidentified)} danger />
           </div>
@@ -383,12 +317,3 @@ export function DistrictDetail() {
     </div>
   );
 }
-
-const FILTER_SEL: React.CSSProperties = {
-  padding: '8px 10px',
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-  background: '#fff',
-  fontFamily: 'inherit',
-  fontSize: 13,
-};
