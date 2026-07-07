@@ -6,21 +6,24 @@ import {
   MapIcon,
   MenuIcon,
   PackageIcon,
+  UsersIcon,
   XIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
+import { Departments } from './features/Departments';
 import { Geo } from './features/Geo';
 import { Materials } from './features/Materials';
 import { Quarries } from './features/Quarries';
 
-type Tab = 'quarries' | 'geo' | 'materials';
+type Tab = 'quarries' | 'geo' | 'materials' | 'departments';
 
 const NAV: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: 'quarries', label: 'nav_quarries', icon: Building2Icon },
   { key: 'materials', label: 'nav_materials', icon: PackageIcon },
   { key: 'geo', label: 'nav_geo', icon: MapIcon },
+  { key: 'departments', label: 'nav_departments', icon: UsersIcon },
 ];
 
 function Sidebar({
@@ -163,7 +166,15 @@ function Home() {
           onMenu={() => setSidebarOpen(true)}
         />
         <main className="mx-auto w-full max-w-[1080px] flex-1 p-4 lg:p-6">
-          {tab === 'quarries' ? <Quarries /> : tab === 'materials' ? <Materials /> : <Geo />}
+          {tab === 'quarries' ? (
+            <Quarries />
+          ) : tab === 'materials' ? (
+            <Materials />
+          ) : tab === 'geo' ? (
+            <Geo />
+          ) : (
+            <Departments />
+          )}
         </main>
       </div>
     </div>

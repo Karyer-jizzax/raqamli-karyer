@@ -647,7 +647,13 @@ export const getUsers = (params: { quarry_id?: string } = {}) => {
   const q = new URLSearchParams(params as Record<string, string>).toString();
   return api.get<AuthUserDto[]>(`/users${q ? `?${q}` : ''}`);
 };
-export const updateUser = (
-  id: string,
-  body: { full_name?: string; email?: string | null; password?: string; is_active?: boolean },
-) => api.patch<AuthUserDto>(`/users/${id}`, body);
+export interface UserUpdateInput {
+  full_name?: string;
+  email?: string | null;
+  password?: string;
+  is_active?: boolean;
+  region_id?: string | null;
+  quarry_id?: string | null;
+}
+export const updateUser = (id: string, body: UserUpdateInput) =>
+  api.patch<AuthUserDto>(`/users/${id}`, body);

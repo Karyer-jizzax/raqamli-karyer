@@ -23,6 +23,7 @@ import {
   updateQuarry,
   updateRegion,
   updateUser,
+  type UserUpdateInput,
   getDistricts,
   getDynamics,
   getEvents,
@@ -229,13 +230,7 @@ export function useUsers(params: { quarry_id?: string } = {}, enabled = true) {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      body,
-    }: {
-      id: string;
-      body: { full_name?: string; email?: string | null; password?: string; is_active?: boolean };
-    }) => updateUser(id, body),
+    mutationFn: ({ id, body }: { id: string; body: UserUpdateInput }) => updateUser(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 }
