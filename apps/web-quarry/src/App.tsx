@@ -1,8 +1,7 @@
 import { useTranslation } from '@karier/i18n';
 import { LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
 
-import { EventList } from './features/EventList';
-import { RegisterForm } from './features/RegisterForm';
+import { QuarryDashboard } from './features/QuarryDashboard';
 
 function Shell() {
   const { t } = useTranslation();
@@ -25,13 +24,7 @@ function Shell() {
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1260px] flex-1 grid-cols-1 items-start gap-[22px] p-[26px] lg:grid-cols-[440px_1fr]">
-        <RegisterForm />
-        <div className="flex min-w-0 flex-col gap-3.5">
-          <h1 className="text-xl font-semibold">{t('ev_list')}</h1>
-          <EventList />
-        </div>
-      </div>
+      <QuarryDashboard />
     </div>
   );
 }
