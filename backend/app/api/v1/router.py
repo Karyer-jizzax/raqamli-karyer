@@ -12,6 +12,7 @@ from app.api.v1 import (
     regions,
     scale,
     stats,
+    trips,
     users,
     video,
 )
@@ -23,6 +24,7 @@ api_router.include_router(regions.router)
 api_router.include_router(organizations.router)
 api_router.include_router(quarries.router)
 api_router.include_router(events.router)
+api_router.include_router(trips.router)
 api_router.include_router(protocols.router)
 api_router.include_router(video.router)
 api_router.include_router(scale.router)

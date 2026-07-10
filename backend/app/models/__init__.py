@@ -7,6 +7,7 @@ from app.models.organization import Organization
 from app.models.protocol import Protocol
 from app.models.quarry import Camera, Post, Quarry
 from app.models.region import District, Region
+from app.models.trip import Trip
 from app.models.user import User
 from app.models.vehicle import Vehicle
 
@@ -21,6 +22,7 @@ __all__ = [
     "Camera",
     "District",
     "Region",
+    "Trip",
     "User",
     "Vehicle",
 ]

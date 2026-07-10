@@ -3,6 +3,7 @@ import { currentLang, formatDateTime, formatNumber, useTranslation } from '@kari
 import { Card, cn, useAuth } from '@karier/ui';
 
 import { M1Table } from './DataM1';
+import { TripsTable } from './Trips';
 
 function name(d: { name_ru: string; name_uz_cyrl: string; name_uz_latn: string }): string {
   const l = currentLang();
@@ -247,6 +248,12 @@ export function QuarryDashboard() {
             })}
           </div>
         </Card>
+      </div>
+
+      {/* Trips (qatnovlar): kon exit → zavod enter → zavod exit chains */}
+      <div>
+        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('trips_title')}</h3>
+        <TripsTable quarryId={quarryId} />
       </div>
 
       {/* Per-quarry data table (same M1 view as the department's Data page, scoped here) */}

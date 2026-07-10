@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Max size (MB) per uploaded part. The local server sends a ~10s H.264 clip
     # plus jpg snapshots; Starlette's default 1MB/part would reject them.
     weigh_max_upload_mb: int = 120
+    # Trip (qatnov) linking: how long after "kon exit" a "main enter" (and
+    # after "main enter" a "main exit") may arrive and still join the trip.
+    trip_link_window_hours: int = 24
 
     @property
     def cors_origin_list(self) -> list[str]:

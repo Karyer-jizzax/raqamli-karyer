@@ -104,9 +104,12 @@ curl -X POST http://SERVER:5555/api/weigh \
 
 #### Muvaffaqiyatli javob (200 yoki 201):
 ```json
-{ "ok": true, "id": 12345, "event_uid": "a3f1c2e4-..." }
+{ "ok": true, "id": 12345, "event_uid": "a3f1c2e4-...", "trip_id": "7b0e..." }
 ```
 - `id` — serverdagi yozuv identifikatori.
+- `trip_id` — hodisa bog'langan qatnov (kon chiqishi → zavod kirishi → zavod
+  chiqishi zanjiri). Bog'lanmasa (raqamsiz, kon kirishi) `null`. Local server
+  bu maydonni e'tiborsiz qoldirsa bo'ladi.
 - Local server `2xx` ni "yuborildi" deb qabul qiladi va navbatdan o'chiradi.
 - **`2xx` bo'lmasa** — local server keyinroq qayta yuboradi.
 
@@ -119,27 +122,35 @@ curl -X POST http://SERVER:5555/api/weigh \
 | `event_uid` | string (UUID) | ✅ | Idempotency kaliti. UNIQUE. |
 | `quarry_id` | string | ✅ | Karyer identifikatori. |
 | `camera_name` | string | ✅ | Kamera nomi — stansiyalarni shu orqali ajratiladi. |
-| `is_main` | bool | ✅ | **`true`** = asosiy zavod (tarozili). **`false`** = kon (faqat raqam). |
+| `is_main` | bool | ✅ | **`true`** = asosiy zavod (tarozili). **`false`** = kon (raqam + video, vaznsiz). |
 | `plate` | string / null | ⛔ | Davlat raqami (masalan `01S748HE`). Aniqlanmasa `null`. |
 | `direction` | string / null | ⛔ | **`"in"`** = kirish, **`"out"`** = chiqish, `null` = raqam aniqlanmagan. |
 | `weight` | number / null | ⛔ | Vazn (kg). Kon'da (is_main=false) odatda `null`. |
 | `unit` | string | ✅ | Doim `"kg"`. |
 | `event_time` | string | ✅ | UTC+5, `YYYY-MM-DD HH:MM:SS`. |
-| `video_path` | string / null | ⛔ | A formatda yo'l; B formatda `video` part. Kon'da `null`. |
+| `video_path` | string / null | ⛔ | A formatda yo'l; B formatda `video` part. Kon'da ham video keladi. |
 | `image_paths` | string[] | ⛔ | A formatda yo'llar; B formatda `images` partlar. |
 
 ### `is_main` semantikasi
 - **`is_main: true`** — asosiy zavod tarozisi: raqam **+ vazn + video** keladi.
-- **`is_main: false`** — kon nazorat nuqtasi: faqat **raqam (+ rasm)**, vazn/video yo'q.
+- **`is_main: false`** — kon nazorat nuqtasi: **raqam + rasm + video**, vazn yo'q
+  (`weight: null`). Video mexanizmi zavod bilan bir xil — mashina zonaga
+  kirishi bilan klip yoziladi, yo'nalish videodan aniqlanadi.
 
 ### `direction` semantikasi (kirish/chiqish)
-Bitta darvoza/tarozidan mashina **ham kiradi, ham chiqadi**. Local server har
-harakat yo'nalishini avtomatik aniqlaydi:
-- Mashina (raqam) shu stansiyada **birinchi marta** ko'rinsa → `"in"` (kirish).
-- Keyingi ko'rinishда → `"out"` (chiqish). Shu tartibda almashinib boradi.
-- Oxirgi harakatdan **N soat** (default 12, sozlanadi) o'tib ketsa — hisob
-  tozalanib, yana `"in"` deb boshlanadi.
-- Raqam aniqlanmagan (`plate: null`) bo'lsa → `direction: null`.
+Bitta darvoza/tarozidan mashina **ham kiradi, ham chiqadi**. Yo'nalish ikki
+usulda aniqlanadi (ustuvorlik tartibida):
+
+1. **Video zona (zavod va kon, asosiy usul):** video kamerada chizilgan zonaga
+   mashina **qaysi tomondan kirgani** (KIRISH tomoni yoki CHIQISH tomoni)
+   YOLO bilan aniqlanadi — fizik harakat yo'nalishi. Mashina zonaga kirishi
+   bilan video yozish ham shu paytdan boshlanadi (klip mashinaning kelishini
+   to'liq qamrab oladi). Raqamsiz mashinada ham ishlaydi.
+2. **Raqam almashinuvi (zaxira):** birinchi ko'rinish → `"in"`,
+   keyingisi → `"out"`, almashinib boradi. Oxirgi harakatdan **N soat**
+   (default 12) o'tsa hisob tozalanib yana `"in"`. Video usul ishlaganda bu
+   hisob ham unga moslab sinxronlanadi.
+- Raqam ham, video yo'nalish ham yo'q bo'lsa → `direction: null`.
 
 Server har hodisani alohida yozadi — `in`/`out` juftliklari orqali mashinaning
 ichкarida qancha turgani, necha qatnov qilgani hisoblab chiqiladi.

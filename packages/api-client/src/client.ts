@@ -287,6 +287,55 @@ export interface EventInput {
 export const getEvents = () => api.get<EventRecord[]>('/events');
 export const createEvent = (body: EventInput) => api.post<EventRecord>('/events', body);
 
+// ── trips (qatnovlar) — kon exit → main enter → main exit chains, produced
+// server-side by the ingest linker; the UI only reads them ────────────────────
+export interface TripStage {
+  event_id: string;
+  occurred_at: string;
+  image_urls: string[];
+  video_url: string | null;
+}
+
+export interface TripRecord {
+  id: string;
+  quarry_id: string;
+  plate_region: string;
+  plate_number: string;
+  kind: 'karyer' | 'tashqi';
+  status: 'open' | 'done' | 'incomplete';
+  kon_exit_event_id: string | null;
+  main_enter_event_id: string | null;
+  main_exit_event_id: string | null;
+  enter_weight_kg: number | null;
+  exit_weight_kg: number | null;
+  netto_kg: number | null;
+  started_at: string;
+  completed_at: string | null;
+  kon_exit_at: string | null;
+  main_enter_at: string | null;
+  main_exit_at: string | null;
+  // per-stage media (linked events' snapshots + clip) for the detail modal
+  kon_exit: TripStage | null;
+  main_enter: TripStage | null;
+  main_exit: TripStage | null;
+}
+
+export interface TripParams {
+  quarry_id?: string;
+  plate?: string;
+  status?: string;
+  kind?: string;
+  limit?: string;
+  offset?: string;
+}
+
+export const getTrips = (params: TripParams = {}) => {
+  const q = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => !!v)) as Record<string, string>,
+  ).toString();
+  return api.get<TripRecord[]>(`/trips${q ? `?${q}` : ''}`);
+};
+
 // ── scale (tarozi) ───────────────────────────────────────────────────────────
 export interface ScaleReading {
   weight_kg: number;

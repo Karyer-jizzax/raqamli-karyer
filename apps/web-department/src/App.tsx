@@ -8,10 +8,12 @@ import { DistrictDetail } from './features/DistrictDetail';
 import { Dynamics } from './features/Dynamics';
 import { Protocols } from './features/Protocols';
 import { QuarryDetail } from './features/QuarryDetail';
+import { Trips } from './features/Trips';
 
 const NAV = [
   { to: '/dashboard', key: 'nav_dashboard' },
   { to: '/data', key: 'nav_data' },
+  { to: '/trips', key: 'trips_title' },
   { to: '/protocol', key: 'nav_protocol' },
   { to: '/dynamics', key: 'nav_dynamics' },
 ] as const;
@@ -79,6 +81,7 @@ export function App() {
           element={<QuarryDetail />}
         />
         <Route path="/data" element={<DataM1 />} />
+        <Route path="/trips" element={<Trips />} />
         <Route path="/protocol" element={<Protocols />} />
         <Route path="/dynamics" element={<Dynamics />} />
       </Routes>

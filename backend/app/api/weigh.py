@@ -34,6 +34,7 @@ from app.models.media import Media
 from app.models.quarry import Camera, Post, Quarry
 from app.services.detection import get_detector
 from app.services.storage import save_bytes
+from app.services.trips import link_event
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
 
 router = APIRouter(tags=["weigh"])
@@ -242,9 +243,16 @@ async def weigh(request: Request, db: DbDep, _key: ApiKeyDep) -> dict[str, objec
     await db.refresh(event)
 
     _attach_media(db, event.id, images, video, payload)
+    # Qatnov: kon exit → main enter → main exit zanjiriga bog'laymiz.
+    trip = await link_event(db, event)
     await db.commit()
 
-    return {"ok": True, "id": str(event.id), "event_uid": payload.event_uid}
+    return {
+        "ok": True,
+        "id": str(event.id),
+        "event_uid": payload.event_uid,
+        "trip_id": str(trip.id) if trip is not None else None,
+    }
 
 
 def _attach_media(

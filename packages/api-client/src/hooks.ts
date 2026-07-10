@@ -31,6 +31,8 @@ import {
   getDistrictCargo,
   getM1,
   getMaterials,
+  getTrips,
+  type TripParams,
   getOverview,
   getQuarryStats,
   getPostCameras,
@@ -368,4 +370,8 @@ export function useDynamics(params: { year?: number; district_id?: string } = {}
 
 export function useM1(params: Record<string, string> = {}) {
   return useQuery({ queryKey: ['m1', params], queryFn: () => getM1(params) });
+}
+
+export function useTrips(params: TripParams = {}) {
+  return useQuery({ queryKey: ['trips', params], queryFn: () => getTrips(params) });
 }
