@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Max size (MB) per uploaded part. The local server sends a ~10s H.264 clip
     # plus jpg snapshots; Starlette's default 1MB/part would reject them.
     weigh_max_upload_mb: int = 120
+    # Provision token (web-main "token berish" -> local server GET
+    # /api/local/config) lifetime. Long enough to hand over to a technician.
+    provision_token_expire_hours: int = 72
     # Trip (qatnov) linking: how long after "kon exit" a "main enter" (and
     # after "main enter" a "main exit") may arrive and still join the trip.
     trip_link_window_hours: int = 24

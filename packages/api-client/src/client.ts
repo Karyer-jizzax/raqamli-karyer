@@ -674,6 +674,22 @@ export const updateCamera = (
 ) => api.patch<Camera>(`/cameras/${id}`, body);
 export const deleteCamera = (id: string) => api.del(`/cameras/${id}`);
 
+// ── local-server provisioning (superadmin) ──────────────────────────────────
+// One paste-able token the quarry local server exchanges at
+// GET /api/local/config for its full configuration (quarry code, ingest
+// api_key, expected camera names) — no manual copying.
+export interface ProvisionToken {
+  token: string;
+  expires_hours: number;
+  quarry_code: string;
+}
+export const createProvisionToken = (quarryId: string) =>
+  api.post<ProvisionToken>(`/quarries/${quarryId}/provision-token`, {
+    // The public backend origin the local server should call. MEDIA_ORIGIN is
+    // '' when API_BASE is same-origin — fall back to the page origin.
+    server_url: MEDIA_ORIGIN || window.location.origin,
+  });
+
 export const getQuarries = () => api.get<Quarry[]>('/quarries');
 export const createQuarry = (body: {
   district_id: string;

@@ -46,8 +46,10 @@ _UZ_TZ = timezone(timedelta(hours=5))
 
 
 async def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> str:
-    """Validate the X-API-Key header against the configured key set."""
-    if not x_api_key or x_api_key not in settings.weigh_api_key_set:
+    """Require the X-API-Key header. The value itself is validated in the
+    handler once the payload names the quarry: either the quarry's own
+    provisioned api_key or one of the global WEIGH_API_KEYS is accepted."""
+    if not x_api_key:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or missing X-API-Key")
     return x_api_key
 
@@ -152,8 +154,20 @@ async def _extract(
 
 
 @router.post("/weigh")
-async def weigh(request: Request, db: DbDep, _key: ApiKeyDep) -> dict[str, object]:
+async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, object]:
     payload, images, video = await _extract(request)
+
+    # Resolve the quarry by its code (e.g. "KARYER-01").
+    quarry = (
+        await db.execute(select(Quarry).where(Quarry.code == payload.quarry_id))
+    ).scalar_one_or_none()
+    if quarry is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"quarry topilmadi: {payload.quarry_id}")
+
+    # Key must be the quarry's own provisioned api_key or a global one — a key
+    # provisioned for quarry A can't post events as quarry B.
+    if api_key not in settings.weigh_api_key_set and api_key != quarry.api_key:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "X-API-Key bu karyer uchun yaroqsiz")
 
     # Idempotency: a retried send returns the existing row (API.md §2).
     existing = (
@@ -166,13 +180,6 @@ async def weigh(request: Request, db: DbDep, _key: ApiKeyDep) -> dict[str, objec
             "event_uid": payload.event_uid,
             "duplicate": True,
         }
-
-    # Resolve the quarry by its code (e.g. "KARYER-01").
-    quarry = (
-        await db.execute(select(Quarry).where(Quarry.code == payload.quarry_id))
-    ).scalar_one_or_none()
-    if quarry is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"quarry topilmadi: {payload.quarry_id}")
 
     # Resolve the camera by name/code within the quarry; fall back to first post.
     cam = (

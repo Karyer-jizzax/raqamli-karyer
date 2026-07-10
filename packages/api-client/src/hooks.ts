@@ -6,6 +6,7 @@ import {
   createEvent,
   createMaterial,
   createPost,
+  createProvisionToken,
   createQuarry,
   createRegion,
   createUser,
@@ -139,6 +140,10 @@ export function useDeleteQuarry() {
     mutationFn: deleteQuarry,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quarries'] }),
   });
+}
+
+export function useProvisionToken() {
+  return useMutation({ mutationFn: createProvisionToken });
 }
 
 export function useQuarryPosts(quarryId: string | undefined) {

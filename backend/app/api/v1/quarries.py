@@ -8,7 +8,11 @@ from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import secrets
+
+from app.core.config import settings
 from app.core.deps import CurrentUser, get_current_user, require_role
+from app.core.security import create_provision_token
 from app.db.session import get_db
 from app.models.material import Material
 from app.models.quarry import Camera, Post, Quarry, quarry_materials
@@ -20,6 +24,8 @@ from app.schemas.quarry import (
     PostCreate,
     PostOut,
     PostUpdate,
+    ProvisionTokenOut,
+    ProvisionTokenRequest,
     QuarryCreate,
     QuarryMaterialsUpdate,
     QuarryOut,
@@ -89,6 +95,30 @@ async def update_quarry(
     await db.commit()
     await db.refresh(quarry)
     return quarry
+
+
+@router.post("/quarries/{quarry_id}/provision-token", response_model=ProvisionTokenOut)
+async def issue_provision_token(
+    quarry_id: UUID, body: ProvisionTokenRequest, db: DbDep, _a: AdminDep
+) -> ProvisionTokenOut:
+    """One paste-able token for the quarry local server's first-run setup.
+
+    The local server exchanges it at GET /api/local/config for its full
+    configuration (quarry code, ingest api_key, expected camera names).
+    Re-issuing reuses the existing api_key so already-installed servers
+    keep working.
+    """
+    quarry = await _get_quarry(db, quarry_id)
+    if not quarry.api_key:
+        quarry.api_key = secrets.token_urlsafe(24)
+        await db.commit()
+        await db.refresh(quarry)
+    token = create_provision_token(str(quarry.id), body.server_url.rstrip("/"))
+    return ProvisionTokenOut(
+        token=token,
+        expires_hours=settings.provision_token_expire_hours,
+        quarry_code=quarry.code,
+    )
 
 
 @router.delete("/quarries/{quarry_id}", status_code=status.HTTP_204_NO_CONTENT)

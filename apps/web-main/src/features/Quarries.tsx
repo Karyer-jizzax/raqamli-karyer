@@ -8,6 +8,7 @@ import {
   useDistricts,
   useMaterials,
   useQuarries,
+  useProvisionToken,
   useQuarryMaterials,
   useSetQuarryMaterials,
   useUpdateQuarry,
@@ -42,6 +43,7 @@ import {
 } from '@karier/ui';
 import {
   CameraIcon,
+  KeyRoundIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
@@ -313,6 +315,63 @@ function QuarryMaterialsModal({ quarry, onClose }: { quarry: Quarry; onClose: ()
   );
 }
 
+// The local server on the quarry PC exchanges this token for its full config
+// (quarry ID, server URL, api key) — the technician only pastes one string.
+function ProvisionTokenModal({ quarry, onClose }: { quarry: Quarry; onClose: () => void }) {
+  const { t } = useTranslation();
+  const issue = useProvisionToken();
+  const [copied, setCopied] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    issue.mutate(quarry.id, {
+      onError: (e2) => setErr(e2 instanceof ApiError ? e2.message : 'Error'),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quarry.id]);
+
+  async function onCopy(e: FormEvent) {
+    e.preventDefault();
+    if (!issue.data) return;
+    try {
+      await navigator.clipboard.writeText(issue.data.token);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable — user can select the text manually */
+    }
+  }
+
+  return (
+    <ModalForm
+      title={t('q_token_title', { name: quarry.name })}
+      onClose={onClose}
+      onSubmit={onCopy}
+      err={err}
+      pending={issue.isPending}
+      submitLabel={copied ? t('q_token_copied') : t('q_token_copy')}
+    >
+      <p className="text-muted-foreground text-sm">{t('q_token_hint')}</p>
+      {issue.isPending ? (
+        <p className="text-muted-foreground text-sm">{t('loading')}</p>
+      ) : issue.data ? (
+        <>
+          <textarea
+            readOnly
+            value={issue.data.token}
+            onFocus={(e) => e.target.select()}
+            rows={5}
+            className="w-full rounded-[10px] border bg-[#f8fafc] px-3 py-2 font-mono text-[12px] break-all"
+          />
+          <p className="text-muted-foreground text-xs">
+            {issue.data.quarry_code} · {t('q_token_expires', { hours: issue.data.expires_hours })}
+          </p>
+        </>
+      ) : null}
+    </ModalForm>
+  );
+}
+
 // ── stat cards ───────────────────────────────────────────────────────────────
 // Four white cards: small colored square dot + uppercase label, big tabular figure.
 function StatCard({
@@ -373,6 +432,7 @@ function QuarryTable({
   const [deleting, setDeleting] = useState<Quarry | null>(null);
   const [linking, setLinking] = useState<Quarry | null>(null);
   const [managingPosts, setManagingPosts] = useState<Quarry | null>(null);
+  const [provisioning, setProvisioning] = useState<Quarry | null>(null);
 
   if (isLoading)
     return <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('loading')}</p>;
@@ -441,6 +501,15 @@ function QuarryTable({
                       onClick={() => setManagingPosts(it)}
                     >
                       <CameraIcon />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={ROW_ACTION}
+                      aria-label={t('q_token_action', { name: it.name })}
+                      onClick={() => setProvisioning(it)}
+                    >
+                      <KeyRoundIcon />
                     </Button>
                     <Button
                       variant="ghost"
@@ -521,6 +590,9 @@ function QuarryTable({
       {linking && <QuarryMaterialsModal quarry={linking} onClose={() => setLinking(null)} />}
       {managingPosts && (
         <QuarryPostsModal quarry={managingPosts} onClose={() => setManagingPosts(null)} />
+      )}
+      {provisioning && (
+        <ProvisionTokenModal quarry={provisioning} onClose={() => setProvisioning(null)} />
       )}
     </div>
   );

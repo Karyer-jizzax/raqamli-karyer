@@ -36,6 +36,9 @@ class Quarry(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255))
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     status: Mapped[str] = mapped_column(String(16), default="active")
+    # Local-server ingest key (X-API-Key on /api/weigh). Generated on first
+    # provision-token issue; NULL until the quarry is provisioned.
+    api_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     location: Mapped[object | None] = mapped_column(
         Geometry("POINT", srid=4326), nullable=True
     )

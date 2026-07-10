@@ -44,5 +44,19 @@ def create_refresh_token(subject: str) -> str:
     return _encode(subject, "refresh", timedelta(days=settings.refresh_token_expire_days), {})
 
 
+def create_provision_token(quarry_id: str, server_url: str) -> str:
+    """One paste-able token the quarry local server uses to fetch its config.
+
+    Carries the public server URL as a claim so the local server learns where
+    to call GET /api/local/config from the token alone (single-field setup).
+    """
+    return _encode(
+        quarry_id,
+        "provision",
+        timedelta(hours=settings.provision_token_expire_hours),
+        {"url": server_url},
+    )
+
+
 def decode_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])

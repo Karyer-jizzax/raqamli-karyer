@@ -69,6 +69,18 @@ class QuarryMaterialsUpdate(BaseModel):
     material_ids: list[str]
 
 
+class ProvisionTokenRequest(BaseModel):
+    # Public backend origin the local server should call (web-main knows the
+    # API base it talks to; the backend can't reliably guess it behind proxies).
+    server_url: str
+
+
+class ProvisionTokenOut(BaseModel):
+    token: str
+    expires_hours: int
+    quarry_code: str
+
+
 class CameraOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

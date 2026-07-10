@@ -245,3 +245,33 @@ Xato javob tanasi (ixtiyoriy):
 - Material payload'da yo'q — server rasmdan aniqlaydi, vazndan hajmni hisoblaydi.
 
 **Qolgan:** Server URL, API kalit, port — server tayyor bo'lgach `config.json`ga yoziladi.
+
+---
+
+## 9. Provisioning — token bilan avtomatik sozlash ✅
+
+Qo'lda `quarry_id` / `api_key` ko'chirish o'rniga: web-main'da karyer qatoridagi
+**kalit tugmasi** token beradi, local server shu token bilan o'z konfiguratsiyasini
+serverdan oladi.
+
+**Oqim:**
+1. `POST /api/v1/quarries/{id}/provision-token` (superadmin, web-main) —
+   body: `{"server_url": "https://server-manzil"}`. Javob: `{token, expires_hours, quarry_code}`.
+   Birinchi chaqiriqda karyer uchun `api_key` generatsiya qilinadi (keyin qayta ishlatiladi —
+   tokenni qayta berish o'rnatilgan serverni buzmaydi).
+2. Local server (Setup GUI'dagi "Serverdan olish" yoki `python main.py --provision TOKEN`):
+   `GET /api/local/config` + `Authorization: Bearer <token>`. Javob:
+   ```json
+   {
+     "quarry_id": "KARYER-01",
+     "quarry_name": "…",
+     "server": {"url": "…", "api_key": "…", "endpoint": "/api/weigh", "enabled": true, "send_files": true},
+     "cameras": [{"post_code": "…", "post_name": "…", "code": "…", "name": "…", "kind": "plate"}]
+   }
+   ```
+3. Token — JWT (`type: "provision"`, muddati `PROVISION_TOKEN_EXPIRE_HOURS`, default 72 soat).
+   Server manzili token ichida (`url` claim) — foydalanuvchi faqat bitta satr kiritadi.
+
+**X-API-Key tekshiruvi endi ikki xil:** global `WEIGH_API_KEYS` (.env) YOKI karyerning
+o'z `api_key`si. Karyer kaliti faqat o'z karyeri uchun amal qiladi — A karyer kaliti
+bilan B karyer nomidan hodisa yuborib bo'lmaydi.
