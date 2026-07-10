@@ -1,6 +1,7 @@
 import { useDistricts, useQuarries, useQuarryStats, useRegions } from '@karier/api-client';
 import { currentLang, formatDateTime, formatNumber, useTranslation } from '@karier/i18n';
 import { Card, cn, useAuth } from '@karier/ui';
+import { useState } from 'react';
 
 import { M1Table } from './DataM1';
 import { TripsTable } from './Trips';
@@ -250,18 +251,34 @@ export function QuarryDashboard() {
         </Card>
       </div>
 
-      {/* Ma'lumotlar: per-vehicle stage table (trips) — stage columns fill as
-          the vehicle passes each checkpoint */}
-      <div>
-        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('nav_data')}</h3>
-        <TripsTable quarryId={quarryId} />
-      </div>
+      {/* Ma'lumotlar (trips) / Hodisalar (M-1 log): one at a time, tab-switched */}
+      <DataTabs quarryId={quarryId} />
+    </div>
+  );
+}
 
-      {/* Raw event log (M-1 grid: material, volume, AI status) */}
-      <div>
-        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('ev_list')}</h3>
-        <M1Table quarryId={quarryId} />
+/** Switches between the per-vehicle stage table and the raw M-1 event log. */
+function DataTabs({ quarryId }: { quarryId?: string }) {
+  const { t } = useTranslation();
+  const [tab, setTab] = useState<'trips' | 'events'>('trips');
+  const btn = (active: boolean) =>
+    cn(
+      'h-[34px] cursor-pointer rounded-[9px] border px-4 text-[13px] font-semibold',
+      active
+        ? 'border-primary bg-primary text-white'
+        : 'border-[#e2e8f0] bg-white text-muted-foreground',
+    );
+  return (
+    <div>
+      <div className="mb-2.5 flex items-center gap-2">
+        <button className={btn(tab === 'trips')} onClick={() => setTab('trips')}>
+          {t('nav_data')}
+        </button>
+        <button className={btn(tab === 'events')} onClick={() => setTab('events')}>
+          {t('ev_list')}
+        </button>
       </div>
+      {tab === 'trips' ? <TripsTable quarryId={quarryId} /> : <M1Table quarryId={quarryId} />}
     </div>
   );
 }
