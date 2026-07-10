@@ -3,10 +3,13 @@
 Called from the /api/weigh ingest after each NEW event (idempotent re-sends
 never reach here). Matching key: (quarry, plate). Chain:
 
-  kon exit (karyerdan chiqdi)  →  main enter (tarozi, kirish)  →  main exit
+  kon enter (karyerga kirdi) → kon exit (chiqdi) → main enter (tarozi) → main exit
 
-* kon exit  → opens a trip (kind="karyer"). A previous kon-exit trip that
-  never reached the scale is superseded (status="incomplete").
+* kon enter → opens a trip (kind="karyer"). A previous enter that never
+  produced a kon exit is superseded (status="incomplete").
+* kon exit  → attaches to the open kon-enter trip; without one it opens a
+  new trip (kind="karyer"). A previous kon-exit trip that never reached the
+  scale is superseded.
 * main enter → attaches to the open kon-exit trip within the link window;
   if none exists the vehicle came from outside → new trip (kind="tashqi").
   A previous enter-without-exit trip is superseded.
@@ -68,14 +71,73 @@ async def link_event(db: AsyncSession, event: Event) -> Trip | None:
 
     if not event.is_main:
         if event.direction != "exit":
-            return None  # kon kirish qatnovni boshlamaydi (yuklash boshlanishi xolos)
+            return await _on_kon_enter(db, event, base_query, window)
         return await _on_kon_exit(db, event, base_query, window)
     if event.direction == "enter":
         return await _on_main_enter(db, event, base_query, window)
     return await _on_main_exit(db, event, base_query, window)
 
 
+async def _on_kon_enter(db: AsyncSession, event: Event, base_query, window) -> Trip:
+    # Out-of-order: kon chiqishi (yoki keyingi bosqich) oldinroq yetib kelgan
+    # bo'lishi mumkin — kon kirishsiz ochilgan karyer qatnoviga ulaymiz.
+    orphan = (
+        await db.execute(
+            base_query().where(
+                Trip.kind == "karyer",
+                Trip.kon_enter_event_id.is_(None),
+                Trip.started_at >= event.occurred_at,
+                Trip.started_at <= event.occurred_at + window,
+            )
+        )
+    ).scalars().first()
+    if orphan is not None:
+        orphan.kon_enter_event_id = event.id
+        orphan.started_at = event.occurred_at
+        return orphan
+
+    # Avvalgi kirish chiqishsiz qolgan — eskisini yopamiz.
+    stale = (
+        await db.execute(
+            base_query().where(
+                Trip.kon_enter_event_id.is_not(None),
+                Trip.kon_exit_event_id.is_(None),
+                Trip.main_enter_event_id.is_(None),
+            )
+        )
+    ).scalars().all()
+    for t in stale:
+        t.status = "incomplete"
+
+    trip = Trip(
+        quarry_id=event.quarry_id,
+        plate_region=event.plate_region,
+        plate_number=event.plate_number,
+        kind="karyer",
+        status="open",
+        kon_enter_event_id=event.id,
+        started_at=event.occurred_at,
+    )
+    db.add(trip)
+    return trip
+
+
 async def _on_kon_exit(db: AsyncSession, event: Event, base_query, window) -> Trip:
+    # Oddiy yo'l: karyerga kirgan (kon enter) ochiq qatnovga ulaymiz.
+    entered = (
+        await db.execute(
+            base_query().where(
+                Trip.kon_enter_event_id.is_not(None),
+                Trip.kon_exit_event_id.is_(None),
+                Trip.started_at >= event.occurred_at - window,
+                Trip.started_at <= event.occurred_at,
+            )
+        )
+    ).scalars().first()
+    if entered is not None:
+        entered.kon_exit_event_id = event.id
+        return entered
+
     # Out-of-order: zavod kirishi kon chiqishidan OLDIN yetib kelgan bo'lishi
     # mumkin (retry backoff) — o'sha "tashqi" qatnovga ulab, turini tuzatamiz.
     orphan = (
@@ -91,7 +153,8 @@ async def _on_kon_exit(db: AsyncSession, event: Event, base_query, window) -> Tr
     if orphan is not None:
         orphan.kon_exit_event_id = event.id
         orphan.kind = "karyer"
-        orphan.started_at = event.occurred_at
+        if orphan.kon_enter_event_id is None:
+            orphan.started_at = event.occurred_at
         orphan.netto_kg = _netto(orphan)
         return orphan
 

@@ -303,6 +303,9 @@ export interface TripRecord {
   plate_number: string;
   kind: 'karyer' | 'tashqi';
   status: 'open' | 'done' | 'incomplete';
+  // derived progress from which checkpoints have fired (status chip)
+  stage: 'karyerda' | 'yolda' | 'zavodda' | 'yakunlandi' | 'chala';
+  kon_enter_event_id: string | null;
   kon_exit_event_id: string | null;
   main_enter_event_id: string | null;
   main_exit_event_id: string | null;
@@ -311,10 +314,12 @@ export interface TripRecord {
   netto_kg: number | null;
   started_at: string;
   completed_at: string | null;
+  kon_enter_at: string | null;
   kon_exit_at: string | null;
   main_enter_at: string | null;
   main_exit_at: string | null;
   // per-stage media (linked events' snapshots + clip) for the detail modal
+  kon_enter: TripStage | null;
   kon_exit: TripStage | null;
   main_enter: TripStage | null;
   main_exit: TripStage | null;

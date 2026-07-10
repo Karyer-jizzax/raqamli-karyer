@@ -250,15 +250,16 @@ export function QuarryDashboard() {
         </Card>
       </div>
 
-      {/* Trips (qatnovlar): kon exit → zavod enter → zavod exit chains */}
+      {/* Ma'lumotlar: per-vehicle stage table (trips) — stage columns fill as
+          the vehicle passes each checkpoint */}
       <div>
-        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('trips_title')}</h3>
+        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('nav_data')}</h3>
         <TripsTable quarryId={quarryId} />
       </div>
 
-      {/* Per-quarry data table (same M1 view as the department's Data page, scoped here) */}
+      {/* Raw event log (M-1 grid: material, volume, AI status) */}
       <div>
-        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('nav_data')}</h3>
+        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('ev_list')}</h3>
         <M1Table quarryId={quarryId} />
       </div>
     </div>

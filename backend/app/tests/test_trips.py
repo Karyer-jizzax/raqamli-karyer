@@ -25,18 +25,22 @@ def _at(minutes: int) -> str:
     return (T0 + timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _kon_exit(plate: str, minutes: int) -> dict[str, object]:
+def _kon(plate: str, direction: str, minutes: int) -> dict[str, object]:
     return {
         "event_uid": str(uuid.uuid4()),
         "quarry_id": "DEMO-1",
         "camera_name": "P-KIRISH-C1",
         "is_main": False,
         "plate": plate,
-        "direction": "out",
+        "direction": direction,
         "weight": None,
         "unit": "kg",
         "event_time": _at(minutes),
     }
+
+
+def _kon_exit(plate: str, minutes: int) -> dict[str, object]:
+    return _kon(plate, "out", minutes)
 
 
 def _main(plate: str, direction: str, weight: float | None, minutes: int) -> dict[str, object]:
@@ -109,6 +113,69 @@ async def test_type2_external_vehicle(client: httpx.AsyncClient, seeded: None) -
     assert t["status"] == "done"
     assert t["netto_kg"] == 28000  # olib ketilgan mahsulot
     assert t["kon_exit_event_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_full_chain_with_kon_enter(client: httpx.AsyncClient, seeded: None) -> None:
+    """Karyerga kirdi → chiqdi → zavodda tortildi → chiqdi: 4 bosqich, 1 qatnov."""
+    plate = _plate()
+    kin = await _send(client, _kon(plate, "in", 0))
+    assert kin["trip_id"] is not None
+
+    async def stage_of() -> str:
+        return (await _trips_of(client, plate))[0]["stage"]
+
+    assert await stage_of() == "karyerda"
+
+    kout = await _send(client, _kon_exit(plate, 10))
+    assert kout["trip_id"] == kin["trip_id"]
+    assert await stage_of() == "yolda"
+
+    enter = await _send(client, _main(plate, "in", 45000, 40))
+    assert enter["trip_id"] == kin["trip_id"]
+    assert await stage_of() == "zavodda"
+
+    ex = await _send(client, _main(plate, "out", 15000, 60))
+    assert ex["trip_id"] == kin["trip_id"]
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    t = trips[0]
+    assert t["kind"] == "karyer"
+    assert t["status"] == "done"
+    assert t["stage"] == "yakunlandi"
+    assert t["kon_enter_event_id"] == kin["id"]
+    assert t["netto_kg"] == 30000
+
+
+@pytest.mark.asyncio
+async def test_out_of_order_kon_enter_grafts(client: httpx.AsyncClient, seeded: None) -> None:
+    """Kon kirishi kechikib kelsa, kon chiqishi ochgan qatnovga ulanadi."""
+    plate = _plate()
+    kout = await _send(client, _kon_exit(plate, 10))
+    kin = await _send(client, _kon(plate, "in", 0))  # occurred earlier, arrived later
+    assert kin["trip_id"] == kout["trip_id"]
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    assert trips[0]["kon_enter_event_id"] == kin["id"]
+    assert trips[0]["kon_exit_event_id"] == kout["id"]
+
+
+@pytest.mark.asyncio
+async def test_second_kon_enter_supersedes_enter_only_trip(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """Kirish chiqishsiz qolsa (chala), keyingi kirish yangi qatnov ochadi."""
+    plate = _plate()
+    first = await _send(client, _kon(plate, "in", 0))
+    second = await _send(client, _kon(plate, "in", 120))
+    assert first["trip_id"] != second["trip_id"]
+
+    trips = {t["id"]: t for t in await _trips_of(client, plate)}
+    assert trips[first["trip_id"]]["status"] == "incomplete"
+    assert trips[first["trip_id"]]["stage"] == "chala"
+    assert trips[second["trip_id"]]["status"] == "open"
 
 
 @pytest.mark.asyncio

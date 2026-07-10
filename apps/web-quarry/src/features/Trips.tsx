@@ -1,23 +1,27 @@
 import { mediaUrl, type TripRecord, type TripStage, useTrips } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card, cn } from '@karier/ui';
-import { useState } from 'react';
+import { type MouseEvent, useState } from 'react';
 
 const KINDS = ['karyer', 'tashqi'] as const;
-const STATUSES = ['open', 'done', 'incomplete'] as const;
+const STAGES = ['karyerda', 'yolda', 'zavodda', 'yakunlandi', 'chala'] as const;
 
 // Same table chrome as the M-1 grid (1px #eef2f6 grid, compact, no wrap).
 const CELL = 'border border-[#eef2f6] px-3 py-2 whitespace-nowrap';
 const CTR = cn(CELL, 'text-center');
 const NUM = cn(CELL, 'text-right tabular-nums');
+const TH = cn(CELL, 'font-bold');
 const FCTRL =
   'h-[38px] rounded-[9px] border border-input bg-white px-[11px] text-[13px] font-[inherit] focus:border-primary focus:ring-[3px] focus:ring-primary/15 focus:outline-none';
 const FLBL = 'flex flex-col gap-[5px] text-xs text-muted-foreground';
 
-const STATUS_BADGE: Record<TripRecord['status'], string> = {
-  open: 'bg-[#eff6ff] text-[#1d4ed8]',
-  done: 'bg-[#ecfdf5] text-[#059669]',
-  incomplete: 'bg-[#fff7ed] text-[#b45309]',
+// Progress chip per derived stage: karyerda → yolda → zavodda → yakunlandi.
+const STAGE_BADGE: Record<TripRecord['stage'], string> = {
+  karyerda: 'bg-[#eff6ff] text-[#1d4ed8]',
+  yolda: 'bg-[#eef2ff] text-[#4338ca]',
+  zavodda: 'bg-[#f5f3ff] text-[#6d28d9]',
+  yakunlandi: 'bg-[#ecfdf5] text-[#059669]',
+  chala: 'bg-[#fff7ed] text-[#b45309]',
 };
 
 function fmtDateTime(iso: string | null): { date: string; time: string } | null {
@@ -31,18 +35,6 @@ function fmtDateTime(iso: string | null): { date: string; time: string } | null 
   };
 }
 
-function Stamp({ iso }: { iso: string | null }) {
-  const dt = fmtDateTime(iso);
-  if (!dt) return <span className="text-slate-300">—</span>;
-  return (
-    <span className="text-muted-foreground">
-      {dt.date}
-      <br />
-      {dt.time}
-    </span>
-  );
-}
-
 function Plate({ trip }: { trip: TripRecord }) {
   return (
     <span className="inline-flex items-stretch overflow-hidden rounded-[5px] border-[1.5px] border-[#1e293b] text-[11.5px] leading-none font-bold">
@@ -50,6 +42,139 @@ function Plate({ trip }: { trip: TripRecord }) {
       <span className="px-1.5 py-1 text-foreground">{trip.plate_number}</span>
       <span className="flex items-center bg-primary px-1 text-[8.5px] text-white">UZ</span>
     </span>
+  );
+}
+
+// ── hover media preview ──────────────────────────────────────────────────────
+interface Preview {
+  stage: TripStage;
+  video: boolean;
+  left: number;
+  top: number;
+  bottom: number;
+}
+
+function CameraIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+/** Photo/video chips inside a stage cell; hovering shows a floating preview. */
+function MediaChips({
+  stage,
+  onPreview,
+}: {
+  stage: TripStage;
+  onPreview: (p: Preview | null) => void;
+}) {
+  const show = (video: boolean) => (e: MouseEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    onPreview({ stage, video, left: r.left, top: r.top, bottom: r.bottom });
+  };
+  const CHIP =
+    'inline-flex items-center gap-0.5 rounded-[6px] border border-[#e2e8f0] bg-white px-1.5 py-0.5 text-primary';
+  const nImg = stage.image_urls?.length ?? 0;
+  if (!nImg && !stage.video_url) return null;
+  return (
+    <span className="mt-1 inline-flex items-center justify-center gap-1">
+      {nImg > 0 && (
+        <span className={CHIP} onMouseEnter={show(false)} onMouseLeave={() => onPreview(null)}>
+          <CameraIcon />
+          {nImg > 1 && <span className="text-[10px] font-semibold">{nImg}</span>}
+        </span>
+      )}
+      {stage.video_url && (
+        <span className={CHIP} onMouseEnter={show(true)} onMouseLeave={() => onPreview(null)}>
+          <PlayIcon />
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** Floating preview card rendered next to the hovered media chip. */
+function PreviewCard({ prev }: { prev: Preview }) {
+  const W = 280;
+  const H = 200;
+  const left = Math.max(8, Math.min(prev.left - W / 2, window.innerWidth - W - 8));
+  const below = prev.bottom + H + 16 < window.innerHeight;
+  return (
+    <div
+      className="pointer-events-none fixed z-[200] overflow-hidden rounded-[10px] border border-[#e2e8f0] bg-white shadow-[0_12px_32px_rgba(8,25,50,.3)]"
+      style={{ left, width: W, top: below ? prev.bottom + 8 : prev.top - H - 8 }}
+    >
+      {prev.video && prev.stage.video_url ? (
+        <video
+          src={mediaUrl(prev.stage.video_url)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="block w-full bg-black"
+          style={{ height: H, objectFit: 'contain' }}
+        />
+      ) : (
+        <img
+          src={mediaUrl(prev.stage.image_urls[0])}
+          alt=""
+          className="block w-full bg-black"
+          style={{ height: H, objectFit: 'contain' }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** One checkpoint cell: time on top, weight (scale stages), then media chips. */
+function StageCell({
+  at,
+  stage,
+  weightKg,
+  lang,
+  onPreview,
+}: {
+  at: string | null;
+  stage: TripStage | null;
+  weightKg?: number | null;
+  lang: ReturnType<typeof currentLang>;
+  onPreview: (p: Preview | null) => void;
+}) {
+  const dt = fmtDateTime(at ?? stage?.occurred_at ?? null);
+  if (!dt && !stage) {
+    return (
+      <td className={CTR}>
+        <span className="text-slate-300">—</span>
+      </td>
+    );
+  }
+  return (
+    <td className={CTR}>
+      {dt && (
+        <span className="text-muted-foreground">
+          {dt.date}
+          <br />
+          <b className="text-foreground tabular-nums">{dt.time}</b>
+        </span>
+      )}
+      {weightKg != null && (
+        <div className="font-semibold text-[#0f766e] tabular-nums">
+          {formatDecimal(weightKg / 1000, lang)} t
+        </div>
+      )}
+      {stage && <MediaChips stage={stage} onPreview={onPreview} />}
+    </td>
   );
 }
 
@@ -109,6 +234,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
 
   const [f, setF] = useState<Record<string, string>>({});
   const [sel, setSel] = useState<TripRecord | null>(null);
+  const [prev, setPrev] = useState<Preview | null>(null);
   const set = (k: string) => (v: string) =>
     setF((p) => {
       const n = { ...p };
@@ -122,7 +248,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   // Client-side filtering over the single fetch (mirrors the M-1 grid).
   const filtered = rows.filter((r) => {
     if (f.kind && r.kind !== f.kind) return false;
-    if (f.status && r.status !== f.status) return false;
+    if (f.stage && r.stage !== f.stage) return false;
     if (f.plate) {
       const hay = `${r.plate_region} ${r.plate_number}`.toUpperCase();
       if (!hay.includes(f.plate.toUpperCase())) return false;
@@ -131,8 +257,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   });
 
   const totalNetto = filtered.reduce((s, r) => s + (r.netto_kg ?? 0), 0);
-  const tons = (kg: number | null) =>
-    kg == null ? '-' : formatDecimal(kg / 1000, lang);
+  const tons = (kg: number | null) => (kg == null ? '-' : formatDecimal(kg / 1000, lang));
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -141,8 +266,8 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
         <div className="flex flex-wrap items-end gap-3">
           <Sel label={t('trip_kind')} value={f.kind} onChange={set('kind')} t={t}
             opts={KINDS.map((k) => [k, t(`trip_kind_${k}`)])} />
-          <Sel label={t('filt_status')} value={f.status} onChange={set('status')} t={t}
-            opts={STATUSES.map((s) => [s, t(`trip_st_${s}`)])} />
+          <Sel label={t('filt_status')} value={f.stage} onChange={set('stage')} t={t}
+            opts={STAGES.map((s) => [s, t(`stage_${s}`)])} />
           <label className={FLBL}>
             {t('filt_plate')}
             <input
@@ -171,16 +296,19 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
               <table className="w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="bg-[#f6fbfb] text-[#334155]">
-                    <th className={cn(CELL, 'font-bold')}>{t('th_no')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('trip_kind')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_kon_exit')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_main_enter')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_enter_w')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_main_exit')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_exit_w')}</th>
-                    <th className={cn(CELL, 'font-bold bg-[#ecfdf5]')}>{t('th_netto')}</th>
-                    <th className={cn(CELL, 'font-bold')}>{t('th_status')}</th>
+                    <th rowSpan={2} className={TH}>{t('th_no')}</th>
+                    <th rowSpan={2} className={TH}>{t('th_plate')}</th>
+                    <th rowSpan={2} className={TH}>{t('trip_kind')}</th>
+                    <th colSpan={2} className={TH}>{t('grp_karyer')}</th>
+                    <th colSpan={2} className={TH}>{t('grp_zavod')}</th>
+                    <th rowSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('th_netto')}</th>
+                    <th rowSpan={2} className={TH}>{t('th_status')}</th>
+                  </tr>
+                  <tr className="bg-[#f6fbfb] text-[#334155]">
+                    <th className={cn(TH, 'font-semibold')}>{t('dir_enter')}</th>
+                    <th className={cn(TH, 'font-semibold')}>{t('dir_exit')}</th>
+                    <th className={cn(TH, 'font-semibold')}>{t('dir_enter')}</th>
+                    <th className={cn(TH, 'font-semibold')}>{t('dir_exit')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,26 +339,21 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                             {t(`trip_kind_${r.kind}`)}
                           </span>
                         </td>
-                        <td className={CTR}>
-                          <Stamp iso={r.kon_exit_at} />
-                        </td>
-                        <td className={CTR}>
-                          <Stamp iso={r.main_enter_at} />
-                        </td>
-                        <td className={NUM}>{tons(r.enter_weight_kg)}</td>
-                        <td className={CTR}>
-                          <Stamp iso={r.main_exit_at} />
-                        </td>
-                        <td className={NUM}>{tons(r.exit_weight_kg)}</td>
+                        <StageCell at={r.kon_enter_at} stage={r.kon_enter} lang={lang} onPreview={setPrev} />
+                        <StageCell at={r.kon_exit_at} stage={r.kon_exit} lang={lang} onPreview={setPrev} />
+                        <StageCell at={r.main_enter_at} stage={r.main_enter}
+                          weightKg={r.enter_weight_kg} lang={lang} onPreview={setPrev} />
+                        <StageCell at={r.main_exit_at} stage={r.main_exit}
+                          weightKg={r.exit_weight_kg} lang={lang} onPreview={setPrev} />
                         <td className={cn(NUM, 'bg-[#ecfdf5] font-bold')}>{tons(r.netto_kg)}</td>
                         <td className={CTR}>
                           <span
                             className={cn(
                               'inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                              STATUS_BADGE[r.status],
+                              STAGE_BADGE[r.stage],
                             )}
                           >
-                            {t(`trip_st_${r.status}`)}
+                            {t(`stage_${r.stage}`)}
                           </span>
                         </td>
                       </tr>
@@ -258,6 +381,9 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
         )}
       </Card>
 
+      {/* Hover media preview (photo / silent looping clip). */}
+      {prev && <PreviewCard prev={prev} />}
+
       {/* Trip detail modal: per-stage photos/video of the linked events. */}
       {sel && (
         <div
@@ -280,8 +406,9 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
               </button>
             </div>
             <div className="overflow-y-auto px-4 pb-1">
-              {sel.kon_exit || sel.main_enter || sel.main_exit ? (
+              {sel.kon_enter || sel.kon_exit || sel.main_enter || sel.main_exit ? (
                 <>
+                  <StageSection label={t('th_kon_enter')} stage={sel.kon_enter} t={t} />
                   <StageSection label={t('th_kon_exit')} stage={sel.kon_exit} t={t} />
                   <StageSection label={t('th_main_enter')} stage={sel.main_enter} t={t} />
                   <StageSection label={t('th_main_exit')} stage={sel.main_exit} t={t} />

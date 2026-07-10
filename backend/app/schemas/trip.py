@@ -24,6 +24,9 @@ class TripOut(BaseModel):
     plate_number: str
     kind: str  # karyer | tashqi
     status: str  # open | done | incomplete
+    # derived progress: karyerda | yolda | zavodda | yakunlandi | chala
+    stage: str
+    kon_enter_event_id: UUID | None
     kon_exit_event_id: UUID | None
     main_enter_event_id: UUID | None
     main_exit_event_id: UUID | None
@@ -33,10 +36,12 @@ class TripOut(BaseModel):
     started_at: datetime
     completed_at: datetime | None
     # per-stage timestamps (from the linked events) for the UI table
+    kon_enter_at: datetime | None = None
     kon_exit_at: datetime | None = None
     main_enter_at: datetime | None = None
     main_exit_at: datetime | None = None
     # per-stage media (photos/video of the linked events) for the UI modal
+    kon_enter: TripStageOut | None = None
     kon_exit: TripStageOut | None = None
     main_enter: TripStageOut | None = None
     main_exit: TripStageOut | None = None

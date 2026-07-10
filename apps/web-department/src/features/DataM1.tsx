@@ -70,14 +70,6 @@ function Plate({ row }: { row: M1Row }) {
   );
 }
 
-export function DataM1() {
-  return (
-    <div className="flex flex-col gap-3.5 p-6">
-      <M1Table />
-    </div>
-  );
-}
-
 export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();

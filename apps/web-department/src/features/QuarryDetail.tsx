@@ -4,6 +4,7 @@ import { Card, cn } from '@karier/ui';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { M1Table } from './DataM1';
+import { TripsTable } from './Trips';
 
 function name(d: { name_ru: string; name_uz_cyrl: string; name_uz_latn: string }): string {
   const l = currentLang();
@@ -286,9 +287,15 @@ export function QuarryDetail() {
         </Card>
       </div>
 
-      {/* Per-quarry data table (same M1 view as the Data page, scoped here) */}
+      {/* Ma'lumotlar: per-vehicle stage table (trips), scoped to this quarry */}
       <div>
         <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('nav_data')}</h3>
+        <TripsTable quarryId={quarryId} />
+      </div>
+
+      {/* Raw event log (M-1 grid: material, volume, AI status) */}
+      <div>
+        <h3 className="mb-2.5 text-[15px] font-semibold text-foreground">{t('ev_list')}</h3>
         <M1Table quarryId={quarryId} />
       </div>
     </div>

@@ -48,6 +48,7 @@ async def test_weigh_multipart_creates_event_with_media(
     client: httpx.AsyncClient, seeded: None
 ) -> None:
     uid = str(uuid.uuid4())
+    plate = "01A" + uuid.uuid4().hex[:5].upper()
     files = [
         ("images", ("snap0.jpg", b"\xff\xd8\xfffake", "image/jpeg")),
         ("video", ("clip.mp4", b"fake-mp4", "video/mp4")),
@@ -55,7 +56,7 @@ async def test_weigh_multipart_creates_event_with_media(
     resp = await client.post(
         "/api/weigh",
         headers=KEY,
-        data={"data": json.dumps(_payload(uid))},
+        data={"data": json.dumps(_payload(uid, plate=plate))},
         files=files,
     )
     assert resp.status_code == 200, resp.text
@@ -65,11 +66,15 @@ async def test_weigh_multipart_creates_event_with_media(
 
     # The event surfaces in the department M1 grid with weight + media urls.
     token = await login(client, "department", "dept123")
-    rows = (await client.get("/api/v1/stats/m1", headers=auth_header(token))).json()["rows"]
+    rows = (
+        await client.get(
+            "/api/v1/stats/m1", params={"plate": plate[2:]}, headers=auth_header(token)
+        )
+    ).json()["rows"]
     row = next(r for r in rows if r["id"] == body["id"])
     assert row["weight_kg"] == 31200
     assert row["is_main"] is True
-    assert row["plate_region"] == "01" and row["plate_number"] == "S748HE"
+    assert row["plate_region"] == "01" and row["plate_number"] == plate[2:]
     assert len(row["image_urls"]) == 1
     assert row["video_url"] is not None
 
@@ -107,9 +112,16 @@ async def test_weigh_maps_direction_in_out(client: httpx.AsyncClient, seeded: No
 
     async def dir_of(direction: object) -> str:
         uid = str(uuid.uuid4())
-        r = await client.post("/api/weigh", headers=KEY, json=_payload(uid, direction=direction))
+        plate = "01A" + uuid.uuid4().hex[:5].upper()
+        r = await client.post(
+            "/api/weigh", headers=KEY, json=_payload(uid, direction=direction, plate=plate)
+        )
         assert r.status_code == 200, r.text
-        rows = (await client.get("/api/v1/stats/m1", headers=auth_header(token))).json()["rows"]
+        rows = (
+            await client.get(
+                "/api/v1/stats/m1", params={"plate": plate[2:]}, headers=auth_header(token)
+            )
+        ).json()["rows"]
         return next(row["direction"] for row in rows if row["id"] == r.json()["id"])
 
     assert await dir_of("in") == "enter"
