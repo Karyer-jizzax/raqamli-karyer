@@ -5,6 +5,7 @@ import { type MouseEvent, useState } from 'react';
 
 const KINDS = ['karyer', 'tashqi'] as const;
 const STAGES = ['karyerda', 'yolda', 'zavodda', 'yakunlandi', 'chala'] as const;
+const PAGE_SIZES = [10, 25, 50] as const;
 
 // Same table chrome as the M-1 grid (1px #eef2f6 grid, compact, no wrap).
 const CELL = 'border border-[#eef2f6] px-3 py-2 whitespace-nowrap';
@@ -235,13 +236,17 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const [f, setF] = useState<Record<string, string>>({});
   const [sel, setSel] = useState<TripRecord | null>(null);
   const [prev, setPrev] = useState<Preview | null>(null);
-  const set = (k: string) => (v: string) =>
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
+  const set = (k: string) => (v: string) => {
+    setPage(1);
     setF((p) => {
       const n = { ...p };
       if (v) n[k] = v;
       else delete n[k];
       return n;
     });
+  };
 
   const rows = data ?? [];
 
@@ -258,6 +263,14 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
 
   const totalNetto = filtered.reduce((s, r) => s + (r.netto_kg ?? 0), 0);
   const tons = (kg: number | null) => (kg == null ? '-' : formatDecimal(kg / 1000, lang));
+
+  // Client-side pagination over the filtered set (filters reset to page 1).
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const cur = Math.min(page, pages);
+  const pageStart = (cur - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+  const PGBTN =
+    'grid size-[30px] cursor-pointer place-items-center rounded-[8px] border border-[#e2e8f0] bg-white text-[15px] text-muted-foreground disabled:cursor-default disabled:opacity-40';
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -319,13 +332,13 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((r, i) => (
+                    pageRows.map((r, i) => (
                       <tr
                         key={r.id}
                         className="cursor-pointer hover:bg-[#f6fefd]"
                         onClick={() => setSel(r)}
                       >
-                        <td className={CTR}>{i + 1}</td>
+                        <td className={CTR}>{pageStart + i + 1}</td>
                         <td className={CTR}>
                           <Plate trip={r} />
                         </td>
@@ -372,10 +385,44 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
               </table>
             </div>
 
-            <div className="mt-2.5 text-[13px] text-muted-foreground">
-              {t('trips_total')}: <b className="text-foreground">{filtered.length}</b> ·{' '}
-              {t('trips_total_netto')}:{' '}
-              <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b>
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-[13px] text-muted-foreground">
+                {t('trips_total')}: <b className="text-foreground">{filtered.length}</b> ·{' '}
+                {t('trips_total_netto')}:{' '}
+                <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {t('pg_per')}
+                  <select
+                    className={cn(FCTRL, 'h-[30px] cursor-pointer px-2 text-xs')}
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                  >
+                    {PAGE_SIZES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className="text-[13px] text-muted-foreground tabular-nums">
+                  {filtered.length === 0 ? 0 : pageStart + 1}–
+                  {Math.min(pageStart + pageSize, filtered.length)} / {filtered.length}
+                </span>
+                <button className={PGBTN} disabled={cur <= 1} onClick={() => setPage(cur - 1)}>
+                  ‹
+                </button>
+                <span className="text-[13px] text-foreground tabular-nums">
+                  {cur}/{pages}
+                </span>
+                <button className={PGBTN} disabled={cur >= pages} onClick={() => setPage(cur + 1)}>
+                  ›
+                </button>
+              </div>
             </div>
           </>
         )}
