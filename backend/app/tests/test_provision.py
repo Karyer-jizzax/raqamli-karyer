@@ -5,7 +5,6 @@ it at GET /api/local/config for quarry code + ingest api_key + camera names →
 that api_key is then valid on /api/weigh for THIS quarry only.
 """
 
-import json
 import uuid
 
 import httpx

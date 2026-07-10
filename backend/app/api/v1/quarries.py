@@ -1,5 +1,6 @@
 """Quarries CRUD + nested posts & cameras (web-main, superadmin)."""
 
+import secrets
 from typing import Annotated
 from uuid import UUID
 
@@ -7,8 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import secrets
 
 from app.core.config import settings
 from app.core.deps import CurrentUser, get_current_user, require_role
