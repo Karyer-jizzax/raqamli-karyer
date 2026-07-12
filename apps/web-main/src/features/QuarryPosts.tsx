@@ -499,7 +499,10 @@ export function QuarryPostsModal({ quarry, onClose }: { quarry: Quarry; onClose:
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid max-h-[60vh] gap-3 overflow-y-auto py-1">
+        {/* auto-rows-max: rows keep their content height — otherwise the grid
+            squeezes the overflow-hidden post cards to fit 60vh and clips them
+            instead of letting this container scroll. */}
+        <div className="grid max-h-[60vh] auto-rows-max gap-3 overflow-y-auto py-1">
           {isLoading ? (
             <p className="text-sm text-muted-foreground">{t('loading')}</p>
           ) : !posts?.length ? (
