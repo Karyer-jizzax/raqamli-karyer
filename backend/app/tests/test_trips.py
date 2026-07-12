@@ -303,11 +303,10 @@ async def test_exit_without_enter_times_out(client: httpx.AsyncClient, seeded: N
 
 @pytest.mark.asyncio
 async def test_no_plate_event_fixed_manually(client: httpx.AsyncClient, seeded: None) -> None:
-    """ANPR o'qimagan hodisa no_plate bo'lib turadi; raqam kiritilgach juftlanadi."""
+    """Raqamsiz hodisa serverda no_plate bo'ladi; raqam kiritilgach juftlanadi."""
     plate = _plate()
     payload = _main("", "in", 45000, 0)
-    payload["plate"] = None
-    payload["status"] = "no_plate"
+    payload["plate"] = None  # ANPR o'qiy olmadi — server o'zi no_plate qiladi
     resp = await _send(client, payload)
     assert resp["trip_id"] is None
 

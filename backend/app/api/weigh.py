@@ -71,9 +71,6 @@ class WeighIn(BaseModel):
     event_time: str
     video_path: str | None = None
     image_paths: list[str] = []
-    # "ok" | "no_plate" — no_plate = ANPR raqamni o'qiy olmadi; operator
-    # dashboardda raqamni qo'lda kiritib, event qatnovga keyin juftlanadi.
-    status: str = "ok"
 
 
 # The local server reports movement as in/out; our Event uses enter/exit.
@@ -246,7 +243,9 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         diff_pct=None,
         volume_confidence=vol.confidence,
         material_confidence=material_confidence,
-        status="no_plate" if payload.status == "no_plate" else vol.status,
+        # Raqam bo'sh = ANPR o'qiy olmagan → "no_plate" (chalkashlik): operator
+        # dashboardda raqamni qo'lda kiritgach, event qatnovga juftlanadi.
+        status="no_plate" if not plate_number else vol.status,
     )
     db.add(event)
     await db.commit()
