@@ -12,6 +12,8 @@ from app.db.base import Base, TimestampMixin, UUIDMixin
 QUARRY_STATUSES = ("active", "suspended")
 # camera kind: plate (ANPR) | record (evidentiary video, no detection)
 CAMERA_KINDS = ("plate", "record")
+# camera vendor — decides the ANPR/RTSP protocol the local server uses
+CAMERA_BRANDS = ("dahua", "hikvision")
 
 # Which materials (products) a quarry produces/handles — plain many-to-many.
 quarry_materials = Table(
@@ -70,5 +72,9 @@ class Camera(Base, UUIDMixin, TimestampMixin):
     kind: Mapped[str] = mapped_column(String(16), default="plate")
     stream_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    brand: Mapped[str] = mapped_column(String(16), default="dahua")
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    login: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    password: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     post: Mapped[Post] = relationship(back_populates="cameras")

@@ -204,7 +204,7 @@ export function useUpdateCamera() {
       body,
     }: {
       id: string;
-      body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active'>>;
+      body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active' | 'brand' | 'ip' | 'login' | 'password'>>;
     }) => updateCamera(id, body),
     onSuccess: (data: Camera) => qc.invalidateQueries({ queryKey: ['post-cameras', data.post_id] }),
   });

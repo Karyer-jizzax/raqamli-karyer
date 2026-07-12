@@ -33,6 +33,7 @@ export {
   type Camera,
   type CameraInput,
   type CameraKind,
+  type CameraBrand,
   createUser,
   getUsers,
   updateUser,

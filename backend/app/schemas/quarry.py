@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 QuarryStatus = Literal["active", "suspended"]
 CameraKind = Literal["plate", "record"]
+CameraBrand = Literal["dahua", "hikvision"]
 
 
 class QuarryCreate(BaseModel):
@@ -57,12 +58,20 @@ class CameraCreate(BaseModel):
     name: str
     kind: CameraKind = "plate"
     stream_url: str | None = None
+    brand: CameraBrand = "dahua"
+    ip: str | None = None
+    login: str | None = None
+    password: str | None = None
 
 
 class CameraUpdate(BaseModel):
     name: str | None = None
     stream_url: str | None = None
     is_active: bool | None = None
+    brand: CameraBrand | None = None
+    ip: str | None = None
+    login: str | None = None
+    password: str | None = None
 
 
 class QuarryMaterialsUpdate(BaseModel):
@@ -91,3 +100,7 @@ class CameraOut(BaseModel):
     kind: str
     stream_url: str | None
     is_active: bool
+    brand: str
+    ip: str | None
+    login: str | None
+    password: str | None

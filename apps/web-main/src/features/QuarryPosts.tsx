@@ -1,6 +1,7 @@
 import {
   ApiError,
   type Camera,
+  type CameraBrand,
   type CameraKind,
   type Post,
   type Quarry,
@@ -169,6 +170,10 @@ function AddCameraForm({ postId, onDone }: { postId: string; onDone: () => void 
   const [name, setName] = useState('');
   const [kind, setKind] = useState<CameraKind>('plate');
   const [streamUrl, setStreamUrl] = useState('');
+  const [brand, setBrand] = useState<CameraBrand>('dahua');
+  const [ip, setIp] = useState('');
+  const [login, setLogin] = useState('admin');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
 
   async function onSubmit(e: FormEvent) {
@@ -182,10 +187,18 @@ function AddCameraForm({ postId, onDone }: { postId: string; onDone: () => void 
           name: name.trim(),
           kind,
           stream_url: streamUrl.trim() || undefined,
+          brand,
+          ip: ip.trim() || undefined,
+          login: login.trim() || undefined,
+          password: password.trim() || undefined,
         },
       });
       setName('');
       setStreamUrl('');
+      setBrand('dahua');
+      setIp('');
+      setLogin('admin');
+      setPassword('');
       onDone();
     } catch (e2) {
       setErr(e2 instanceof ApiError ? e2.message : 'Error');
@@ -209,6 +222,31 @@ function AddCameraForm({ postId, onDone }: { postId: string; onDone: () => void 
           <SelectItem value="record">{t('camera_kind_record')}</SelectItem>
         </SelectContent>
       </Select>
+      <Select value={brand} onValueChange={(v) => setBrand(v as CameraBrand)}>
+        <SelectTrigger>
+          <SelectValue placeholder={t('camera_brand')} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="dahua">Dahua</SelectItem>
+          <SelectItem value="hikvision">Hikvision</SelectItem>
+        </SelectContent>
+      </Select>
+      <Input
+        value={ip}
+        onChange={(e) => setIp(e.target.value)}
+        placeholder={t('camera_ip')}
+      />
+      <Input
+        value={login}
+        onChange={(e) => setLogin(e.target.value)}
+        placeholder={t('camera_login')}
+      />
+      <Input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder={t('camera_password')}
+      />
       <Input
         value={streamUrl}
         onChange={(e) => setStreamUrl(e.target.value)}
@@ -236,12 +274,23 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(camera.name);
   const [streamUrl, setStreamUrl] = useState(camera.stream_url ?? '');
+  const [brand, setBrand] = useState<CameraBrand>(camera.brand ?? 'dahua');
+  const [ip, setIp] = useState(camera.ip ?? '');
+  const [login, setLogin] = useState(camera.login ?? '');
+  const [password, setPassword] = useState(camera.password ?? '');
   const [deleting, setDeleting] = useState(false);
 
   async function onSave() {
     await update.mutateAsync({
       id: camera.id,
-      body: { name: name.trim(), stream_url: streamUrl.trim() || null },
+      body: {
+        name: name.trim(),
+        stream_url: streamUrl.trim() || null,
+        brand,
+        ip: ip.trim() || null,
+        login: login.trim() || null,
+        password: password.trim() || null,
+      },
     });
     setEditing(false);
   }
@@ -250,14 +299,39 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
 
   if (editing) {
     return (
-      <div className="grid gap-2 rounded-[11px] border border-[#f1f5f9] bg-[#f8fafc] p-2.5 sm:grid-cols-[1fr_1fr_auto]">
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+      <div className="grid gap-2 rounded-[11px] border border-[#f1f5f9] bg-[#f8fafc] p-2.5 sm:grid-cols-2">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('camera_name')} />
+        <Select value={brand} onValueChange={(v) => setBrand(v as CameraBrand)}>
+          <SelectTrigger>
+            <SelectValue placeholder={t('camera_brand')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dahua">Dahua</SelectItem>
+            <SelectItem value="hikvision">Hikvision</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          value={ip}
+          onChange={(e) => setIp(e.target.value)}
+          placeholder={t('camera_ip')}
+        />
+        <Input
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
+          placeholder={t('camera_login')}
+        />
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={t('camera_password')}
+        />
         <Input
           value={streamUrl}
           onChange={(e) => setStreamUrl(e.target.value)}
           placeholder={t('camera_stream_url')}
         />
-        <div className="flex gap-1">
+        <div className="flex gap-1 sm:col-span-2">
           <Button type="button" size="icon" variant="ghost" onClick={onSave} disabled={update.isPending}>
             <CheckIcon />
           </Button>
@@ -277,9 +351,9 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
         <Badge variant="outline" className="bg-card">
           {t(CAMERA_KIND_LABEL[camera.kind])}
         </Badge>
-        {camera.stream_url && (
+        {camera.ip && (
           <span className="hidden truncate text-[11px] text-slate-400 sm:inline">
-            {camera.stream_url}
+            {camera.brand === 'hikvision' ? 'Hikvision' : 'Dahua'} · {camera.ip}
           </span>
         )}
       </div>

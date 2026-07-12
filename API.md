@@ -266,9 +266,18 @@ serverdan oladi.
      "quarry_id": "KARYER-01",
      "quarry_name": "…",
      "server": {"url": "…", "api_key": "…", "endpoint": "/api/weigh", "enabled": true, "send_files": true},
-     "cameras": [{"post_code": "…", "post_name": "…", "code": "…", "name": "…", "kind": "plate"}]
+     "cameras": [
+       {
+         "post_code": "…", "post_name": "…", "code": "…", "name": "…", "kind": "plate",
+         "brand": "dahua", "ip": "192.168.1.108", "login": "admin", "password": "…",
+         "stream_url": "", "is_active": true
+       }
+     ]
    }
    ```
+   Kamera ulanish maydonlari (`brand`/`ip`/`login`/`password`/`stream_url`/`is_active`)
+   web-main'da kiritiladi va faqat superadmin ko'radi; `ip` bo'sh bo'lsa kamera local
+   serverda faqat nom sifatida ishlatiladi (ulanish sozlanmaydi).
 3. Token — JWT (`type: "provision"`, muddati `PROVISION_TOKEN_EXPIRE_HOURS`, default 72 soat).
    Server manzili token ichida (`url` claim) — foydalanuvchi faqat bitta satr kiritadi.
 

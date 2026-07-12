@@ -169,7 +169,8 @@ async def delete_post(post_id: UUID, db: DbDep, _a: AdminDep) -> None:
 
 # ── cameras ────────────────────────────────────────────────────────────────
 @router.get("/posts/{post_id}/cameras", response_model=list[CameraOut])
-async def list_cameras(post_id: UUID, _user: CurrentUser, db: DbDep) -> list[Camera]:
+# superadmin-only: CameraOut carries camera credentials (login/password)
+async def list_cameras(post_id: UUID, db: DbDep, _a: AdminDep) -> list[Camera]:
     result = await db.execute(select(Camera).where(Camera.post_id == post_id))
     return list(result.scalars().all())
 

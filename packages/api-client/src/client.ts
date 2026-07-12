@@ -642,6 +642,7 @@ export interface PostInput {
   name: string;
 }
 export type CameraKind = 'plate' | 'record';
+export type CameraBrand = 'dahua' | 'hikvision';
 export interface Camera {
   id: string;
   post_id: string;
@@ -650,12 +651,20 @@ export interface Camera {
   kind: CameraKind;
   stream_url: string | null;
   is_active: boolean;
+  brand: CameraBrand;
+  ip: string | null;
+  login: string | null;
+  password: string | null;
 }
 export interface CameraInput {
   code: string;
   name: string;
   kind?: CameraKind;
   stream_url?: string | null;
+  brand?: CameraBrand;
+  ip?: string | null;
+  login?: string | null;
+  password?: string | null;
 }
 export const getQuarryPosts = (quarryId: string) =>
   api.get<Post[]>(`/quarries/${quarryId}/posts`);
@@ -670,7 +679,7 @@ export const createCamera = (postId: string, body: CameraInput) =>
   api.post<Camera>(`/posts/${postId}/cameras`, body);
 export const updateCamera = (
   id: string,
-  body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active'>>,
+  body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active' | 'brand' | 'ip' | 'login' | 'password'>>,
 ) => api.patch<Camera>(`/cameras/${id}`, body);
 export const deleteCamera = (id: string) => api.del(`/cameras/${id}`);
 

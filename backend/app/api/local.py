@@ -92,6 +92,12 @@ async def local_config(
                 "code": c.code,
                 "name": c.name,
                 "kind": c.kind,
+                "brand": c.brand or "dahua",
+                "ip": c.ip or "",
+                "login": c.login or "",
+                "password": c.password or "",
+                "stream_url": c.stream_url or "",
+                "is_active": c.is_active,
             }
             for p in posts
             for c in p.cameras
