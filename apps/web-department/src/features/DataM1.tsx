@@ -492,7 +492,9 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 </p>
               )
             ) : (media.row.image_urls?.length ?? 0) > 0 ? (
-              <div className="grid max-h-[70vh] gap-1.5 overflow-auto bg-black">
+              {/* auto-rows-max: keep photo rows content-sized so the gallery
+                  scrolls instead of the grid squeezing the images into 70vh */}
+              <div className="grid max-h-[70vh] auto-rows-max gap-1.5 overflow-auto bg-black">
                 {(media.row.image_urls ?? []).map((u, idx) => (
                   <img key={idx} src={mediaUrl(u)} alt="" className="block w-full" />
                 ))}

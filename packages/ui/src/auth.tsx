@@ -175,10 +175,13 @@ function LoginScreen({
   const tint = `color-mix(in srgb, ${accent} 8%, #ffffff)`;
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto bg-background p-5">
+    // mt-auto/mb-auto on the children (not justify-center) keeps the card
+    // centered yet scrollable — justify-center would push the top of a
+    // taller-than-viewport card out of reach on short screens.
+    <div className="fixed inset-0 flex flex-col items-center gap-4 overflow-y-auto bg-background p-5">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-[400px] rounded-[20px] border bg-card px-8 py-[34px] shadow-[0_1px_2px_rgba(15,23,42,.04),0_12px_34px_rgba(15,23,42,.06)]"
+        className="mt-auto w-full max-w-[400px] rounded-[20px] border bg-card px-8 py-[34px] shadow-[0_1px_2px_rgba(15,23,42,.04),0_12px_34px_rgba(15,23,42,.06)]"
       >
         <div className="mb-5 flex items-center gap-3">
           <div
@@ -239,7 +242,7 @@ function LoginScreen({
           <LangSwitcher />
         </div>
       </form>
-      <p className="text-xs text-slate-300">© 2026 Karier Kontrol</p>
+      <p className="mb-auto text-xs text-slate-300">© 2026 Karier Kontrol</p>
     </div>
   );
 }
