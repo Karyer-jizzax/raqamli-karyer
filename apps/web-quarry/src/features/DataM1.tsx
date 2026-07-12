@@ -1,9 +1,17 @@
-import { type M1Row, type Material, mediaUrl, useM1, useMaterials } from '@karier/api-client';
+import {
+  ApiError,
+  type M1Row,
+  type Material,
+  mediaUrl,
+  useM1,
+  useMaterials,
+  useUpdateEventPlate,
+} from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card, cn } from '@karier/ui';
-import { useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 
-const STATUSES = ['confirm', 'flagged', 'inspect'] as const;
+const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
 const DIRECTIONS = ['exit', 'enter'] as const;
 const LOADS = ['yes', 'no'] as const;
 
@@ -70,6 +78,78 @@ function Plate({ row }: { row: M1Row }) {
   );
 }
 
+/** Manual plate entry for a "no_plate" event (CHALKASHLIK — ANPR failed).
+    On save the server re-links the event into its trip automatically. */
+function FixPlateModal({ row, onClose }: { row: M1Row; onClose: () => void }) {
+  const { t } = useTranslation();
+  const update = useUpdateEventPlate();
+  const [region, setRegion] = useState(row.plate_region);
+  const [number, setNumber] = useState(row.plate_number);
+  const [err, setErr] = useState('');
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setErr('');
+    try {
+      await update.mutateAsync({
+        id: row.id,
+        body: { plate_region: region.trim(), plate_number: number.trim() },
+      });
+      onClose();
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : 'Error');
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[130] grid place-items-center bg-[#070d14]/60 p-5"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[420px] rounded-[14px] bg-white p-4 shadow-[0_24px_60px_rgba(8,25,50,.4)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-1 font-bold">{t('np_fix_title')}</div>
+        <p className="m-0 mb-3 text-[12.5px] text-muted-foreground">{t('np_fix_hint')}</p>
+        <form onSubmit={onSubmit} className="grid grid-cols-[110px_1fr] gap-2">
+          <input
+            className={FCTRL}
+            placeholder={t('np_region')}
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+          />
+          <input
+            className={FCTRL}
+            placeholder={t('np_number')}
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+            required
+            autoFocus
+          />
+          {err && <span className="col-span-2 text-xs text-destructive">{err}</span>}
+          <div className="col-span-2 mt-1 flex justify-end gap-2">
+            <button
+              type="button"
+              className="h-[38px] cursor-pointer rounded-[9px] border border-[#e2e8f0] bg-white px-[15px] text-[13px] font-medium text-muted-foreground"
+              onClick={onClose}
+            >
+              {t('q_cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={update.isPending || !number.trim()}
+              className="h-[38px] cursor-pointer rounded-[9px] border-none bg-primary px-[15px] text-[13px] font-semibold text-white disabled:opacity-50"
+            >
+              {t('q_save')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
@@ -87,6 +167,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
 
   const [media, setMedia] = useState<{ row: M1Row; mode: 'photo' | 'video' } | null>(null);
   const [history, setHistory] = useState<{ plate_region: string; plate_number: string } | null>(null);
+  const [fix, setFix] = useState<M1Row | null>(null);
 
   const matById = useMemo(() => {
     const m = new Map<string, Material>();
@@ -266,14 +347,25 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                           <td className={CTR}>{r.post_code ?? '—'}</td>
                           <td className={CTR}>{r.camera_label ?? '—'}</td>
                           <td className={CTR}>
-                            <button
-                              type="button"
-                              className="cursor-pointer border-none bg-transparent p-0 hover:[&>span]:shadow-[0_0_0_2px_rgba(22,163,74,.35)]"
-                              title={t('veh_history_hint')}
-                              onClick={() => setHistory({ plate_region: r.plate_region, plate_number: r.plate_number })}
-                            >
-                              <Plate row={r} />
-                            </button>
+                            {r.status === 'no_plate' ? (
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-full border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1 text-[11px] font-semibold text-[#dc2626] hover:bg-[#fee2e2]"
+                                title={t('np_fix_title')}
+                                onClick={() => setFix(r)}
+                              >
+                                {t('status_no_plate')}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="cursor-pointer border-none bg-transparent p-0 hover:[&>span]:shadow-[0_0_0_2px_rgba(22,163,74,.35)]"
+                                title={t('veh_history_hint')}
+                                onClick={() => setHistory({ plate_region: r.plate_region, plate_number: r.plate_number })}
+                              >
+                                <Plate row={r} />
+                              </button>
+                            )}
                           </td>
                           <td className={CTR}>{vtypeLabel(r.vtype)}</td>
                           <td className={CTR}>
@@ -352,6 +444,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
           </>
         )}
       </Card>
+
+      {fix && <FixPlateModal row={fix} onClose={() => setFix(null)} />}
 
       {history && (
         <div

@@ -260,7 +260,8 @@ export interface EventRecord {
   volume_final: number;
   diff_pct: number | null;
   volume_confidence: number;
-  status: 'confirm' | 'flagged' | 'inspect';
+  // no_plate = ANPR raqamni o'qiy olmagan — operator qo'lda kiritadi
+  status: 'confirm' | 'flagged' | 'inspect' | 'no_plate';
   owner_name: string;
   stir: string;
   image_urls: string[];
@@ -286,6 +287,9 @@ export interface EventInput {
 
 export const getEvents = () => api.get<EventRecord[]>('/events');
 export const createEvent = (body: EventInput) => api.post<EventRecord>('/events', body);
+// Manual plate fix for a "no_plate" event — the server re-links it to its trip.
+export const updateEventPlate = (id: string, body: { plate_region: string; plate_number: string }) =>
+  api.patch<EventRecord>(`/events/${id}/plate`, body);
 
 // ── trips (qatnovlar) — kon exit → main enter → main exit chains, produced
 // server-side by the ingest linker; the UI only reads them ────────────────────
@@ -302,9 +306,10 @@ export interface TripRecord {
   plate_region: string;
   plate_number: string;
   kind: 'karyer' | 'tashqi';
-  status: 'open' | 'done' | 'incomplete';
+  // no_cargo = netto below the floor (staff car); incomplete = violation
+  status: 'open' | 'done' | 'incomplete' | 'no_cargo';
   // derived progress from which checkpoints have fired (status chip)
-  stage: 'karyerda' | 'yolda' | 'zavodda' | 'yakunlandi' | 'chala';
+  stage: 'karyerda' | 'yolda' | 'zavodda' | 'yakunlandi' | 'chala' | 'yuk_emas';
   kon_enter_event_id: string | null;
   kon_exit_event_id: string | null;
   main_enter_event_id: string | null;
@@ -496,7 +501,7 @@ export interface M1Row {
   payer_type: string;
   stir: string;
   owner_name: string;
-  status: 'confirm' | 'flagged' | 'inspect';
+  status: 'confirm' | 'flagged' | 'inspect' | 'no_plate';
   image_urls: string[];
   video_url: string | null;
 }

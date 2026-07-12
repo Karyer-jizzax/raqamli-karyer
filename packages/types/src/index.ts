@@ -6,7 +6,8 @@ export type Role = (typeof ROLES)[number];
 export const DIRECTIONS = ['exit', 'enter'] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 
-export const STATUSES = ['confirm', 'flagged', 'inspect'] as const;
+// no_plate = ANPR raqamni o'qiy olmagan — operator qo'lda kiritadi
+export const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
 export type StatusKey = (typeof STATUSES)[number];
 
 export const PAYER_TYPES = ['legal', 'indiv', 'yatt'] as const;

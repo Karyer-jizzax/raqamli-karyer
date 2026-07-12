@@ -14,7 +14,10 @@ never reach here). Matching key: (quarry, plate). Chain:
   if none exists the vehicle came from outside → new trip (kind="tashqi").
   A previous enter-without-exit trip is superseded.
 * main exit → completes the trip: netto = enter−exit (karyer, olib keldi)
-  yoki exit−enter (tashqi, olib ketdi).
+  yoki exit−enter (tashqi, olib ketdi). Netto below trip_min_netto_kg means
+  no real cargo (a staff car) → status "no_cargo" instead of "done". An exit
+  with no matching enter opens an exit-only trip: a late enter completes it,
+  otherwise the read-side timeout surfaces it as a violation.
 
 Events can arrive out of order (the local server retries with backoff): a
 late kon exit is grafted onto the already-created tashqi trip instead of
@@ -45,12 +48,25 @@ def _netto(trip: Trip) -> int | None:
     return max(trip.exit_weight_kg - trip.enter_weight_kg, 0)  # tashqi
 
 
+def _finalize(trip: Trip, completed_at) -> None:
+    """Close a trip that has both scale readings: compute netto and decide
+    whether it was real cargo. Netto below the floor means a staff car simply
+    drove across the scale — counted separately, never as material."""
+    trip.netto_kg = _netto(trip)
+    if trip.netto_kg is not None and trip.netto_kg < settings.trip_min_netto_kg:
+        trip.status = "no_cargo"
+    else:
+        trip.status = "done"
+    trip.completed_at = completed_at
+
+
 async def link_event(db: AsyncSession, event: Event) -> Trip | None:
     """Attach the event to its trip (creating/completing as needed).
 
     Adds/updates rows on the session without committing — the caller owns
-    the transaction. Returns the touched trip, or None for unlinkable events
-    (no plate, kon enter, exit-without-enter).
+    the transaction. Returns the touched trip, or None for plateless events
+    (those stay visible as "no_plate" until an operator fills the plate in
+    and this function is called again).
     """
     if not event.plate_number:
         return None
@@ -206,6 +222,28 @@ async def _on_main_enter(db: AsyncSession, event: Event, base_query, window) -> 
         )
     ).scalars().first()
 
+    # Out-of-order: zavod chiqishi kirishdan OLDIN yetib kelgan bo'lishi
+    # mumkin (retry backoff) — chiqishgina bor ochiq qatnov qolgan.
+    orphan = (
+        await db.execute(
+            base_query().where(
+                Trip.main_enter_event_id.is_(None),
+                Trip.main_exit_event_id.is_not(None),
+                Trip.started_at >= event.occurred_at,
+                Trip.started_at <= event.occurred_at + window,
+            )
+        )
+    ).scalars().first()
+
+    if trip is None and orphan is not None:
+        # Kon zanjiri yo'q — chiqish ochgan qatnovning o'zini yakunlaymiz.
+        orphan.main_enter_event_id = event.id
+        orphan.enter_weight_kg = _weight(event)
+        exit_at = orphan.main_exit_at or event.occurred_at
+        orphan.started_at = event.occurred_at
+        _finalize(orphan, exit_at)
+        return orphan
+
     if trip is None:
         # Kon chiqishi yo'q — tashqaridan kelgan mashina (2-tur).
         trip = Trip(
@@ -220,10 +258,21 @@ async def _on_main_enter(db: AsyncSession, event: Event, base_query, window) -> 
 
     trip.main_enter_event_id = event.id
     trip.enter_weight_kg = _weight(event)
+
+    if orphan is not None and orphan is not trip:
+        # Kon zanjiri ham, oldin kelgan chiqish ham bor — bitta qatnovga
+        # birlashtiramiz: chiqish hodisasi karyer qatnoviga o'tadi, ortiqcha
+        # qator o'chadi (netto yo'nalishi kind bo'yicha to'g'ri hisoblanadi).
+        trip.main_exit_event_id = orphan.main_exit_event_id
+        trip.exit_weight_kg = orphan.exit_weight_kg
+        exit_at = orphan.main_exit_at or event.occurred_at
+        await db.delete(orphan)
+        _finalize(trip, exit_at)
+
     return trip
 
 
-async def _on_main_exit(db: AsyncSession, event: Event, base_query, window) -> Trip | None:
+async def _on_main_exit(db: AsyncSession, event: Event, base_query, window) -> Trip:
     trip = (
         await db.execute(
             base_query().where(
@@ -234,11 +283,23 @@ async def _on_main_exit(db: AsyncSession, event: Event, base_query, window) -> T
         )
     ).scalars().first()
     if trip is None:
-        return None  # kirishsiz chiqish — bog'laydigan qatnov yo'q
+        # Kirishsiz chiqish. Kirish hodisasi retry tufayli kechikayotgan
+        # bo'lishi mumkin — ochiq qatnov ochamiz; kirish kelsa juftlanadi,
+        # kelmasa timeout'dan keyin "incomplete" (huquqbuzarlik) ko'rinadi.
+        trip = Trip(
+            quarry_id=event.quarry_id,
+            plate_region=event.plate_region,
+            plate_number=event.plate_number,
+            kind="tashqi",
+            status="open",
+            main_exit_event_id=event.id,
+            exit_weight_kg=_weight(event),
+            started_at=event.occurred_at,
+        )
+        db.add(trip)
+        return trip
 
     trip.main_exit_event_id = event.id
     trip.exit_weight_kg = _weight(event)
-    trip.netto_kg = _netto(trip)
-    trip.status = "done"
-    trip.completed_at = event.occurred_at
+    _finalize(trip, event.occurred_at)
     return trip

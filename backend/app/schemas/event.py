@@ -51,6 +51,13 @@ class EventCreate(BaseModel):
     occurred_at: datetime | None = None
 
 
+class EventPlateUpdate(BaseModel):
+    """Manual plate fix for a "no_plate" event (ANPR couldn't read it)."""
+
+    plate_region: str
+    plate_number: str
+
+
 class EventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

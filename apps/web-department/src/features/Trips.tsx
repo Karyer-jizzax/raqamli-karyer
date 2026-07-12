@@ -10,7 +10,7 @@ import { Card, cn } from '@karier/ui';
 import { type MouseEvent, useMemo, useState } from 'react';
 
 const KINDS = ['karyer', 'tashqi'] as const;
-const STAGES = ['karyerda', 'yolda', 'zavodda', 'yakunlandi', 'chala'] as const;
+const STAGES = ['karyerda', 'yolda', 'zavodda', 'yakunlandi', 'yuk_emas', 'chala'] as const;
 const PAGE_SIZES = [10, 25, 50] as const;
 
 // Same table chrome as the M-1 grid (1px #eef2f6 grid, compact, no wrap).
@@ -23,12 +23,14 @@ const FCTRL =
 const FLBL = 'flex flex-col gap-[5px] text-xs text-muted-foreground';
 
 // Progress chip per derived stage: karyerda → yolda → zavodda → yakunlandi.
+// chala = huquqbuzarlik (red); yuk_emas = netto below the cargo floor (gray).
 const STAGE_BADGE: Record<TripRecord['stage'], string> = {
   karyerda: 'bg-[#eff6ff] text-[#1d4ed8]',
   yolda: 'bg-[#eef2ff] text-[#4338ca]',
   zavodda: 'bg-[#f5f3ff] text-[#6d28d9]',
   yakunlandi: 'bg-[#ecfdf5] text-[#059669]',
-  chala: 'bg-[#fff7ed] text-[#b45309]',
+  chala: 'bg-[#fef2f2] text-[#dc2626]',
+  yuk_emas: 'bg-[#f1f5f9] text-[#64748b]',
 };
 
 function fmtDateTime(iso: string | null): { date: string; time: string } | null {
@@ -296,7 +298,11 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
     [rows, quarryById],
   );
 
-  const totalNetto = filtered.reduce((s, r) => s + (r.netto_kg ?? 0), 0);
+  // no_cargo (yuk emas) rows never count as material in the totals.
+  const totalNetto = filtered.reduce(
+    (s, r) => s + (r.status === 'no_cargo' ? 0 : (r.netto_kg ?? 0)),
+    0,
+  );
   const tons = (kg: number | null) => (kg == null ? '-' : formatDecimal(kg / 1000, lang));
 
   // Client-side pagination over the filtered set (filters reset to page 1).
@@ -404,7 +410,15 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                           weightKg={r.enter_weight_kg} lang={lang} onPreview={setPrev} />
                         <StageCell at={r.main_exit_at} stage={r.main_exit}
                           weightKg={r.exit_weight_kg} lang={lang} onPreview={setPrev} />
-                        <td className={cn(NUM, 'bg-[#ecfdf5] font-bold')}>{tons(r.netto_kg)}</td>
+                        <td
+                          className={cn(
+                            NUM,
+                            'bg-[#ecfdf5] font-bold',
+                            r.status === 'no_cargo' && 'bg-[#f8fafc] text-slate-400 line-through',
+                          )}
+                        >
+                          {tons(r.netto_kg)}
+                        </td>
                         <td className={CTR}>
                           <span
                             className={cn(

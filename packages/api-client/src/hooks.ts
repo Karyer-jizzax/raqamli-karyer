@@ -19,6 +19,7 @@ import {
   getUsers,
   updateCamera,
   updateDistrict,
+  updateEventPlate,
   updateMaterial,
   updatePost,
   updateQuarry,
@@ -244,6 +245,26 @@ export function useUpdateUser() {
 
 export function useEvents() {
   return useQuery({ queryKey: ['events'], queryFn: getEvents });
+}
+
+export function useUpdateEventPlate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: { plate_region: string; plate_number: string };
+    }) => updateEventPlate(id, body),
+    onSuccess: () => {
+      // The fixed event changes the M-1 log, the events list AND (via
+      // re-linking) the trips table.
+      qc.invalidateQueries({ queryKey: ['events'] });
+      qc.invalidateQueries({ queryKey: ['m1'] });
+      qc.invalidateQueries({ queryKey: ['trips'] });
+    },
+  });
 }
 
 export function useCreateEvent() {

@@ -3,7 +3,7 @@ import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card, cn } from '@karier/ui';
 import { useMemo, useState } from 'react';
 
-const STATUSES = ['confirm', 'flagged', 'inspect'] as const;
+const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
 const DIRECTIONS = ['exit', 'enter'] as const;
 const LOADS = ['yes', 'no'] as const;
 
@@ -266,14 +266,21 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                           <td className={CTR}>{r.post_code ?? '—'}</td>
                           <td className={CTR}>{r.camera_label ?? '—'}</td>
                           <td className={CTR}>
-                            <button
-                              type="button"
-                              className="cursor-pointer border-none bg-transparent p-0 hover:[&>span]:shadow-[0_0_0_2px_rgba(13,148,136,.35)]"
-                              title={t('veh_history_hint')}
-                              onClick={() => setHistory({ plate_region: r.plate_region, plate_number: r.plate_number })}
-                            >
-                              <Plate row={r} />
-                            </button>
+                            {r.status === 'no_plate' ? (
+                              // ANPR o'qiy olmagan — operator (web-quarry) raqamni kiritadi.
+                              <span className="inline-block rounded-full border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1 text-[11px] font-semibold text-[#dc2626]">
+                                {t('status_no_plate')}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="cursor-pointer border-none bg-transparent p-0 hover:[&>span]:shadow-[0_0_0_2px_rgba(13,148,136,.35)]"
+                                title={t('veh_history_hint')}
+                                onClick={() => setHistory({ plate_region: r.plate_region, plate_number: r.plate_number })}
+                              >
+                                <Plate row={r} />
+                              </button>
+                            )}
                           </td>
                           <td className={CTR}>{vtypeLabel(r.vtype)}</td>
                           <td className={CTR}>

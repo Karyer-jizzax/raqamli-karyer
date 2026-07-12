@@ -33,11 +33,12 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   );
 }
 
-/** Soft pastel status badges (confirm / flagged / inspect). */
+/** Soft pastel status badges (confirm / flagged / inspect / no_plate). */
 const STATUS_CLASSES: Record<StatusKey, string> = {
   confirm: 'bg-[#ecfdf5] text-[#059669]',
   flagged: 'bg-[#fffbeb] text-[#d97706]',
   inspect: 'bg-[#fff1f2] text-[#e11d48]',
+  no_plate: 'bg-[#fef2f2] text-[#dc2626]',
 };
 
 export function StatusPill({ status }: { status: StatusKey }) {

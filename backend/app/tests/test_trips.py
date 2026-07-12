@@ -6,7 +6,7 @@ scale, and out-of-order arrival (main enter before its kon exit).
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
@@ -14,7 +14,10 @@ import pytest
 from app.tests.conftest import auth_header, login
 
 KEY = {"X-API-Key": "KARYER-01-SECRET"}
-T0 = datetime(2026, 7, 9, 8, 0, 0)
+# event_time is naive UZ local (UTC+5). Anchor at "now" so the read-side
+# open-timeout rule (2h) never flags fresh test trips as violations.
+_UZ_TZ = timezone(timedelta(hours=5))
+T0 = datetime.now(_UZ_TZ).replace(tzinfo=None, microsecond=0)
 
 
 def _plate() -> str:
@@ -213,6 +216,89 @@ async def test_plateless_event_has_no_trip(client: httpx.AsyncClient, seeded: No
     payload["plate"] = None
     resp = await _send(client, payload)
     assert resp["trip_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_low_netto_marks_no_cargo(client: httpx.AsyncClient, seeded: None) -> None:
+    """Netto < 300 kg — xodim mashinasi shunchaki o'tgan, yuk emas."""
+    plate = _plate()
+    await _send(client, _main(plate, "in", 12000, 0))
+    await _send(client, _main(plate, "out", 12100, 10))
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    t = trips[0]
+    assert t["netto_kg"] == 100
+    assert t["status"] == "no_cargo"
+    assert t["stage"] == "yuk_emas"
+
+
+@pytest.mark.asyncio
+async def test_open_timeout_flags_violation(client: httpx.AsyncClient, seeded: None) -> None:
+    """Zavodga kirdi, 2+ soatdan beri chiqmagan — o'qishda huquqbuzarlik."""
+    plate = _plate()
+    await _send(client, _main(plate, "in", 45000, -200))  # ~3.3 soat oldin
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    assert trips[0]["status"] == "incomplete"
+    assert trips[0]["stage"] == "chala"
+
+
+@pytest.mark.asyncio
+async def test_exit_without_enter_opens_trip(client: httpx.AsyncClient, seeded: None) -> None:
+    """Kirishsiz chiqish yo'qolmaydi: qatnov ochiladi, kechikkan kirish yakunlaydi."""
+    plate = _plate()
+    ex = await _send(client, _main(plate, "out", 40000, 20))
+    assert ex["trip_id"] is not None
+
+    trips = await _trips_of(client, plate)
+    assert trips[0]["status"] == "open"  # hali timeout bo'lmagan
+
+    enter = await _send(client, _main(plate, "in", 12000, 0))  # retry'da kechikkan
+    assert enter["trip_id"] == ex["trip_id"]
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    assert trips[0]["status"] == "done"
+    assert trips[0]["netto_kg"] == 28000
+
+
+@pytest.mark.asyncio
+async def test_exit_without_enter_times_out(client: httpx.AsyncClient, seeded: None) -> None:
+    """Teskari holat: chiqish bor, kirish 2+ soat kelmadi — huquqbuzarlik."""
+    plate = _plate()
+    await _send(client, _main(plate, "out", 40000, -200))
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    assert trips[0]["status"] == "incomplete"
+    assert trips[0]["stage"] == "chala"
+
+
+@pytest.mark.asyncio
+async def test_no_plate_event_fixed_manually(client: httpx.AsyncClient, seeded: None) -> None:
+    """ANPR o'qimagan hodisa no_plate bo'lib turadi; raqam kiritilgach juftlanadi."""
+    plate = _plate()
+    payload = _main("", "in", 45000, 0)
+    payload["plate"] = None
+    payload["status"] = "no_plate"
+    resp = await _send(client, payload)
+    assert resp["trip_id"] is None
+
+    token = await login(client, "admin", "admin123")
+    fix = await client.patch(
+        f"/api/v1/events/{resp['id']}/plate",
+        json={"plate_region": plate[:2], "plate_number": plate[2:]},
+        headers=auth_header(token),
+    )
+    assert fix.status_code == 200, fix.text
+    assert fix.json()["status"] == "confirm"
+    assert fix.json()["plate_number"] == plate[2:]
+
+    trips = await _trips_of(client, plate)
+    assert len(trips) == 1
+    assert trips[0]["main_enter_event_id"] == resp["id"]
 
 
 @pytest.mark.asyncio

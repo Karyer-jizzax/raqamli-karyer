@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # Trip (qatnov) linking: how long after "kon exit" a "main enter" (and
     # after "main enter" a "main exit") may arrive and still join the trip.
     trip_link_window_hours: int = 24
+    # A completed trip whose netto is below this is not real cargo (a staff car
+    # passing the scale) — it is marked "no_cargo" instead of "done".
+    trip_min_netto_kg: int = 300
+    # A trip stuck at the factory scale (main enter without exit, or exit
+    # without enter) longer than this is a violation → shown as "incomplete".
+    trip_open_timeout_hours: int = 2
 
     @property
     def cors_origin_list(self) -> list[str]:

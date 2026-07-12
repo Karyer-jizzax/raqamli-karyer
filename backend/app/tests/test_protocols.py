@@ -7,7 +7,8 @@ from app.tests.conftest import auth_header, login
 
 
 async def _first_event_id(client: httpx.AsyncClient, token: str) -> str:
-    # Ensure at least one event exists.
+    # Create the event and use ITS id — the newest event in the shared test DB
+    # may be a material-less weigh ingest from another test module.
     body = {
         "plate_region": "80",
         "plate_number": "R 100 AA",
@@ -21,9 +22,9 @@ async def _first_event_id(client: httpx.AsyncClient, token: str) -> str:
         "width_m": 2.5,
         "height_m": 4.0,
     }
-    await client.post("/api/v1/events", json=body, headers=auth_header(token))
-    events = (await client.get("/api/v1/events", headers=auth_header(token))).json()
-    return events[0]["id"]
+    resp = await client.post("/api/v1/events", json=body, headers=auth_header(token))
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
 
 
 @pytest.mark.asyncio

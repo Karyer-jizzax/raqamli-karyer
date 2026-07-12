@@ -14,7 +14,14 @@ from app.models.event import Event
 from app.models.material import Material
 from app.models.quarry import Camera, Post, Quarry
 from app.models.region import District
-from app.schemas.event import EventCreate, EventOut, VolumeInputDto, VolumeResultDto
+from app.schemas.event import (
+    EventCreate,
+    EventOut,
+    EventPlateUpdate,
+    VolumeInputDto,
+    VolumeResultDto,
+)
+from app.services.trips import link_event
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
 
 router = APIRouter(tags=["events"])
@@ -99,6 +106,49 @@ async def create_event(
         stir=body.stir,
     )
     db.add(event)
+    await db.commit()
+    await db.refresh(event)
+    return event
+
+
+@router.patch("/events/{event_id}/plate", response_model=EventOut)
+async def set_event_plate(
+    event_id: UUID,
+    body: EventPlateUpdate,
+    db: DbDep,
+    user: Annotated[object, Depends(get_current_user)],
+) -> Event:
+    """Manual plate entry for a "no_plate" event (CHALKASHLIK ro'yxati).
+
+    The operator reads the plate from the stored photo/video and types it in;
+    once filled the event is re-fed to trips.link_event so it pairs into its
+    qatnov exactly as if ANPR had read it on arrival.
+    """
+    event = await db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hodisa topilmadi")
+
+    role = user.role  # type: ignore[attr-defined]
+    if role == "operator":
+        if event.quarry_id != user.quarry_id:  # type: ignore[attr-defined]
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Boshqa karyer hodisasi")
+    elif role != "superadmin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Ruxsat yo'q")
+
+    region = body.plate_region.strip().upper()
+    number = body.plate_number.strip().upper().replace(" ", "")
+    if not number:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Raqam bo'sh")
+
+    had_plate = bool(event.plate_number)
+    event.plate_region = region
+    event.plate_number = number
+    if event.status == "no_plate":
+        event.status = "confirm"
+    # Faqat hali qatnovga ulanmagan (raqamsiz kelgan) hodisani juftlaymiz —
+    # bor raqamni tahrirlash zanjirni ikkilantirmasin.
+    if not had_plate:
+        await link_event(db, event)
     await db.commit()
     await db.refresh(event)
     return event

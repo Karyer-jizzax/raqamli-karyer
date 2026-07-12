@@ -34,7 +34,8 @@ class Trip(Base, UUIDMixin, TimestampMixin):
     # tashqi = zavodga to'g'ridan-to'g'ri kelgan (mahsulot olib ketadi)
     kind: Mapped[str] = mapped_column(String(16), default="karyer")
     # open = davom etmoqda; done = yakunlangan (main exit bilan);
-    # incomplete = keyingi hodisa kelmay eskirgan/almashtirilgan
+    # incomplete = keyingi hodisa kelmay eskirgan/almashtirilgan (huquqbuzarlik);
+    # no_cargo = yakunlangan, lekin netto < trip_min_netto_kg (yuk emas)
     status: Mapped[str] = mapped_column(String(16), default="open", index=True)
 
     # linked checkpoint events
@@ -123,11 +124,14 @@ class Trip(Base, UUIDMixin, TimestampMixin):
         return self._stage(self.main_exit_event)
 
     # Derived progress label from which checkpoints have fired (UI status chip):
-    # karyerda → yolda → zavodda → yakunlandi; chala = chain broke (incomplete).
+    # karyerda → yolda → zavodda → yakunlandi; chala = chain broke (incomplete,
+    # huquqbuzarlik); yuk_emas = completed but netto below the cargo floor.
     @property
     def stage(self) -> str:
         if self.status == "incomplete":
             return "chala"
+        if self.status == "no_cargo":
+            return "yuk_emas"
         if self.status == "done":
             return "yakunlandi"
         if self.main_enter_event_id is not None:

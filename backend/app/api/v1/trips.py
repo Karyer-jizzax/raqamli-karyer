@@ -1,5 +1,6 @@
 """Trips (qatnovlar): scoped list — rows are produced by services.trips."""
 
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -7,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.quarry import Quarry
@@ -17,6 +19,41 @@ from app.schemas.trip import TripOut
 router = APIRouter(tags=["trips"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+
+# Uzbekistan time — occurred_at values from /api/weigh carry this zone; a few
+# manually created events may be naive, treat those as UZ local too.
+_UZ_TZ = timezone(timedelta(hours=5))
+
+
+def _aware(dt: datetime | None) -> datetime | None:
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=_UZ_TZ)
+    return dt
+
+
+def _apply_open_timeout(trip: Trip, out: TripOut, cutoff: datetime) -> TripOut:
+    """Read-side violation rule (no migration, no background job): a trip
+    stuck at the factory scale — enter without exit, or exit without enter —
+    beyond trip_open_timeout_hours is shown as "incomplete" (huquqbuzarlik)."""
+    if trip.status != "open":
+        return out
+    enter_at, exit_at = _aware(trip.main_enter_at), _aware(trip.main_exit_at)
+    stuck_after_enter = (
+        trip.main_enter_event_id is not None
+        and trip.main_exit_event_id is None
+        and enter_at is not None
+        and enter_at < cutoff
+    )
+    stuck_after_exit = (
+        trip.main_exit_event_id is not None
+        and trip.main_enter_event_id is None
+        and exit_at is not None
+        and exit_at < cutoff
+    )
+    if stuck_after_enter or stuck_after_exit:
+        out.status = "incomplete"
+        out.stage = "chala"
+    return out
 
 
 @router.get("/trips", response_model=list[TripOut])
@@ -29,7 +66,7 @@ async def list_trips(
     kind: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[Trip]:
+) -> list[TripOut]:
     stmt = select(Trip).order_by(Trip.started_at.desc())
 
     # DB-level tenant scope — never trust the UI alone (mirrors /events).
@@ -56,4 +93,8 @@ async def list_trips(
 
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    cutoff = datetime.now(UTC) - timedelta(hours=settings.trip_open_timeout_hours)
+    return [
+        _apply_open_timeout(trip, TripOut.model_validate(trip), cutoff)
+        for trip in result.scalars().all()
+    ]
