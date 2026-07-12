@@ -6,6 +6,7 @@ import {
   MapIcon,
   MenuIcon,
   PackageIcon,
+  SlidersHorizontalIcon,
   UsersIcon,
   XIcon,
   type LucideIcon,
@@ -16,14 +17,16 @@ import { Departments } from './features/Departments';
 import { Geo } from './features/Geo';
 import { Materials } from './features/Materials';
 import { Quarries } from './features/Quarries';
+import { Settings } from './features/Settings';
 
-type Tab = 'quarries' | 'geo' | 'materials' | 'departments';
+type Tab = 'quarries' | 'geo' | 'materials' | 'departments' | 'settings';
 
 const NAV: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: 'quarries', label: 'nav_quarries', icon: Building2Icon },
   { key: 'materials', label: 'nav_materials', icon: PackageIcon },
   { key: 'geo', label: 'nav_geo', icon: MapIcon },
   { key: 'departments', label: 'nav_departments', icon: UsersIcon },
+  { key: 'settings', label: 'nav_settings', icon: SlidersHorizontalIcon },
 ];
 
 function Sidebar({
@@ -172,8 +175,10 @@ function Home() {
             <Materials />
           ) : tab === 'geo' ? (
             <Geo />
-          ) : (
+          ) : tab === 'departments' ? (
             <Departments />
+          ) : (
+            <Settings />
           )}
         </main>
       </div>

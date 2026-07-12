@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.event import Event
 from app.models.trip import Trip
+from app.services.app_settings import TRIP_MIN_NETTO_KG, get_int_setting
 
 
 def _weight(event: Event) -> int | None:
@@ -48,12 +49,14 @@ def _netto(trip: Trip) -> int | None:
     return max(trip.exit_weight_kg - trip.enter_weight_kg, 0)  # tashqi
 
 
-def _finalize(trip: Trip, completed_at) -> None:
+async def _finalize(db: AsyncSession, trip: Trip, completed_at) -> None:
     """Close a trip that has both scale readings: compute netto and decide
     whether it was real cargo. Netto below the floor means a staff car simply
-    drove across the scale — counted separately, never as material."""
+    drove across the scale — counted separately, never as material. The floor
+    is runtime-tunable from web-main (app_settings, env default 300 kg)."""
     trip.netto_kg = _netto(trip)
-    if trip.netto_kg is not None and trip.netto_kg < settings.trip_min_netto_kg:
+    min_netto = await get_int_setting(db, TRIP_MIN_NETTO_KG)
+    if trip.netto_kg is not None and trip.netto_kg < min_netto:
         trip.status = "no_cargo"
     else:
         trip.status = "done"
@@ -241,7 +244,7 @@ async def _on_main_enter(db: AsyncSession, event: Event, base_query, window) -> 
         orphan.enter_weight_kg = _weight(event)
         exit_at = orphan.main_exit_at or event.occurred_at
         orphan.started_at = event.occurred_at
-        _finalize(orphan, exit_at)
+        await _finalize(db, orphan, exit_at)
         return orphan
 
     if trip is None:
@@ -267,7 +270,7 @@ async def _on_main_enter(db: AsyncSession, event: Event, base_query, window) -> 
         trip.exit_weight_kg = orphan.exit_weight_kg
         exit_at = orphan.main_exit_at or event.occurred_at
         await db.delete(orphan)
-        _finalize(trip, exit_at)
+        await _finalize(db, trip, exit_at)
 
     return trip
 
@@ -301,5 +304,5 @@ async def _on_main_exit(db: AsyncSession, event: Event, base_query, window) -> T
 
     trip.main_exit_event_id = event.id
     trip.exit_weight_kg = _weight(event)
-    _finalize(trip, event.occurred_at)
+    await _finalize(db, trip, event.occurred_at)
     return trip

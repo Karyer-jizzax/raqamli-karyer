@@ -234,6 +234,31 @@ async def test_low_netto_marks_no_cargo(client: httpx.AsyncClient, seeded: None)
 
 
 @pytest.mark.asyncio
+async def test_netto_floor_is_runtime_tunable(client: httpx.AsyncClient, seeded: None) -> None:
+    """Chegara web-main'dan (settings API) o'zgartirilsa darhol amal qiladi."""
+    token = await login(client, "admin", "admin123")
+    hdr = auth_header(token)
+    original = (await client.get("/api/v1/settings/trip-rules", headers=hdr)).json()
+
+    resp = await client.put(
+        "/api/v1/settings/trip-rules",
+        json={**original, "trip_min_netto_kg": 5000},
+        headers=hdr,
+    )
+    assert resp.status_code == 200, resp.text
+    try:
+        plate = _plate()
+        await _send(client, _main(plate, "in", 12000, 0))
+        await _send(client, _main(plate, "out", 16000, 10))  # netto 4000 < 5000
+
+        trips = await _trips_of(client, plate)
+        assert trips[0]["status"] == "no_cargo"
+    finally:
+        # Boshqa testlar default chegaraga tayanadi — qaytarib qo'yamiz.
+        await client.put("/api/v1/settings/trip-rules", json=original, headers=hdr)
+
+
+@pytest.mark.asyncio
 async def test_open_timeout_flags_violation(client: httpx.AsyncClient, seeded: None) -> None:
     """Zavodga kirdi, 2+ soatdan beri chiqmagan — o'qishda huquqbuzarlik."""
     plate = _plate()

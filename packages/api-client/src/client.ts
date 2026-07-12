@@ -346,6 +346,17 @@ export const getTrips = (params: TripParams = {}) => {
   return api.get<TripRecord[]>(`/trips${q ? `?${q}` : ''}`);
 };
 
+// ── runtime settings (superadmin, web-main) ─────────────────────────────────
+// Trip rules: netto floor (kg) below which a trip is "no_cargo", and the
+// open-timeout (hours) after which a stuck scale trip becomes a violation.
+export interface TripRules {
+  trip_min_netto_kg: number;
+  trip_open_timeout_hours: number;
+}
+export const getTripRules = () => api.get<TripRules>('/settings/trip-rules');
+export const updateTripRules = (body: TripRules) =>
+  api.put<TripRules>('/settings/trip-rules', body);
+
 // ── scale (tarozi) ───────────────────────────────────────────────────────────
 export interface ScaleReading {
   weight_kg: number;

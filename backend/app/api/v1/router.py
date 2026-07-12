@@ -11,6 +11,7 @@ from app.api.v1 import (
     quarries,
     regions,
     scale,
+    settings,
     stats,
     trips,
     users,
@@ -30,3 +31,4 @@ api_router.include_router(video.router)
 api_router.include_router(scale.router)
 api_router.include_router(stats.router)
 api_router.include_router(users.router)
+api_router.include_router(settings.router)

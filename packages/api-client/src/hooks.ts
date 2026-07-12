@@ -41,6 +41,9 @@ import {
   getQuarryMaterials,
   getQuarryPosts,
   getReport,
+  getTripRules,
+  updateTripRules,
+  type TripRules,
   getQuarries,
   getRegionGeo,
   getRegions,
@@ -400,4 +403,20 @@ export function useM1(params: Record<string, string> = {}) {
 
 export function useTrips(params: TripParams = {}) {
   return useQuery({ queryKey: ['trips', params], queryFn: () => getTrips(params) });
+}
+
+export function useTripRules() {
+  return useQuery({ queryKey: ['trip-rules'], queryFn: getTripRules });
+}
+
+export function useUpdateTripRules() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TripRules) => updateTripRules(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trip-rules'] });
+      // The open-timeout rule is applied when trips are READ — refetch them.
+      qc.invalidateQueries({ queryKey: ['trips'] });
+    },
+  });
 }

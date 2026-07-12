@@ -8,13 +8,13 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.quarry import Quarry
 from app.models.region import District
 from app.models.trip import Trip
 from app.schemas.trip import TripOut
+from app.services.app_settings import TRIP_OPEN_TIMEOUT_HOURS, get_int_setting
 
 router = APIRouter(tags=["trips"])
 
@@ -34,7 +34,8 @@ def _aware(dt: datetime | None) -> datetime | None:
 def _apply_open_timeout(trip: Trip, out: TripOut, cutoff: datetime) -> TripOut:
     """Read-side violation rule (no migration, no background job): a trip
     stuck at the factory scale — enter without exit, or exit without enter —
-    beyond trip_open_timeout_hours is shown as "incomplete" (huquqbuzarlik)."""
+    beyond trip_open_timeout_hours (runtime-tunable from web-main) is shown
+    as "incomplete" (huquqbuzarlik)."""
     if trip.status != "open":
         return out
     enter_at, exit_at = _aware(trip.main_enter_at), _aware(trip.main_exit_at)
@@ -93,7 +94,8 @@ async def list_trips(
 
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
-    cutoff = datetime.now(UTC) - timedelta(hours=settings.trip_open_timeout_hours)
+    timeout_hours = await get_int_setting(db, TRIP_OPEN_TIMEOUT_HOURS)
+    cutoff = datetime.now(UTC) - timedelta(hours=timeout_hours)
     return [
         _apply_open_timeout(trip, TripOut.model_validate(trip), cutoff)
         for trip in result.scalars().all()

@@ -117,6 +117,18 @@ const uzLatn: Dict = {
   mat_link_title: '{{name}} — mahsulotlar',
   nav_geo: 'Hududlar',
   nav_departments: 'Departament',
+  nav_settings: 'Sozlamalar',
+  set_trip_rules: 'Sozlamalar',
+  set_trip_rules_title: 'Qatnov qoidalari',
+  set_min_netto: 'Netto chegarasi (kg)',
+  set_min_netto_hint:
+    "Netto shu qiymatdan kam bo'lsa qatnov «Yuk emas» deb belgilanadi (xodim mashinasi).",
+  set_timeout: 'Huquqbuzarlik muddati (soat)',
+  set_timeout_hint:
+    "Zavodga kirib shu vaqt ichida chiqmagan (yoki kirishsiz chiqqan) qatnov «Huquqbuzarlik» deb ko'rsatiladi.",
+  set_saved: 'Saqlandi',
+  set_apply_note:
+    "Yangi qiymatlar shu ondan boshlab amal qiladi — avval yakunlangan qatnovlar qayta hisoblanmaydi.",
   dep_subtitle: 'Departament (viloyat) foydalanuvchilarini boshqarish',
   dep_registry: 'Foydalanuvchilar',
   dep_add: 'Yangi foydalanuvchi',
@@ -485,6 +497,18 @@ const uzCyrl: Dict = {
   mat_link_title: '{{name}} — маҳсулотлар',
   nav_geo: 'Ҳудудлар',
   nav_departments: 'Департамент',
+  nav_settings: 'Созламалар',
+  set_trip_rules: 'Созламалар',
+  set_trip_rules_title: 'Қатнов қоидалари',
+  set_min_netto: 'Нетто чегараси (кг)',
+  set_min_netto_hint:
+    'Нетто шу қийматдан кам бўлса қатнов «Юк эмас» деб белгиланади (ходим машинаси).',
+  set_timeout: 'Ҳуқуқбузарлик муддати (соат)',
+  set_timeout_hint:
+    'Заводга кириб шу вақт ичида чиқмаган (ёки киришсиз чиққан) қатнов «Ҳуқуқбузарлик» деб кўрсатилади.',
+  set_saved: 'Сақланди',
+  set_apply_note:
+    'Янги қийматлар шу ондан бошлаб амал қилади — аввал якунланган қатновлар қайта ҳисобланмайди.',
   dep_subtitle: 'Департамент (вилоят) фойдаланувчиларини бошқариш',
   dep_registry: 'Фойдаланувчилар',
   dep_add: 'Янги фойдаланувчи',
@@ -853,6 +877,18 @@ const ru: Dict = {
   mat_link_title: '{{name}} — продукция',
   nav_geo: 'Территории',
   nav_departments: 'Департамент',
+  nav_settings: 'Настройки',
+  set_trip_rules: 'Настройки',
+  set_trip_rules_title: 'Правила рейсов',
+  set_min_netto: 'Порог нетто (кг)',
+  set_min_netto_hint:
+    'Если нетто меньше этого значения, рейс помечается как «Не груз» (служебная машина).',
+  set_timeout: 'Срок нарушения (часы)',
+  set_timeout_hint:
+    'Рейс, въехавший на завод и не выехавший за это время (или выехавший без въезда), помечается как «Нарушение».',
+  set_saved: 'Сохранено',
+  set_apply_note:
+    'Новые значения действуют с этого момента — ранее завершённые рейсы не пересчитываются.',
   dep_subtitle: 'Управление пользователями департамента (области)',
   dep_registry: 'Пользователи',
   dep_add: 'Новый пользователь',
