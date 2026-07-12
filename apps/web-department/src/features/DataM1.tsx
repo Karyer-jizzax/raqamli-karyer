@@ -482,7 +482,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                   loop
                   playsInline
                   poster={mediaUrl(media.row.image_urls?.[0])}
-                  className="block w-full bg-black"
+                  className="block max-h-[70vh] w-full bg-black object-contain"
                 >
                   <source src={mediaUrl(media.row.video_url)} type="video/mp4" />
                 </video>

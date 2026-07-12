@@ -107,7 +107,7 @@ function FixPlateModal({ row, onClose }: { row: M1Row; onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] rounded-[14px] bg-white p-4 shadow-[0_24px_60px_rgba(8,25,50,.4)]"
+        className="max-h-[88vh] w-full max-w-[420px] overflow-y-auto rounded-[14px] bg-white p-4 shadow-[0_24px_60px_rgba(8,25,50,.4)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-1 font-bold">{t('np_fix_title')}</div>
@@ -569,7 +569,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                   loop
                   playsInline
                   poster={mediaUrl(media.row.image_urls?.[0])}
-                  className="block w-full bg-black"
+                  className="block max-h-[70vh] w-full bg-black object-contain"
                 >
                   <source src={mediaUrl(media.row.video_url)} type="video/mp4" />
                 </video>
