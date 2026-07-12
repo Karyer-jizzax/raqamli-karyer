@@ -15,7 +15,7 @@ export {
   CardDescription,
   CardContent,
 } from './ui/card';
-export { Input } from './ui/input';
+export { Input, PasswordInput } from './ui/input';
 export { Label } from './ui/label';
 export { Badge, badgeVariants } from './ui/badge';
 export {

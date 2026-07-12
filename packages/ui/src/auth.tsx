@@ -39,7 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Input } from './ui/input';
+import { Input, PasswordInput } from './ui/input';
 import { Label } from './ui/label';
 
 interface AuthContextValue {
@@ -219,9 +219,8 @@ function LoginScreen({
         </div>
         <div className="mt-4 grid gap-1.5">
           <Label htmlFor="login-pass">{t('login_pass')}</Label>
-          <Input
+          <PasswordInput
             id="login-pass"
-            type="password"
             className="h-11 rounded-[11px]"
             value={pass}
             onChange={(e) => setPass(e.target.value)}
@@ -334,9 +333,8 @@ function ChangePasswordModal({
         <form onSubmit={onSubmit} className="grid gap-3">
           <div className="grid gap-1.5">
             <Label htmlFor="pw-current">{t('pw_current')}</Label>
-            <Input
+            <PasswordInput
               id="pw-current"
-              type="password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
               autoComplete="current-password"
@@ -346,9 +344,8 @@ function ChangePasswordModal({
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="pw-new">{t('pw_new')}</Label>
-            <Input
+            <PasswordInput
               id="pw-new"
-              type="password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
               autoComplete="new-password"
@@ -357,9 +354,8 @@ function ChangePasswordModal({
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="pw-confirm">{t('pw_confirm')}</Label>
-            <Input
+            <PasswordInput
               id="pw-confirm"
-              type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"

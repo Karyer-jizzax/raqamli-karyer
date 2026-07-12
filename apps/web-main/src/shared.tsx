@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  PasswordInput,
   UiButton as Button,
 } from '@karier/ui';
 import { type FormEvent, type ReactNode, useId } from 'react';
@@ -99,17 +100,30 @@ export function Field({
       <Label htmlFor={id} className="text-[13px] font-medium text-slate-700">
         {label}
       </Label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        type={type}
-        autoComplete={autoComplete}
-        required={required}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        className={cn('h-[42px]', readOnly && 'bg-muted text-muted-foreground')}
-      />
+      {type === 'password' ? (
+        <PasswordInput
+          id={id}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          autoComplete={autoComplete}
+          required={required}
+          readOnly={readOnly}
+          placeholder={placeholder}
+          className={cn('h-[42px]', readOnly && 'bg-muted text-muted-foreground')}
+        />
+      ) : (
+        <Input
+          id={id}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          type={type}
+          autoComplete={autoComplete}
+          required={required}
+          readOnly={readOnly}
+          placeholder={placeholder}
+          className={cn('h-[42px]', readOnly && 'bg-muted text-muted-foreground')}
+        />
+      )}
     </div>
   );
 }

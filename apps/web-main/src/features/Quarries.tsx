@@ -28,6 +28,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PasswordInput,
   Select,
   SelectContent,
   SelectItem,
@@ -198,9 +199,8 @@ function EditQuarryModal({ quarry, onClose }: { quarry: Quarry; onClose: () => v
             <Field label={t('q_login')} value={operator.username} readOnly required={false} />
             <div className="grid gap-1.5">
               <Label htmlFor="op-pw">{t('q_pw_new_optional')}</Label>
-              <Input
+              <PasswordInput
                 id="op-pw"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"

@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  PasswordInput,
   Select,
   SelectContent,
   SelectItem,
@@ -241,8 +242,7 @@ function AddCameraForm({ postId, onDone }: { postId: string; onDone: () => void 
         onChange={(e) => setLogin(e.target.value)}
         placeholder={t('camera_login')}
       />
-      <Input
-        type="password"
+      <PasswordInput
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t('camera_password')}
@@ -320,8 +320,7 @@ function CameraRow({ camera, postId }: { camera: Camera; postId: string }) {
           onChange={(e) => setLogin(e.target.value)}
           placeholder={t('camera_login')}
         />
-        <Input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={t('camera_password')}
