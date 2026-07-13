@@ -26,6 +26,7 @@ _CYR = dict(zip(
     ["a", "b", "v", "g", "d", "e", "yo", "j", "z", "i", "y", "k", "l", "m", "n",
      "o", "p", "r", "s", "t", "u", "f", "x", "ts", "ch", "sh", "sh", "", "i",
      "", "e", "yu", "ya", "q", "g", "h", "u"],
+    strict=True,
 ))
 
 
