@@ -223,7 +223,8 @@ export async function getHealth(): Promise<{ status: string }> {
 
 export const getMaterials = () => api.get<Material[]>('/materials');
 export interface MaterialInput {
-  id: string;
+  // omitted on create → backend slugs it from name_uz_latn
+  id?: string;
   default_density: number;
   density_min: number;
   density_max: number;

@@ -89,7 +89,7 @@ function MaterialModal({ material, onClose }: { material: Material | null; onClo
     };
     try {
       if (material) await update.mutateAsync({ id: material.id, body });
-      else await create.mutateAsync({ id: f.id.trim(), ...body });
+      else await create.mutateAsync(body); // id backend'da nomdan yasaladi
       onClose();
     } catch (e2) {
       setErr(e2 instanceof ApiError ? e2.message : 'Error');
@@ -105,13 +105,9 @@ function MaterialModal({ material, onClose }: { material: Material | null; onClo
       pending={pending}
       submitLabel={material ? t('q_save') : t('q_create')}
     >
-      <Field
-        label={t('mat_id')}
-        value={f.id}
-        onChange={set('id')}
-        readOnly={!!material}
-        autoComplete="off"
-      />
+      {material && (
+        <Field label={t('mat_id')} value={f.id} onChange={set('id')} readOnly autoComplete="off" />
+      )}
       <Field label={t('geo_name_latn')} value={f.name_uz_latn} onChange={set('name_uz_latn')} />
       <Field label={t('geo_name_cyrl')} value={f.name_uz_cyrl} onChange={set('name_uz_cyrl')} />
       <Field label={t('geo_name_ru')} value={f.name_ru} onChange={set('name_ru')} />

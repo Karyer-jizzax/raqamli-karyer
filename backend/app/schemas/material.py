@@ -17,7 +17,8 @@ class MaterialOut(BaseModel):
 
 
 class MaterialCreate(BaseModel):
-    id: str
+    # id berilmasa backend name_uz_latn dan slug yasab beradi
+    id: str | None = None
     default_density: float
     density_min: float
     density_max: float
