@@ -183,7 +183,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   );
   const vtypeOpts = useMemo(() => [...new Set(rows.map((r) => r.vtype).filter(Boolean))], [rows]);
 
-  const vtypeLabel = (v: string) => (v === 'truck' ? t('vt_truck') : v);
+  const vtypeLabel = (v: string) =>
+    v === 'truck' ? t('vt_truck') : v === 'car' ? t('vt_car') : v;
 
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {

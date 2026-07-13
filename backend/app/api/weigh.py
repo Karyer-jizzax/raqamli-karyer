@@ -67,6 +67,8 @@ class WeighIn(BaseModel):
     is_main: bool
     plate: str | None = None
     direction: str | None = None  # "in" | "out" | null (see API.md)
+    # Dahua ANPR vehicle category (LargeTruck/MicroTruck/Car/Bus/...), optional.
+    vtype: str | None = None
     weight: float | None = None
     unit: str = "kg"
     event_time: str
@@ -81,6 +83,15 @@ _DIRECTION_MAP = {"in": "enter", "out": "exit"}
 def _map_direction(raw: str | None) -> str:
     """in→enter, out→exit; unknown/null falls back to the model default."""
     return _DIRECTION_MAP.get((raw or "").lower(), "exit")
+
+
+def _norm_vtype(cat: str | None) -> str:
+    """Dahua category → our coarse vtype: light vehicles are "car", the rest
+    (LargeTruck/MidTruck/MicroTruck/Bus/unknown) count as "truck"."""
+    c = (cat or "").lower()
+    if "car" in c or "suv" in c or "van" in c or "motor" in c or "bike" in c:
+        return "car"
+    return "truck"
 
 
 def _parse_event_time(raw: str) -> datetime:
@@ -227,7 +238,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         direction=_map_direction(payload.direction),
         occurred_at=_parse_event_time(payload.event_time),
         is_loaded=True,
-        vtype="truck",
+        vtype=_norm_vtype(payload.vtype),
         payer_type=payer_type(plate_number),
         density=density,
         weight_kg=weight_kg,
