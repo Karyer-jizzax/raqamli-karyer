@@ -82,6 +82,7 @@ class RegionGeo(BaseModel):
 
 class M1Row(BaseModel):
     id: UUID
+    quarry_id: UUID
     post_code: str | None
     camera_label: str | None
     plate_region: str

@@ -1,4 +1,11 @@
-import { type M1Row, type Material, mediaUrl, useM1, useMaterials } from '@karier/api-client';
+import {
+  type M1Row,
+  type Material,
+  mediaUrl,
+  useM1,
+  useMaterials,
+  useQuarries,
+} from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { Card, cn, PlateBadge } from '@karier/ui';
 import { useMemo, useState } from 'react';
@@ -68,6 +75,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const { data: materials } = useMaterials();
+  const { data: quarries } = useQuarries();
   const { data, isLoading } = useM1(quarryId ? { limit: '500', quarry_id: quarryId } : { limit: '500' });
 
   const [f, setF] = useState<Record<string, string>>({});
@@ -88,7 +96,22 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
     return m;
   }, [materials]);
 
+  const quarryById = useMemo(() => {
+    const m = new Map<string, string>();
+    (quarries ?? []).forEach((q) => m.set(q.id, q.name));
+    return m;
+  }, [quarries]);
+
   const rows = data?.rows ?? [];
+
+  // Quarry filter options from the fetched events (only quarries with data).
+  const quarryOpts = useMemo(
+    () =>
+      [...new Set(rows.map((r) => r.quarry_id))].map(
+        (id): [string, string] => [id, quarryById.get(id) ?? id],
+      ),
+    [rows, quarryById],
+  );
 
   // Filter dropdown options derived from the full (unfiltered) result set, so
   // selecting one filter never collapses the others' choices.
@@ -106,6 +129,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
 
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {
+    if (f.quarry && r.quarry_id !== f.quarry) return false;
     if (f.post && r.post_code !== f.post) return false;
     if (f.camera && r.camera_label !== f.camera) return false;
     if (f.direction && r.direction !== f.direction) return false;
@@ -176,6 +200,10 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
       {/* Filters */}
       <Card className="rounded-[14px] px-4 py-3.5">
         <div className="flex flex-wrap items-end gap-3">
+          {!quarryId && (
+            <Sel label={t('q_name')} value={f.quarry} onChange={set('quarry')} t={t}
+              opts={quarryOpts} />
+          )}
           <Sel label={t('filt_post')} value={f.post} onChange={set('post')} t={t}
             opts={postOpts.map((p) => [p, p])} />
           <Sel label={t('filt_camera')} value={f.camera} onChange={set('camera')} t={t}
@@ -219,6 +247,9 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 <thead>
                   <tr className="bg-[#f6fbfb] text-[#334155]">
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_no')}</th>
+                    {!quarryId && (
+                      <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('q_name')}</th>
+                    )}
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_post')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
@@ -244,7 +275,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={quarryId ? 15 : 16} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -257,6 +288,9 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                       return (
                         <tr key={r.id} className="hover:bg-[#f6fefd]">
                           <td className={CTR}>{i + 1}</td>
+                          {!quarryId && (
+                            <td className={CTR}>{quarryById.get(r.quarry_id) ?? '—'}</td>
+                          )}
                           <td className={CTR}>{r.post_code ?? '—'}</td>
                           <td className={CTR}>{r.camera_label ?? '—'}</td>
                           <td className={CTR}>
@@ -333,7 +367,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#ecfdf5] font-bold">
-                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={10}>
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={quarryId ? 10 : 11}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>

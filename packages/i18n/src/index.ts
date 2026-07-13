@@ -55,7 +55,7 @@ export function currentLang(): Lang {
 }
 
 export { DICTIONARIES } from './dictionaries';
-export { formatNumber, formatDecimal, formatDateTime } from './format';
+export { formatNumber, formatDecimal, formatDateTime, monthName } from './format';
 export { LANGS };
 export type { Lang };
 export { useTranslation } from 'react-i18next';

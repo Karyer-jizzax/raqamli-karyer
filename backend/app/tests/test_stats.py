@@ -48,11 +48,13 @@ async def test_region_geo_has_svg(client: httpx.AsyncClient, seeded: None) -> No
 @pytest.mark.asyncio
 async def test_m1_totals_not_cross_joined(client: httpx.AsyncClient, seeded: None) -> None:
     # Regression: M1 total_count must equal the number of matching rows.
+    # A dev DB can hold more than the page limit, so compare via min() —
+    # a cross-join would still explode total_count far past the row count.
     token = await login(client, "department", "dept123")
     resp = await client.get("/api/v1/stats/m1?limit=500", headers=auth_header(token))
     assert resp.status_code == 200
     data = resp.json()
-    assert data["total_count"] == len(data["rows"])
+    assert len(data["rows"]) == min(data["total_count"], 500)
 
 
 @pytest.mark.asyncio

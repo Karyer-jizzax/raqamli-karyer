@@ -496,6 +496,7 @@ export interface RegionGeo {
 
 export interface M1Row {
   id: string;
+  quarry_id: string;
   post_code: string | null;
   camera_label: string | null;
   plate_region: string;

@@ -250,6 +250,7 @@ async def m1(
         rows=[
             M1Row(
                 id=e.id,
+                quarry_id=e.quarry_id,
                 post_code=post_code,
                 camera_label=cam_code or cam_name,
                 plate_region=e.plate_region,

@@ -1,5 +1,5 @@
 import { type DistrictGeo, useOverview, useRegionGeo, useRegions } from '@karier/api-client';
-import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
+import { currentLang, formatNumber, monthName, useTranslation } from '@karier/i18n';
 import { Card, cn, JizzaxMap, useAuth } from '@karier/ui';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -106,11 +106,6 @@ export function Dashboard() {
   const { data: overview } = useOverview(params);
   const selectedDistrict = geo?.districts.find((d) => d.id === selected);
 
-  const monthName = (m: number) =>
-    new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'uz-UZ', { month: 'long' }).format(
-      new Date(2000, m - 1, 1),
-    );
-
   const regionTitle =
     regionName
       ? lang === 'ru'
@@ -150,7 +145,7 @@ export function Dashboard() {
             <option value="">{t('as_all')}</option>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
               <option key={m} value={m}>
-                {monthName(m)}
+                {monthName(m, lang)}
               </option>
             ))}
           </select>
