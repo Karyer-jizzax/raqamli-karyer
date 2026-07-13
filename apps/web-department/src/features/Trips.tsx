@@ -374,7 +374,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                   {filtered.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={quarryId ? 11 : 12}
+                        colSpan={quarryId ? 10 : 11}
                         className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}
                       >
                         {t('empty_table')}
@@ -446,7 +446,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                   <tr className="bg-[#ecfdf5] font-bold">
                     <td
                       className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')}
-                      colSpan={quarryId ? 8 : 9}
+                      colSpan={quarryId ? 7 : 8}
                     >
                       {t('jami')} ({filtered.length})
                     </td>

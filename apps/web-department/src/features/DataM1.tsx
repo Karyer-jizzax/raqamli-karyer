@@ -153,6 +153,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   }, [rows, history]);
 
   const totalVol = filtered.reduce((s, r) => s + (r.volume_final || 0), 0);
+  const totalTon = filtered.reduce((s, r) => s + (r.weight_kg || 0), 0) / 1000;
   const f2 = (n: number) => formatDecimal(n, lang);
   const f1 = (n: number) => {
     const s = n.toFixed(1);
@@ -387,7 +388,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>
-                    <td className={cn(CELL, 'border-t-2 border-t-[#d1fae5]')} colSpan={4} />
+                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f2(totalTon)}</td>
+                    <td className={cn(CELL, 'border-t-2 border-t-[#d1fae5]')} colSpan={3} />
                   </tr>
                 </tfoot>
               </table>
@@ -398,7 +400,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
               {t('total_vol')}:{' '}
               <b className="text-foreground tabular-nums">
                 {f2(totalVol)} {t('vol_unit')}
-              </b>
+              </b>{' '}
+              · <b className="text-foreground tabular-nums">{f2(totalTon)} t</b>
             </div>
           </>
         )}

@@ -333,7 +333,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={10} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -398,7 +398,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#ecfdf5] font-bold">
-                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={8}>
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={7}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{tons(totalNetto)}</td>
