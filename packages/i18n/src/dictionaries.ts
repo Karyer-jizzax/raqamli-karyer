@@ -277,6 +277,11 @@ const uzLatn: Dict = {
   status_flagged: 'Belgilandi',
   status_inspect: 'Tekshiruvga',
 
+  plate_kind_indiv: 'Jismoniy shaxs raqami',
+  plate_kind_legal: 'Yuridik shaxs raqami',
+  plate_kind_dav: 'Davlat organi raqami',
+  plate_kind_other: 'Nostandart raqam',
+
   backend_connected: 'Backend ulandi',
   backend_offline: 'Backend ulanmadi',
   loading: 'Yuklanmoqda…',
@@ -660,6 +665,11 @@ const uzCyrl: Dict = {
   status_flagged: 'Белгиланди',
   status_inspect: 'Текширувга',
 
+  plate_kind_indiv: 'Жисмоний шахс рақами',
+  plate_kind_legal: 'Юридик шахс рақами',
+  plate_kind_dav: 'Давлат органи рақами',
+  plate_kind_other: 'Ностандарт рақам',
+
   backend_connected: 'Backend уланди',
   backend_offline: 'Backend уланмади',
   loading: 'Юкланмоқда…',
@@ -1042,6 +1052,11 @@ const ru: Dict = {
   status_confirm: 'Подтверждено',
   status_flagged: 'Отмечено',
   status_inspect: 'На проверку',
+
+  plate_kind_indiv: 'Номер физ. лица',
+  plate_kind_legal: 'Номер юр. лица',
+  plate_kind_dav: 'Номер гос. органа',
+  plate_kind_other: 'Нестандартный номер',
 
   backend_connected: 'Backend подключён',
   backend_offline: 'Backend не подключён',

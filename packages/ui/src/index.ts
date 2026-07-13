@@ -1,4 +1,5 @@
 export { Button, Card, StatusPill, LangSwitcher } from './components';
+export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './plate';
 export { AuthProvider, RequireAuth, useAuth, ProfileMenu } from './auth';
 export { JizzaxMap } from './map';
 export { ProtocolDocument, ProtocolViewer } from './protocol';

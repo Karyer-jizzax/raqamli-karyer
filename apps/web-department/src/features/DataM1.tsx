@@ -1,6 +1,6 @@
 import { type M1Row, type Material, mediaUrl, useM1, useMaterials } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { Card, cn } from '@karier/ui';
+import { Card, cn, PlateBadge } from '@karier/ui';
 import { useMemo, useState } from 'react';
 
 const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
@@ -61,13 +61,7 @@ function Glyph({ path }: { path: string }) {
 }
 
 function Plate({ row }: { row: M1Row }) {
-  return (
-    <span className="inline-flex items-stretch overflow-hidden rounded-[5px] border-[1.5px] border-[#1e293b] text-[11.5px] leading-none font-bold">
-      <span className="bg-[#1e293b] px-[5px] py-1 text-white">{row.plate_region}</span>
-      <span className="px-1.5 py-1 text-foreground">{row.plate_number}</span>
-      <span className="flex items-center bg-primary px-1 text-[8.5px] text-white">UZ</span>
-    </span>
-  );
+  return <PlateBadge region={row.plate_region} number={row.plate_number} />;
 }
 
 export function M1Table({ quarryId }: { quarryId?: string } = {}) {

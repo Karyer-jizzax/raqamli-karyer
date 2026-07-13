@@ -6,7 +6,7 @@ import {
   useTrips,
 } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { Card, cn } from '@karier/ui';
+import { Card, cn, PlateBadge } from '@karier/ui';
 import { type MouseEvent, useMemo, useState } from 'react';
 
 const KINDS = ['karyer', 'tashqi'] as const;
@@ -45,13 +45,7 @@ function fmtDateTime(iso: string | null): { date: string; time: string } | null 
 }
 
 function Plate({ trip }: { trip: TripRecord }) {
-  return (
-    <span className="inline-flex items-stretch overflow-hidden rounded-[5px] border-[1.5px] border-[#1e293b] text-[11.5px] leading-none font-bold">
-      <span className="bg-[#1e293b] px-[5px] py-1 text-white">{trip.plate_region}</span>
-      <span className="px-1.5 py-1 text-foreground">{trip.plate_number}</span>
-      <span className="flex items-center bg-primary px-1 text-[8.5px] text-white">UZ</span>
-    </span>
-  );
+  return <PlateBadge region={trip.plate_region} number={trip.plate_number} />;
 }
 
 // ── hover media preview ──────────────────────────────────────────────────────

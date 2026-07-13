@@ -33,6 +33,7 @@ from app.models.material import Material
 from app.models.media import Media
 from app.models.quarry import Camera, Post, Quarry
 from app.services.detection import get_detector
+from app.services.plates import payer_type, split_plate
 from app.services.storage import save_bytes
 from app.services.trips import link_event
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
@@ -89,17 +90,6 @@ def _parse_event_time(raw: str) -> datetime:
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "event_time formati xato") from exc
     return naive.replace(tzinfo=_UZ_TZ)
-
-
-def _split_plate(plate: str | None) -> tuple[str, str]:
-    """`01S748HE` -> ('01', 'S748HE'). Region = leading digits (max 3)."""
-    if not plate:
-        return "", ""
-    plate = plate.strip().upper()
-    i = 0
-    while i < len(plate) and i < 3 and plate[i].isdigit():
-        i += 1
-    return plate[:i], plate[i:]
 
 
 @router.get("/ping")
@@ -199,7 +189,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         ).scalar_one_or_none()
         camera_id = None
 
-    plate_region, plate_number = _split_plate(payload.plate)
+    plate_region, plate_number = split_plate(payload.plate)
     weight_kg = int(payload.weight) if payload.weight else 0
 
     # The local server sends plate + weight but NOT material — recognise the
@@ -238,7 +228,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         occurred_at=_parse_event_time(payload.event_time),
         is_loaded=True,
         vtype="truck",
-        payer_type="legal",
+        payer_type=payer_type(plate_number),
         density=density,
         weight_kg=weight_kg,
         volume_camera=None,
