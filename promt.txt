@@ -1,0 +1,24 @@
+Fayl: raqamli-karyer/backend/app/api/weigh.py
+
+1. WeighIn schema'ga qo'sh:
+     vtype: str | None = None
+   (local Dahua kategoriyasini yuboradi: LargeTruck/MicroTruck/Car/Bus/...)
+
+2. Normallashtiruvchi yordamchi qo'sh:
+     def _norm_vtype(cat: str | None) -> str:
+         c = (cat or "").lower()
+         if "car" in c or "suv" in c or "van" in c or "motor" in c or "bike" in c:
+             return "car"     # yengil
+         return "truck"       # LargeTruck/MidTruck/MicroTruck/Bus -> yuk
+
+3. Event(...) da vtype ni almashtir (hozir qattiq "truck"):
+     -   vtype="truck",
+     +   vtype=_norm_vtype(payload.vtype),
+
+Dashboard (web-department + web-quarry + web-main):
+- vtype "truck" -> "Yuk avtomobili", "car" -> "Yengil avtomobil" (i18n: uz-lat/uz-cyr/ru)
+- Hodisalar jadvalida ko'rsatilsin; xohlasangiz filtr (yuk/yengil) ham.
+
+Tekshiruv: ruff + test_weigh.
+Commit: "Store vehicle type (truck/car) from ANPR vehicle category"
+git push origin main.
