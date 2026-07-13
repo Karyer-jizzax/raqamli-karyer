@@ -3,17 +3,15 @@ import { cn, LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
 import { Dashboard } from './features/Dashboard';
+import { Events } from './features/Events';
 import { DistrictDetail } from './features/DistrictDetail';
-import { Dynamics } from './features/Dynamics';
-import { Protocols } from './features/Protocols';
 import { QuarryDetail } from './features/QuarryDetail';
 import { Trips } from './features/Trips';
 
 const NAV = [
   { to: '/dashboard', key: 'nav_dashboard' },
   { to: '/data', key: 'nav_data' },
-  { to: '/protocol', key: 'nav_protocol' },
-  { to: '/dynamics', key: 'nav_dynamics' },
+  { to: '/events', key: 'ev_list' },
 ] as const;
 
 function Header() {
@@ -81,8 +79,8 @@ export function App() {
         {/* Ma'lumotlar: per-vehicle stage table (trips); /trips redirects here */}
         <Route path="/data" element={<Trips />} />
         <Route path="/trips" element={<Navigate to="/data" replace />} />
-        <Route path="/protocol" element={<Protocols />} />
-        <Route path="/dynamics" element={<Dynamics />} />
+        {/* Hodisalar: raw M-1 event log across all quarries in the region */}
+        <Route path="/events" element={<Events />} />
       </Routes>
     </RequireAuth>
   );
