@@ -319,8 +319,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     <th rowSpan={2} className={TH}>{t('trip_kind')}</th>
                     <th colSpan={2} className={TH}>{t('grp_karyer')}</th>
                     <th colSpan={2} className={TH}>{t('grp_zavod')}</th>
-                    <th rowSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('th_netto')}</th>
-                    <th rowSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('th_m3')}</th>
+                    <th colSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('grp_ai')}</th>
                     <th rowSpan={2} className={TH}>{t('th_status')}</th>
                   </tr>
                   <tr className="bg-[#f6fbfb] text-[#334155]">
@@ -328,6 +327,8 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     <th className={cn(TH, 'font-semibold')}>{t('dir_exit')}</th>
                     <th className={cn(TH, 'font-semibold')}>{t('dir_enter')}</th>
                     <th className={cn(TH, 'font-semibold')}>{t('dir_exit')}</th>
+                    <th className={cn(TH, 'bg-[#ecfdf5] font-semibold')}>{t('th_m3')}</th>
+                    <th className={cn(TH, 'bg-[#ecfdf5] font-semibold')}>{t('th_ton')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -371,7 +372,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                             r.status === 'no_cargo' && 'bg-[#f8fafc] text-slate-400 line-through',
                           )}
                         >
-                          {tons(r.netto_kg)}
+                          {cubes(r.volume_m3)}
                         </td>
                         <td
                           className={cn(
@@ -380,7 +381,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                             r.status === 'no_cargo' && 'bg-[#f8fafc] text-slate-400 line-through',
                           )}
                         >
-                          {cubes(r.volume_m3)}
+                          {tons(r.netto_kg)}
                         </td>
                         <td className={CTR}>
                           <span
@@ -401,8 +402,8 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={7}>
                       {t('jami')} ({filtered.length})
                     </td>
-                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{tons(totalNetto)}</td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{cubes(totalM3)}</td>
+                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{tons(totalNetto)}</td>
                     <td className={cn(CELL, 'border-t-2 border-t-[#d1fae5]')} />
                   </tr>
                 </tfoot>
@@ -413,10 +414,10 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
               <div className="text-[13px] text-muted-foreground">
                 {t('trips_total')}: <b className="text-foreground">{filtered.length}</b> ·{' '}
                 {t('trips_total_netto')}:{' '}
-                <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b> ·{' '}
                 <b className="text-foreground tabular-nums">
                   {cubes(totalM3)} {t('vol_unit')}
-                </b>
+                </b>{' '}
+                · <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b>
               </div>
               <div className="flex items-center gap-2.5">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
