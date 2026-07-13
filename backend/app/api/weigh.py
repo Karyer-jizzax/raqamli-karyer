@@ -212,9 +212,13 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
     spec = MaterialSpec(lo=1.4, hi=1.7)
     if images:
         det = get_detector().analyze(images[0][0])
-        model, material_id, material_confidence = det.model, det.material_id, det.type_confidence
-        material = await db.get(Material, material_id)
+        model = det.model
+        material = await db.get(Material, det.material_id)
         if material is not None:
+            # FK faqat MAVJUD materialga yozilsin (prod seed qilinmagan bo'lsa
+            # 500 bermasin) — topilmasa material_id=None qoladi.
+            material_id = det.material_id
+            material_confidence = det.type_confidence
             density = float(material.default_density)
             spec = MaterialSpec(lo=float(material.density_min), hi=float(material.density_max))
 
