@@ -106,6 +106,10 @@ async def create_event(
         stir=body.stir,
     )
     db.add(event)
+    await db.flush()
+    # Qo'lda kiritilgan hodisa ham /api/weigh dagi kabi qatnovga juftlanadi —
+    # "Ma'lumotlar" jadvali shu Trip qatorlaridan o'qiydi.
+    await link_event(db, event)
     await db.commit()
     await db.refresh(event)
     return event
