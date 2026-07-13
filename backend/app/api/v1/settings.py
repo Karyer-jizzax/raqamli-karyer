@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import CurrentUser, require_role
 from app.db.session import get_db
 from app.services.app_settings import (
+    TRIP_LINK_WINDOW_HOURS,
     TRIP_MIN_NETTO_KG,
     TRIP_OPEN_TIMEOUT_HOURS,
     get_int_setting,
@@ -26,6 +27,9 @@ class TripRules(BaseModel):
     trip_min_netto_kg: int = Field(ge=0, le=100_000)
     # Main enter/exit unmatched longer than this (hours) → violation.
     trip_open_timeout_hours: int = Field(ge=1, le=168)
+    # Kon exit → main enter linked only within this window (hours); beyond it
+    # the factory event opens a separate "tashqi" (sotuv) trip.
+    trip_link_window_hours: int = Field(ge=1, le=168)
 
 
 @router.get("/trip-rules", response_model=TripRules)
@@ -33,6 +37,7 @@ async def get_trip_rules(_user: CurrentUser, db: DbDep) -> TripRules:
     return TripRules(
         trip_min_netto_kg=await get_int_setting(db, TRIP_MIN_NETTO_KG),
         trip_open_timeout_hours=await get_int_setting(db, TRIP_OPEN_TIMEOUT_HOURS),
+        trip_link_window_hours=await get_int_setting(db, TRIP_LINK_WINDOW_HOURS),
     )
 
 
@@ -42,5 +47,6 @@ async def update_trip_rules(body: TripRules, db: DbDep, _a: AdminDep) -> TripRul
     recomputed (the open-timeout rule IS read-time, so it follows instantly)."""
     await set_int_setting(db, TRIP_MIN_NETTO_KG, body.trip_min_netto_kg)
     await set_int_setting(db, TRIP_OPEN_TIMEOUT_HOURS, body.trip_open_timeout_hours)
+    await set_int_setting(db, TRIP_LINK_WINDOW_HOURS, body.trip_link_window_hours)
     await db.commit()
     return body

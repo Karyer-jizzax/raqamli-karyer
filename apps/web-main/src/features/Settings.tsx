@@ -14,6 +14,7 @@ export function Settings() {
   const update = useUpdateTripRules();
   const [minNetto, setMinNetto] = useState('');
   const [timeoutHours, setTimeoutHours] = useState('');
+  const [linkWindowHours, setLinkWindowHours] = useState('');
   const [err, setErr] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -22,6 +23,7 @@ export function Settings() {
     if (data) {
       setMinNetto(String(data.trip_min_netto_kg));
       setTimeoutHours(String(data.trip_open_timeout_hours));
+      setLinkWindowHours(String(data.trip_link_window_hours));
     }
   }, [data]);
 
@@ -33,6 +35,7 @@ export function Settings() {
       await update.mutateAsync({
         trip_min_netto_kg: Number(minNetto),
         trip_open_timeout_hours: Number(timeoutHours),
+        trip_link_window_hours: Number(linkWindowHours),
       });
       setSaved(true);
     } catch (e2) {
@@ -83,6 +86,24 @@ export function Settings() {
               className="max-w-56"
             />
             <p className="text-xs text-muted-foreground">{t('set_timeout_hint')}</p>
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="set-link-window">{t('set_link_window')}</Label>
+            <Input
+              id="set-link-window"
+              type="number"
+              min={1}
+              max={168}
+              required
+              value={linkWindowHours}
+              onChange={(e) => {
+                setLinkWindowHours(e.target.value);
+                setSaved(false);
+              }}
+              className="max-w-56"
+            />
+            <p className="text-xs text-muted-foreground">{t('set_link_window_hint')}</p>
           </div>
 
           {err && <p className="text-sm text-destructive">{err}</p>}

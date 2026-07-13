@@ -13,6 +13,7 @@ from app.models.app_setting import AppSetting
 # key -> env-config default (also serves as the whitelist)
 TRIP_MIN_NETTO_KG = "trip_min_netto_kg"
 TRIP_OPEN_TIMEOUT_HOURS = "trip_open_timeout_hours"
+TRIP_LINK_WINDOW_HOURS = "trip_link_window_hours"
 
 
 def _default(key: str) -> int:

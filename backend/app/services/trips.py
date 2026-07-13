@@ -29,10 +29,13 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.event import Event
 from app.models.trip import Trip
-from app.services.app_settings import TRIP_MIN_NETTO_KG, get_int_setting
+from app.services.app_settings import (
+    TRIP_LINK_WINDOW_HOURS,
+    TRIP_MIN_NETTO_KG,
+    get_int_setting,
+)
 
 
 def _weight(event: Event) -> int | None:
@@ -74,7 +77,10 @@ async def link_event(db: AsyncSession, event: Event) -> Trip | None:
     if not event.plate_number:
         return None
 
-    window = timedelta(hours=settings.trip_link_window_hours)
+    # Karyerdan chiqish → zavodga kirish oralig'i shu oynadan oshsa zanjir
+    # ulanmaydi — zavod hodisasi "tashqi" (sotuv) qatnov sifatida ochiladi.
+    # Web-main'dagi "Qatnov qoidalari"dan boshqariladi (app_settings).
+    window = timedelta(hours=await get_int_setting(db, TRIP_LINK_WINDOW_HOURS))
 
     def base_query():  # noqa: ANN202 - local helper
         return (

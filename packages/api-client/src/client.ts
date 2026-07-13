@@ -347,11 +347,14 @@ export const getTrips = (params: TripParams = {}) => {
 };
 
 // ── runtime settings (superadmin, web-main) ─────────────────────────────────
-// Trip rules: netto floor (kg) below which a trip is "no_cargo", and the
-// open-timeout (hours) after which a stuck scale trip becomes a violation.
+// Trip rules: netto floor (kg) below which a trip is "no_cargo", the
+// open-timeout (hours) after which a stuck scale trip becomes a violation,
+// and the link window (hours) within which kon exit → main enter chains
+// (beyond it the factory event opens a separate "tashqi"/sotuv trip).
 export interface TripRules {
   trip_min_netto_kg: number;
   trip_open_timeout_hours: number;
+  trip_link_window_hours: number;
 }
 export const getTripRules = () => api.get<TripRules>('/settings/trip-rules');
 export const updateTripRules = (body: TripRules) =>

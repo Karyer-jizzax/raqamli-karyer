@@ -126,6 +126,9 @@ const uzLatn: Dict = {
   set_timeout: 'Huquqbuzarlik muddati (soat)',
   set_timeout_hint:
     "Zavodga kirib shu vaqt ichida chiqmagan (yoki kirishsiz chiqqan) qatnov «Huquqbuzarlik» deb ko'rsatiladi.",
+  set_link_window: "Karyer–zavod oraliq vaqti (soat)",
+  set_link_window_hint:
+    "Karyerdan chiqqan mashina shu vaqt ichida zavodga kirsa qatnov «Hom ashyo» zanjiriga ulanadi; kechiksa zavod hodisasi alohida «Sotuv» qatnovi sifatida ochiladi.",
   set_saved: 'Saqlandi',
   set_apply_note:
     "Yangi qiymatlar shu ondan boshlab amal qiladi — avval yakunlangan qatnovlar qayta hisoblanmaydi.",
@@ -236,8 +239,8 @@ const uzLatn: Dict = {
   dir_enter: 'Kirish',
   trips_title: 'Qatnovlar',
   trip_kind: 'Qatnov turi',
-  trip_kind_karyer: 'Karyerdan',
-  trip_kind_tashqi: 'Tashqi',
+  trip_kind_karyer: 'Hom ashyo (karyerdan)',
+  trip_kind_tashqi: 'Sotuv (tayyor mahsulot)',
   trip_st_open: 'Ochiq',
   trip_st_done: 'Yakunlangan',
   trip_st_incomplete: 'Chala',
@@ -506,6 +509,9 @@ const uzCyrl: Dict = {
   set_timeout: 'Ҳуқуқбузарлик муддати (соат)',
   set_timeout_hint:
     'Заводга кириб шу вақт ичида чиқмаган (ёки киришсиз чиққан) қатнов «Ҳуқуқбузарлик» деб кўрсатилади.',
+  set_link_window: 'Карьер–завод оралиқ вақти (соат)',
+  set_link_window_hint:
+    'Карьердан чиққан машина шу вақт ичида заводга кирса қатнов «Хом ашё» занжирига уланади; кечикса завод ҳодисаси алоҳида «Сотув» қатнови сифатида очилади.',
   set_saved: 'Сақланди',
   set_apply_note:
     'Янги қийматлар шу ондан бошлаб амал қилади — аввал якунланган қатновлар қайта ҳисобланмайди.',
@@ -616,8 +622,8 @@ const uzCyrl: Dict = {
   dir_enter: 'Кириш',
   trips_title: 'Қатновлар',
   trip_kind: 'Қатнов тури',
-  trip_kind_karyer: 'Карьердан',
-  trip_kind_tashqi: 'Ташқи',
+  trip_kind_karyer: 'Хом ашё (карьердан)',
+  trip_kind_tashqi: 'Сотув (тайёр маҳсулот)',
   trip_st_open: 'Очиқ',
   trip_st_done: 'Якунланган',
   trip_st_incomplete: 'Чала',
@@ -883,6 +889,9 @@ const ru: Dict = {
   set_min_netto: 'Порог нетто (кг)',
   set_min_netto_hint:
     'Если нетто меньше этого значения, рейс помечается как «Не груз» (служебная машина).',
+  set_link_window: 'Интервал карьер–завод (часы)',
+  set_link_window_hint:
+    'Если машина, выехавшая с карьера, въезжает на завод в течение этого времени, рейс связывается в цепочку «Сырьё»; при опоздании заводское событие открывается отдельным рейсом «Продажа».',
   set_timeout: 'Срок нарушения (часы)',
   set_timeout_hint:
     'Рейс, въехавший на завод и не выехавший за это время (или выехавший без въезда), помечается как «Нарушение».',
@@ -996,8 +1005,8 @@ const ru: Dict = {
   dir_enter: 'Въезд',
   trips_title: 'Рейсы',
   trip_kind: 'Тип рейса',
-  trip_kind_karyer: 'С карьера',
-  trip_kind_tashqi: 'Внешний',
+  trip_kind_karyer: 'Сырьё (с карьера)',
+  trip_kind_tashqi: 'Продажа (готовая продукция)',
   trip_st_open: 'Открыт',
   trip_st_done: 'Завершён',
   trip_st_incomplete: 'Незавершён',
