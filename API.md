@@ -130,6 +130,8 @@ curl -X POST http://SERVER:5555/api/weigh \
 | `event_time` | string | ✅ | UTC+5, `YYYY-MM-DD HH:MM:SS`. |
 | `video_path` | string / null | ⛔ | A formatda yo'l; B formatda `video` part. Kon'da ham video keladi. |
 | `image_paths` | string[] | ⛔ | A formatda yo'llar; B formatda `images` partlar. |
+| `material_id` | string / null | ⛔ | Lokal YOLO aniqlagan mahsulot (slug, masalan `shagal`). Bu faqat **taklif** — yakuniy qaror backendda: karyerga biriktirilgan mahsulotlar ro'yxati bilan cheklanadi (1 ta mahsulotli karyerda har doim o'sha yoziladi; taklif ro'yxatga mos kelmasa hodisa `inspect` bo'ladi). |
+| `material_confidence` | number / null | ⛔ | YOLO ishonch foizi (0–100). `material_id` bilan birga yuboriladi. |
 
 ### `is_main` semantikasi
 - **`is_main: true`** — asosiy zavod tarozisi: raqam **+ vazn + video** keladi.

@@ -31,7 +31,7 @@ from app.db.session import get_db
 from app.models.event import Event
 from app.models.material import Material
 from app.models.media import Media
-from app.models.quarry import Camera, Post, Quarry
+from app.models.quarry import Camera, Post, Quarry, quarry_materials
 from app.services.detection import get_detector
 from app.services.plates import payer_type, split_plate
 from app.services.storage import save_bytes
@@ -74,6 +74,10 @@ class WeighIn(BaseModel):
     event_time: str
     video_path: str | None = None
     image_paths: list[str] = []
+    # Lokal YOLO material taklifi (ixtiyoriy) — yakuniy qaror backendda:
+    # karyerga biriktirilgan mahsulotlar ro'yxati bilan cheklanadi.
+    material_id: str | None = None
+    material_confidence: float | None = None
 
 
 # The local server reports movement as in/out; our Event uses enter/exit.
@@ -101,6 +105,58 @@ def _parse_event_time(raw: str) -> datetime:
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "event_time formati xato") from exc
     return naive.replace(tzinfo=_UZ_TZ)
+
+
+async def _resolve_material(
+    db: AsyncSession,
+    quarry_id: object,
+    local_id: str | None,
+    local_conf: float | None,
+    det_id: str | None,
+    det_conf: float,
+) -> tuple[Material | None, float, bool]:
+    """Hodisa materialini aniqlash. Asosiy manba — karyerga biriktirilgan
+    mahsulotlar ro'yxati; lokal YOLO taklifi ham, backend detektori ham shu
+    ro'yxat bilan cheklanadi. Qaytaradi: (material, confidence, inspect?).
+
+    * 1 ta biriktirilgan  → har doim o'sha (AI shart emas).
+    * bir nechta          → lokal taklif ro'yxatda bo'lsa → qabul; bo'lmasa
+                            detektor taklifi ro'yxatda bo'lsa → qabul (lokal
+                            adashgan bo'lsa inspect); hech biri mos kelmasa →
+                            birinchisi yoziladi va inspect.
+    * ro'yxat bo'sh       → eski xatti-harakat: lokal taklif > detektor.
+    """
+    assigned = list(
+        (
+            await db.execute(
+                select(Material)
+                .join(quarry_materials, quarry_materials.c.material_id == Material.id)
+                .where(quarry_materials.c.quarry_id == quarry_id)
+                .order_by(Material.default_density)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    if len(assigned) == 1:
+        return assigned[0], 100.0, False
+
+    if assigned:
+        by_id = {m.id: m for m in assigned}
+        if local_id and local_id in by_id:
+            return by_id[local_id], float(local_conf or 0.0), False
+        mismatch = bool(local_id)  # lokal taklif ro'yxatdan tashqarida
+        if det_id and det_id in by_id:
+            return by_id[det_id], det_conf, mismatch
+        return assigned[0], 0.0, True
+
+    for cand_id, conf in ((local_id, float(local_conf or 0.0)), (det_id, det_conf)):
+        if cand_id:
+            material = await db.get(Material, cand_id)
+            if material is not None:
+                return material, conf, False
+    return None, 0.0, False
 
 
 @router.get("/ping")
@@ -203,27 +259,46 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
     plate_region, plate_number = split_plate(payload.plate)
     weight_kg = int(payload.weight) if payload.weight else 0
 
-    # The local server sends plate + weight but NOT material — recognise the
-    # material from the first snapshot so volume can be computed. (Stub for now;
-    # swap services.detection for a real model — nothing here changes.)
+    # Backend detektori (hozircha stub) — mashina modeli hamda lokal taklif
+    # kelmaganda material uchun zaxira manba.
     model = ""
-    material_id: str | None = None
-    material_confidence = 0.0
-    density = 0.0
-    spec = MaterialSpec(lo=1.4, hi=1.7)
+    det_material_id: str | None = None
+    det_confidence = 0.0
     if images:
         det = get_detector().analyze(images[0][0])
         model = det.model
-        material = await db.get(Material, det.material_id)
-        if material is not None:
-            # FK faqat MAVJUD materialga yozilsin (prod seed qilinmagan bo'lsa
-            # 500 bermasin) — topilmasa material_id=None qoladi.
-            material_id = det.material_id
-            material_confidence = det.type_confidence
-            density = float(material.default_density)
-            spec = MaterialSpec(lo=float(material.density_min), hi=float(material.density_max))
+        det_material_id = det.material_id
+        det_confidence = det.type_confidence
+
+    # Material: karyerga biriktirilgan mahsulotlar ro'yxati asosida (lokal YOLO
+    # taklifi va detektor shu ro'yxat bilan cheklanadi, mos kelmasa inspect).
+    material, material_confidence, material_inspect = await _resolve_material(
+        db,
+        quarry.id,
+        payload.material_id,
+        payload.material_confidence,
+        det_material_id,
+        det_confidence,
+    )
+    material_id = material.id if material is not None else None
+    density = float(material.default_density) if material is not None else 0.0
+    spec = (
+        MaterialSpec(lo=float(material.density_min), hi=float(material.density_max))
+        if material is not None
+        else MaterialSpec(lo=1.4, hi=1.7)
+    )
 
     vol = compute_volume(VolumeInput(density=density, weight_kg=weight_kg), spec)
+
+    # Raqam bo'sh = ANPR o'qiy olmagan → "no_plate" (chalkashlik): operator
+    # dashboardda raqamni qo'lda kiritgach, event qatnovga juftlanadi.
+    # Material karyer ro'yxatiga mos kelmasa → "inspect" (operator ko'radi).
+    if not plate_number:
+        event_status = "no_plate"
+    elif material_inspect:
+        event_status = "inspect"
+    else:
+        event_status = vol.status
 
     event = Event(
         event_uid=payload.event_uid,
@@ -248,9 +323,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         diff_pct=None,
         volume_confidence=vol.confidence,
         material_confidence=material_confidence,
-        # Raqam bo'sh = ANPR o'qiy olmagan → "no_plate" (chalkashlik): operator
-        # dashboardda raqamni qo'lda kiritgach, event qatnovga juftlanadi.
-        status="no_plate" if not plate_number else vol.status,
+        status=event_status,
     )
     db.add(event)
     await db.commit()
