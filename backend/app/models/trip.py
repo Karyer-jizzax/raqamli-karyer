@@ -123,6 +123,20 @@ class Trip(Base, UUIDMixin, TimestampMixin):
     def main_exit(self) -> dict | None:
         return self._stage(self.main_exit_event)
 
+    # Netto (t) ÷ cargo density (t/m³). The cargo is weighed loaded — karyer
+    # trips at zavod enter (brutto), tashqi trips at zavod exit — so take the
+    # density from that event; fall back to any linked event that has one.
+    @property
+    def volume_m3(self) -> float | None:
+        if self.netto_kg is None:
+            return None
+        preferred = self.main_enter_event if self.kind == "karyer" else self.main_exit_event
+        for ev in (preferred, self.main_enter_event, self.main_exit_event, self.kon_exit_event):
+            rho = float(ev.density) if ev is not None and ev.density is not None else 0.0
+            if rho > 0:
+                return round(self.netto_kg / 1000 / rho, 2)
+        return None
+
     # Derived progress label from which checkpoints have fired (UI status chip):
     # karyerda → yolda → zavodda → yakunlandi; chala = chain broke (incomplete,
     # huquqbuzarlik); yuk_emas = completed but netto below the cargo floor.

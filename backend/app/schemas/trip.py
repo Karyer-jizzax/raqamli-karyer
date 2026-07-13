@@ -33,6 +33,8 @@ class TripOut(BaseModel):
     enter_weight_kg: int | None
     exit_weight_kg: int | None
     netto_kg: int | None
+    # netto (t) ÷ density (t/m³) from the loaded-side weigh event
+    volume_m3: float | None = None
     started_at: datetime
     completed_at: datetime | None
     # per-stage timestamps (from the linked events) for the UI table

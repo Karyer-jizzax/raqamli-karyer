@@ -317,6 +317,8 @@ export interface TripRecord {
   enter_weight_kg: number | null;
   exit_weight_kg: number | null;
   netto_kg: number | null;
+  // netto (t) / material density (t/m³) — null until weighed
+  volume_m3: number | null;
   started_at: string;
   completed_at: string | null;
   kon_enter_at: string | null;

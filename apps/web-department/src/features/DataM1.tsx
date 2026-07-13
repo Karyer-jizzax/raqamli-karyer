@@ -130,6 +130,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {
     if (f.quarry && r.quarry_id !== f.quarry) return false;
+    if (f.source && (f.source === 'zavod') !== r.is_main) return false;
     if (f.post && r.post_code !== f.post) return false;
     if (f.camera && r.camera_label !== f.camera) return false;
     if (f.direction && r.direction !== f.direction) return false;
@@ -204,6 +205,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
             <Sel label={t('q_name')} value={f.quarry} onChange={set('quarry')} t={t}
               opts={quarryOpts} />
           )}
+          <Sel label={t('th_source')} value={f.source} onChange={set('source')} t={t}
+            opts={[['zavod', t('grp_zavod')], ['karyer', t('grp_karyer')]]} />
           <Sel label={t('filt_post')} value={f.post} onChange={set('post')} t={t}
             opts={postOpts.map((p) => [p, p])} />
           <Sel label={t('filt_camera')} value={f.camera} onChange={set('camera')} t={t}
@@ -252,6 +255,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                     )}
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_post')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_source')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
                     <th colSpan={5} className={cn(CELL, 'font-bold')}>{t('grp_events')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
@@ -275,7 +279,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={quarryId ? 15 : 16} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={quarryId ? 16 : 17} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -293,6 +297,18 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                           )}
                           <td className={CTR}>{r.post_code ?? '—'}</td>
                           <td className={CTR}>{r.camera_label ?? '—'}</td>
+                          <td className={CTR}>
+                            <span
+                              className={cn(
+                                'inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                                r.is_main
+                                  ? 'bg-[#f5f3ff] text-[#6d28d9]'
+                                  : 'bg-[#eff6ff] text-[#1d4ed8]',
+                              )}
+                            >
+                              {t(r.is_main ? 'grp_zavod' : 'grp_karyer')}
+                            </span>
+                          </td>
                           <td className={CTR}>
                             {r.status === 'no_plate' ? (
                               // ANPR o'qiy olmagan — operator (web-quarry) raqamni kiritadi.
@@ -367,7 +383,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#ecfdf5] font-bold">
-                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={quarryId ? 10 : 11}>
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={quarryId ? 11 : 12}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>

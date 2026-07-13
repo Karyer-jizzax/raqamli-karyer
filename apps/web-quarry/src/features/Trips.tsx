@@ -262,7 +262,12 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
     (s, r) => s + (r.status === 'no_cargo' ? 0 : (r.netto_kg ?? 0)),
     0,
   );
+  const totalM3 = filtered.reduce(
+    (s, r) => s + (r.status === 'no_cargo' ? 0 : (r.volume_m3 ?? 0)),
+    0,
+  );
   const tons = (kg: number | null) => (kg == null ? '-' : formatDecimal(kg / 1000, lang));
+  const cubes = (m3: number | null) => (m3 == null ? '-' : formatDecimal(m3, lang));
 
   // Client-side pagination over the filtered set (filters reset to page 1).
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -315,6 +320,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     <th colSpan={2} className={TH}>{t('grp_karyer')}</th>
                     <th colSpan={2} className={TH}>{t('grp_zavod')}</th>
                     <th rowSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('th_netto')}</th>
+                    <th rowSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('th_m3')}</th>
                     <th rowSpan={2} className={TH}>{t('th_status')}</th>
                   </tr>
                   <tr className="bg-[#f6fbfb] text-[#334155]">
@@ -327,7 +333,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={11} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -367,6 +373,15 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                         >
                           {tons(r.netto_kg)}
                         </td>
+                        <td
+                          className={cn(
+                            NUM,
+                            'bg-[#ecfdf5] font-bold',
+                            r.status === 'no_cargo' && 'bg-[#f8fafc] text-slate-400 line-through',
+                          )}
+                        >
+                          {cubes(r.volume_m3)}
+                        </td>
                         <td className={CTR}>
                           <span
                             className={cn(
@@ -387,6 +402,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{tons(totalNetto)}</td>
+                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{cubes(totalM3)}</td>
                     <td className={cn(CELL, 'border-t-2 border-t-[#d1fae5]')} />
                   </tr>
                 </tfoot>
@@ -397,7 +413,10 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
               <div className="text-[13px] text-muted-foreground">
                 {t('trips_total')}: <b className="text-foreground">{filtered.length}</b> ·{' '}
                 {t('trips_total_netto')}:{' '}
-                <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b>
+                <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b> ·{' '}
+                <b className="text-foreground tabular-nums">
+                  {cubes(totalM3)} {t('vol_unit')}
+                </b>
               </div>
               <div className="flex items-center gap-2.5">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
