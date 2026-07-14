@@ -123,6 +123,7 @@ function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }
   const { t } = useTranslation();
   const update = useUpdateUser();
   const { data: regions } = useRegions();
+  const [login, setLogin] = useState(user.username);
   const [fullName, setFullName] = useState(user.full_name);
   const [password, setPassword] = useState('');
   const [regionId, setRegionId] = useState(user.region_id ?? '');
@@ -136,6 +137,7 @@ function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }
       await update.mutateAsync({
         id: user.id,
         body: {
+          username: login.trim(),
           full_name: fullName.trim(),
           is_active: active,
           region_id: regionId || null,
@@ -157,7 +159,7 @@ function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }
       pending={update.isPending}
       submitLabel={t('q_save')}
     >
-      <Field label={t('q_login')} value={user.username} readOnly required={false} />
+      <Field label={t('q_login')} value={login} onChange={setLogin} autoComplete="off" />
       <Field label={t('dep_full_name')} value={fullName} onChange={setFullName} required={false} />
       <Field
         label={t('q_pw_new_optional')}

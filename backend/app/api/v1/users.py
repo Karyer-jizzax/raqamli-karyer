@@ -57,6 +57,10 @@ async def update_user(user_id: UUID, body: UserUpdate, db: DbDep, _a: AdminDep) 
         user.password_hash = hash_password(password)
     for field, value in data.items():
         setattr(user, field, value)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Username band") from exc
     await db.refresh(user)
     return user

@@ -750,6 +750,7 @@ export const getUsers = (params: { quarry_id?: string } = {}) => {
   return api.get<AuthUserDto[]>(`/users${q ? `?${q}` : ''}`);
 };
 export interface UserUpdateInput {
+  username?: string;
   full_name?: string;
   email?: string | null;
   password?: string;
