@@ -76,6 +76,10 @@ async def link_event(db: AsyncSession, event: Event) -> Trip | None:
     """
     if not event.plate_number:
         return None
+    # Yo'nalishi noma'lum hodisa zanjirga ulanmaydi — "exit" deb taxmin qilish
+    # soxta yakunlangan qatnov tug'diradi (ikkita kirish = bitta "done" sotuv).
+    if event.direction not in ("enter", "exit"):
+        return None
 
     # Karyerdan chiqish → zavodga kirish oralig'i shu oynadan oshsa zanjir
     # ulanmaydi — zavod hodisasi "tashqi" (sotuv) qatnov sifatida ochiladi.

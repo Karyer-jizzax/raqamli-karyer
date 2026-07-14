@@ -39,7 +39,7 @@ class Event(Base, UUIDMixin, TimestampMixin):
     # true = main factory weighbridge (plate + weight + video); false = kon
     # checkpoint (plate + photo only, no weight). See API.md is_main semantics.
     is_main: Mapped[bool] = mapped_column(Boolean, default=True)
-    direction: Mapped[str] = mapped_column(String(8), default="exit")  # exit | enter
+    direction: Mapped[str] = mapped_column(String(8), default="exit")  # exit | enter | unknown
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

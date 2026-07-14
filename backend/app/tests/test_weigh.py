@@ -126,7 +126,7 @@ async def test_weigh_maps_direction_in_out(client: httpx.AsyncClient, seeded: No
 
     assert await dir_of("in") == "enter"
     assert await dir_of("out") == "exit"
-    assert await dir_of(None) == "exit"  # unknown → model default
+    assert await dir_of(None) == "unknown"  # taxmin yo'q — operator inspect'da ko'radi
 
 
 @pytest.mark.asyncio

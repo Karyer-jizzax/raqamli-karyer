@@ -235,7 +235,9 @@ Xato javob tanasi (ixtiyoriy):
 - ✅ `GET /api/ping` va `POST /api/weigh` (Format A va B) ishlaydi, sinovdan o'tgan.
 - ✅ `event_uid` UNIQUE — dublikat → mavjud `id` bilan `200` (`duplicate:true`).
 - ✅ `X-API-Key` — `WEIGH_API_KEYS` (.env) dagi kalitlar bilan tekshiriladi.
-- ✅ `direction`: **`in`→`enter`**, **`out`→`exit`** ga xaritalanadi (`null`→`exit`).
+- ✅ `direction`: **`in`→`enter`**, **`out`→`exit`** ga xaritalanadi (`null`→`unknown`:
+  hodisa `inspect` statusini oladi va qatnov zanjiriga ulanmaydi — "exit" deb
+  taxmin qilish soxta yakunlangan qatnov tug'dirardi).
 - ✅ **Fayllar server diskda** saqlanadi (`backend/media/`), `/media/...` URL bilan servis
   qilinadi. Prod'da S3/MinIO'ga almashtirish mumkin (bir xil interfeys).
 - ✅ **Maksimal so'rov hajmi:** har part uchun **120 MB** (sozlanadi: `WEIGH_MAX_UPLOAD_MB`).

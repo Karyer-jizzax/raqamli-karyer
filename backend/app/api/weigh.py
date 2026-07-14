@@ -85,8 +85,10 @@ _DIRECTION_MAP = {"in": "enter", "out": "exit"}
 
 
 def _map_direction(raw: str | None) -> str:
-    """in→enter, out→exit; unknown/null falls back to the model default."""
-    return _DIRECTION_MAP.get((raw or "").lower(), "exit")
+    """in→enter, out→exit; null/notanish → "unknown" — "exit" deb taxmin
+    qilinmaydi: noto'g'ri yo'nalish qatnov zanjirini buzadi (soxta "done"
+    qatnov), shuning uchun operator ko'rib chiqishi uchun inspect bo'ladi."""
+    return _DIRECTION_MAP.get((raw or "").lower(), "unknown")
 
 
 def _norm_vtype(cat: str | None) -> str:
@@ -290,12 +292,15 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
 
     vol = compute_volume(VolumeInput(density=density, weight_kg=weight_kg), spec)
 
+    direction = _map_direction(payload.direction)
+
     # Raqam bo'sh = ANPR o'qiy olmagan → "no_plate" (chalkashlik): operator
     # dashboardda raqamni qo'lda kiritgach, event qatnovga juftlanadi.
-    # Material karyer ro'yxatiga mos kelmasa → "inspect" (operator ko'radi).
+    # Yo'nalish null/notanish yoki material karyer ro'yxatiga mos kelmasa →
+    # "inspect" (operator ko'radi).
     if not plate_number:
         event_status = "no_plate"
-    elif material_inspect:
+    elif direction == "unknown" or material_inspect:
         event_status = "inspect"
     else:
         event_status = vol.status
@@ -310,7 +315,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         plate_region=plate_region,
         plate_number=plate_number,
         model=model,
-        direction=_map_direction(payload.direction),
+        direction=direction,
         occurred_at=_parse_event_time(payload.event_time),
         is_loaded=True,
         vtype=_norm_vtype(payload.vtype),
