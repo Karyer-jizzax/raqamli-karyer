@@ -219,8 +219,10 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
             opts={vtypeOpts.map((v) => [v, vtypeLabel(v)])} />
           <Sel label={t('filt_status')} value={f.status} onChange={set('status')} t={t}
             opts={STATUSES.map((s) => [s, t(`status_${s}`)])} />
-          <Sel label={t('filt_load')} value={f.load} onChange={set('load')} t={t}
-            opts={LOADS.map((l) => [l, t(`load_${l === 'yes' ? 'yes' : 'no'}`)])} />
+          {!quarryId && (
+            <Sel label={t('filt_load')} value={f.load} onChange={set('load')} t={t}
+              opts={LOADS.map((l) => [l, t(`load_${l === 'yes' ? 'yes' : 'no'}`)])} />
+          )}
           <Sel label={t('flt_material')} value={f.material_id} onChange={set('material_id')} t={t}
             opts={(materials ?? []).map((m) => [m.id, materialName(m, lang)])} />
           <label className={FLBL}>
@@ -260,7 +262,9 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_source')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
                     <th colSpan={5} className={cn(CELL, 'font-bold')}>{t('grp_events')}</th>
-                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
+                    {!quarryId && (
+                      <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
+                    )}
                     <th colSpan={2} className={cn(CELL, AI, 'font-bold')}>{t('grp_ai')}</th>
                     <th colSpan={1} className={cn(CELL, MAT, 'font-bold')}>{t('grp_mat')}</th>
                     <th colSpan={2} className={cn(CELL, OWN, 'font-bold')}>{t('grp_yhxx')}</th>
@@ -281,7 +285,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={quarryId ? 16 : 17} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={quarryId ? 15 : 17} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -364,13 +368,15 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                               <Glyph path={PLAY} />
                             </button>
                           </td>
-                          <td className={CELL}>
-                            {r.is_loaded ? (
-                              <span className="font-semibold text-[#059669]">{t('load_yes')}</span>
-                            ) : (
-                              <span className="font-semibold text-slate-400">{t('load_no')}</span>
-                            )}
-                          </td>
+                          {!quarryId && (
+                            <td className={CELL}>
+                              {r.is_loaded ? (
+                                <span className="font-semibold text-[#059669]">{t('load_yes')}</span>
+                              ) : (
+                                <span className="font-semibold text-slate-400">{t('load_no')}</span>
+                              )}
+                            </td>
+                          )}
                           <td className={NUM}>{loaded ? f1(r.volume_final) : '-'}</td>
                           <td className={NUM}>{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
                           <td className={CELL}>
@@ -385,7 +391,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#ecfdf5] font-bold">
-                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={quarryId ? 11 : 12}>
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={quarryId ? 10 : 12}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>
