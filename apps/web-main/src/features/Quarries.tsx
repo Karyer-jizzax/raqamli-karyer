@@ -150,6 +150,8 @@ function EditQuarryModal({ quarry, onClose }: { quarry: Quarry; onClose: () => v
   const [status, setStatus] = useState<'active' | 'suspended'>(
     quarry.status === 'suspended' ? 'suspended' : 'active',
   );
+  // null = untouched (operator loads async, so seed lazily from the fetch)
+  const [login, setLogin] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
 
@@ -160,8 +162,15 @@ function EditQuarryModal({ quarry, onClose }: { quarry: Quarry; onClose: () => v
     setErr('');
     try {
       await update.mutateAsync({ id: quarry.id, body: { name, status } });
-      if (operator && password.trim()) {
-        await updateUser.mutateAsync({ id: operator.id, body: { password: password.trim() } });
+      if (operator) {
+        const newLogin = login?.trim();
+        const body = {
+          ...(newLogin && newLogin !== operator.username ? { username: newLogin } : {}),
+          ...(password.trim() ? { password: password.trim() } : {}),
+        };
+        if (Object.keys(body).length) {
+          await updateUser.mutateAsync({ id: operator.id, body });
+        }
       }
       onClose();
     } catch (e2) {
@@ -196,7 +205,12 @@ function EditQuarryModal({ quarry, onClose }: { quarry: Quarry; onClose: () => v
         <div className="text-muted-foreground mb-2 text-xs font-semibold">{t('q_operator')}</div>
         {operator ? (
           <div className="grid gap-2.5">
-            <Field label={t('q_login')} value={operator.username} readOnly required={false} />
+            <Field
+              label={t('q_login')}
+              value={login ?? operator.username}
+              onChange={setLogin}
+              autoComplete="off"
+            />
             <div className="grid gap-1.5">
               <Label htmlFor="op-pw">{t('q_pw_new_optional')}</Label>
               <PasswordInput
