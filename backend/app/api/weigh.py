@@ -123,9 +123,10 @@ async def _resolve_material(
 
     * 1 ta biriktirilgan  → har doim o'sha (AI shart emas).
     * bir nechta          → lokal taklif ro'yxatda bo'lsa → qabul; bo'lmasa
-                            detektor taklifi ro'yxatda bo'lsa → qabul (lokal
-                            adashgan bo'lsa inspect); hech biri mos kelmasa →
-                            birinchisi yoziladi va inspect.
+                            detektor taklifi ro'yxatda bo'lsa → yoziladi, lekin
+                            inspect (detektor yagona manba — operator
+                            tasdiqlasin); hech biri mos kelmasa → birinchisi
+                            yoziladi va inspect.
     * ro'yxat bo'sh       → eski xatti-harakat: lokal taklif > detektor.
     """
     assigned = list(
@@ -148,9 +149,10 @@ async def _resolve_material(
         by_id = {m.id: m for m in assigned}
         if local_id and local_id in by_id:
             return by_id[local_id], float(local_conf or 0.0), False
-        mismatch = bool(local_id)  # lokal taklif ro'yxatdan tashqarida
         if det_id and det_id in by_id:
-            return by_id[det_id], det_conf, mismatch
+            # Detektor taklifi yagona manba (lokal yo'q yoki ro'yxatdan
+            # tashqarida) — tasodifiy taqsimlanib ketmasin, operator ko'rsin.
+            return by_id[det_id], det_conf, True
         return assigned[0], 0.0, True
 
     for cand_id, conf in ((local_id, float(local_conf or 0.0)), (det_id, det_conf)):
@@ -317,7 +319,6 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         model=model,
         direction=direction,
         occurred_at=_parse_event_time(payload.event_time),
-        is_loaded=True,
         vtype=_norm_vtype(payload.vtype),
         payer_type=payer_type(plate_number),
         density=density,

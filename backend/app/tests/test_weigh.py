@@ -130,6 +130,89 @@ async def test_weigh_maps_direction_in_out(client: httpx.AsyncClient, seeded: No
 
 
 @pytest.mark.asyncio
+async def test_weigh_detector_only_material_needs_inspect(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """Karyerda >1 mahsulot bo'lsa va lokal material_id kelmasa, stub/detektor
+    taklifi yozilsa ham hodisa inspect'ga tushadi (operator tasdiqlaydi);
+    lokal taklif ro'yxatda bo'lsa esa inspect'siz qabul qilinadi."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    districts = (await client.get("/api/v1/districts")).json()
+    quarry = (
+        await client.post(
+            "/api/v1/quarries",
+            json={
+                "district_id": districts[0]["id"],
+                "name": "Materiallar karyeri",
+                "code": f"MAT-{uuid.uuid4().hex[:8]}",
+            },
+            headers=admin,
+        )
+    ).json()
+    post = (
+        await client.post(
+            f"/api/v1/quarries/{quarry['id']}/posts",
+            json={"code": f"P-{uuid.uuid4().hex[:6]}", "name": "Tarozi"},
+            headers=admin,
+        )
+    ).json()
+    cam_name = f"CAM-{uuid.uuid4().hex[:6]}"
+    created_cam = await client.post(
+        f"/api/v1/posts/{post['id']}/cameras",
+        json={"code": cam_name, "name": cam_name, "kind": "plate"},
+        headers=admin,
+    )
+    assert created_cam.status_code == 201, created_cam.text
+    # Stub detektor taklif qilishi mumkin bo'lgan barcha materiallar
+    # biriktirilgan (>1) — det taklifi doim ro'yxat ichiga tushadi.
+    stub_materials = ["shagal", "qumshagal", "qurilishqum", "tosh"]
+    assign = await client.put(
+        f"/api/v1/quarries/{quarry['id']}/materials",
+        json={"material_ids": stub_materials},
+        headers=admin,
+    )
+    assert assign.status_code == 200, assign.text
+
+    token = await login(client, "department", "dept123")
+
+    async def send(**over: object) -> dict[str, object]:
+        plate = "01A" + uuid.uuid4().hex[:5].upper()
+        payload = _payload(
+            str(uuid.uuid4()),
+            quarry_id=quarry["code"],
+            camera_name=cam_name,
+            direction="out",
+            plate=plate,
+            **over,
+        )
+        r = await client.post(
+            "/api/weigh",
+            headers=KEY,
+            data={"data": json.dumps(payload)},
+            files=[("images", ("snap.jpg", b"\xff\xd8\xfffake", "image/jpeg"))],
+        )
+        assert r.status_code == 200, r.text
+        rows = (
+            await client.get(
+                "/api/v1/stats/m1",
+                params={"plate": plate[2:], "quarry_id": quarry["id"]},
+                headers=auth_header(token),
+            )
+        ).json()["rows"]
+        return next(row for row in rows if row["id"] == r.json()["id"])
+
+    # Lokal taklif yo'q — detektor yagona manba: material yoziladi, lekin inspect.
+    det_only = await send()
+    assert det_only["material_id"] in stub_materials
+    assert det_only["status"] == "inspect"
+
+    # Lokal taklif ro'yxatda — inspect talab qilinmaydi.
+    local = await send(material_id="shagal", material_confidence=88.5)
+    assert local["material_id"] == "shagal"
+    assert local["status"] == "confirm"
+
+
+@pytest.mark.asyncio
 async def test_weigh_kon_event_without_weight(client: httpx.AsyncClient, seeded: None) -> None:
     uid = str(uuid.uuid4())
     resp = await client.post(
