@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, insert, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +56,39 @@ async def _get_camera(db: AsyncSession, camera_id: UUID) -> Camera:
     if camera is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kamera topilmadi")
     return camera
+
+
+async def _ensure_camera_unique(
+    db: AsyncSession,
+    quarry_id: UUID,
+    *,
+    name: str | None = None,
+    code: str | None = None,
+    exclude_id: UUID | None = None,
+) -> None:
+    """Bir karyer ichida kamera name/code takrorlanmasin: weigh ingest kamerani
+    karyer bo'yicha name/code orqali qidiradi (.limit(1)), dublikat bo'lsa
+    hodisa ixtiyoriy postga biriktirilib qoladi."""
+    conds = []
+    if name:
+        conds.append(Camera.name == name)
+    if code:
+        conds.append(Camera.code == code)
+    if not conds:
+        return
+    stmt = (
+        select(Camera.id)
+        .join(Post, Post.id == Camera.post_id)
+        .where(Post.quarry_id == quarry_id)
+        .where(or_(*conds))
+        .limit(1)
+    )
+    if exclude_id is not None:
+        stmt = stmt.where(Camera.id != exclude_id)
+    if (await db.execute(stmt)).scalar_one_or_none() is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Bu karyerda shunday nomli yoki kodli kamera bor"
+        )
 
 
 @router.get("/quarries", response_model=list[QuarryOut])
@@ -182,6 +215,7 @@ async def create_camera(post_id: UUID, body: CameraCreate, db: DbDep, _a: AdminD
     post = await db.get(Post, post_id)
     if post is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Post topilmadi")
+    await _ensure_camera_unique(db, post.quarry_id, name=body.name, code=body.code)
     camera = Camera(post_id=post_id, **body.model_dump())
     db.add(camera)
     await db.commit()
@@ -192,7 +226,13 @@ async def create_camera(post_id: UUID, body: CameraCreate, db: DbDep, _a: AdminD
 @router.patch("/cameras/{camera_id}", response_model=CameraOut)
 async def update_camera(camera_id: UUID, body: CameraUpdate, db: DbDep, _a: AdminDep) -> Camera:
     camera = await _get_camera(db, camera_id)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    if updates.get("name"):
+        post = await _get_post(db, camera.post_id)
+        await _ensure_camera_unique(
+            db, post.quarry_id, name=updates["name"], exclude_id=camera.id
+        )
+    for field, value in updates.items():
         setattr(camera, field, value)
     await db.commit()
     await db.refresh(camera)
