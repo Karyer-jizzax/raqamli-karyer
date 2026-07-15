@@ -23,8 +23,6 @@ class QuarryStats(BaseModel):
     events: int
     trucks: int
     volume: float
-    loaded: int
-    not_loaded: int
     unidentified: int
     cameras: int
     cameras_active: int
@@ -53,8 +51,6 @@ class DistrictCargo(BaseModel):
     """District cargo dashboard: totals + per-post strip + per-quarry table."""
 
     trucks_total: int
-    loaded: int
-    not_loaded: int
     unidentified: int
     posts: list[CargoPost]
     quarries: list[CargoQuarryRow]
@@ -92,7 +88,6 @@ class M1Row(BaseModel):
     direction: str
     is_main: bool
     occurred_at: str
-    is_loaded: bool
     material_id: str | None
     weight_kg: int
     density: float

@@ -121,7 +121,6 @@ async def ingest(
         model=det.model,
         direction="exit",
         occurred_at=datetime.now(),
-        is_loaded=True,
         vtype="truck",
         payer_type="legal",
         density=density,

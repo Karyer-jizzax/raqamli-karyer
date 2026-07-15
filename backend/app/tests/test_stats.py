@@ -113,8 +113,7 @@ async def test_quarry_stats(client: httpx.AsyncClient, seeded: None) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert data["cameras"] == data["cameras_active"] + data["cameras_inactive"]
-    # loaded + not_loaded covers every event exactly once.
-    assert data["loaded"] + data["not_loaded"] == data["events"]
+    assert data["events"] >= data["unidentified"] >= 0
 
     # A period with no events returns clean zeros, not an error.
     empty = (
@@ -152,7 +151,7 @@ async def test_district_cargo(client: httpx.AsyncClient, seeded: None) -> None:
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["loaded"] + data["not_loaded"] >= data["trucks_total"] >= 0
+    assert data["trucks_total"] >= 0 and data["unidentified"] >= 0
     for post in data["posts"]:
         assert post["cameras"] >= post["cameras_active"] >= 0
     for quarry in data["quarries"]:

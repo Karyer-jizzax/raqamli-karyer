@@ -252,13 +252,7 @@ export function QuarryDetail() {
             <b className="text-[19px] text-[#0f766e] tabular-nums">{fn(stat?.trucks)}</b>
           </div>
 
-          <div className="mb-1 flex justify-between border-y border-y-[#f1f5f9] py-2">
-            <span className="text-[13px] text-muted-foreground">{t('dash_loaded')}:</span>
-            <b className="text-sm tabular-nums">{fn(stat?.loaded)}</b>
-          </div>
-
           <div className="mt-3.5 flex flex-wrap gap-2.5">
-            <StatBox label={t('dash_not_loaded')} value={fn(stat?.not_loaded)} />
             <StatBox label={t('dash_unidentified')} value={fn(stat?.unidentified)} danger />
           </div>
 

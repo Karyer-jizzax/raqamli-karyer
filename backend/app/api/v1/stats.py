@@ -260,7 +260,6 @@ async def m1(
                 direction=e.direction,
                 is_main=e.is_main,
                 occurred_at=e.occurred_at.isoformat(),
-                is_loaded=e.is_loaded,
                 material_id=e.material_id,
                 weight_kg=e.weight_kg,
                 density=float(e.density),

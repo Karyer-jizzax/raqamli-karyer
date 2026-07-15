@@ -292,11 +292,6 @@ export function DistrictDetail() {
             <b className="text-[19px] text-[#0f766e] tabular-nums">{fn(cargo?.trucks_total)}</b>
           </div>
 
-          <div className="mb-1 flex justify-between border-y border-y-[#f1f5f9] py-2">
-            <span className="text-[13px] text-muted-foreground">{t('dash_loaded')}:</span>
-            <b className="text-sm tabular-nums">{fn(cargo?.loaded)}</b>
-          </div>
-
           {quarryCargoRows.length > 0 ? (
             <CargoTable
               t={t}
@@ -309,7 +304,6 @@ export function DistrictDetail() {
           )}
 
           <div className="mt-3.5 flex flex-wrap gap-2.5">
-            <StatBox label={t('dash_not_loaded')} value={fn(cargo?.not_loaded)} />
             <StatBox label={t('dash_unidentified')} value={fn(cargo?.unidentified)} danger />
           </div>
         </Card>

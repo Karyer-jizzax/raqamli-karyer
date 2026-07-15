@@ -121,13 +121,11 @@ def _period_conds(date_from: date | None, date_to: date | None) -> list[ColumnEl
 # Distinct-plate key; empty plate_number (unrecognized) is excluded via FILTER.
 _PLATE = Event.plate_region + Event.plate_number
 
-# Shared aggregate columns for cargo stats (events / trucks / loaded / ...).
+# Shared aggregate columns for cargo stats (events / trucks / volume / ...).
 _CARGO_AGGS = (
     func.count(Event.id).label("events"),
     func.count(func.distinct(_PLATE)).filter(Event.plate_number != "").label("trucks"),
     func.coalesce(func.sum(Event.volume_final), 0).label("volume"),
-    func.count(Event.id).filter(Event.is_loaded).label("loaded"),
-    func.count(Event.id).filter(~Event.is_loaded).label("not_loaded"),
     func.count(Event.id).filter(Event.plate_number == "").label("unidentified"),
     func.max(Event.occurred_at).label("last_event_at"),
 )
@@ -144,9 +142,7 @@ async def quarry_stats(
     ev_stmt = select(*_CARGO_AGGS).where(
         Event.quarry_id == quarry_id, *_period_conds(date_from, date_to)
     )
-    events, trucks, volume, loaded, not_loaded, unidentified, last_at = (
-        (await db.execute(ev_stmt)).one()
-    )
+    events, trucks, volume, unidentified, last_at = (await db.execute(ev_stmt)).one()
 
     cam_stmt = (
         select(func.count(Camera.id), func.count(Camera.id).filter(Camera.is_active))
@@ -159,8 +155,6 @@ async def quarry_stats(
         "events": int(events),
         "trucks": int(trucks),
         "volume": round(float(volume), 2),
-        "loaded": int(loaded),
-        "not_loaded": int(not_loaded),
         "unidentified": int(unidentified),
         "cameras": int(cameras),
         "cameras_active": int(cameras_active),
@@ -184,9 +178,7 @@ async def district_cargo(
         .join(Quarry, Quarry.id == Event.quarry_id)
         .where(Quarry.district_id == district_id, *period)
     )
-    _events, trucks, _volume, loaded, not_loaded, unidentified, last_at = (
-        (await db.execute(totals_stmt)).one()
-    )
+    _events, trucks, _volume, unidentified, last_at = (await db.execute(totals_stmt)).one()
 
     # Per-post traffic (posts with no events still listed via outer join).
     posts_stmt = (
@@ -233,8 +225,6 @@ async def district_cargo(
 
     return {
         "trucks_total": int(trucks),
-        "loaded": int(loaded),
-        "not_loaded": int(not_loaded),
         "unidentified": int(unidentified),
         "posts": [
             {

@@ -13,7 +13,6 @@ import { type FormEvent, useMemo, useState } from 'react';
 
 const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
 const DIRECTIONS = ['exit', 'enter'] as const;
-const LOADS = ['yes', 'no'] as const;
 
 type Lang = ReturnType<typeof currentLang>;
 
@@ -193,7 +192,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
     if (f.direction && r.direction !== f.direction) return false;
     if (f.vtype && r.vtype !== f.vtype) return false;
     if (f.status && r.status !== f.status) return false;
-    if (f.load && (f.load === 'yes') !== r.is_loaded) return false;
     if (f.material_id && r.material_id !== f.material_id) return false;
     if (f.plate) {
       const hay = `${r.plate_region} ${r.plate_number}`.toUpperCase();
@@ -269,8 +267,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
             opts={vtypeOpts.map((v) => [v, vtypeLabel(v)])} />
           <Sel label={t('filt_status')} value={f.status} onChange={set('status')} t={t}
             opts={STATUSES.map((s) => [s, t(`status_${s}`)])} />
-          <Sel label={t('filt_load')} value={f.load} onChange={set('load')} t={t}
-            opts={LOADS.map((l) => [l, t(`load_${l === 'yes' ? 'yes' : 'no'}`)])} />
           <Sel label={t('flt_material')} value={f.material_id} onChange={set('material_id')} t={t}
             opts={(materials ?? []).map((m) => [m.id, materialName(m, lang)])} />
           <label className={FLBL}>
@@ -306,7 +302,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
                     <th colSpan={5} className={cn(CELL, 'font-bold')}>{t('grp_events')}</th>
-                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
                     <th colSpan={2} className={cn(CELL, AI, 'font-bold')}>{t('grp_ai')}</th>
                     <th colSpan={1} className={cn(CELL, MAT, 'font-bold')}>{t('grp_mat')}</th>
                     <th colSpan={2} className={cn(CELL, OWN, 'font-bold')}>{t('grp_yhxx')}</th>
@@ -327,7 +322,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={14} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -399,13 +394,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                               <Glyph path={PLAY} />
                             </button>
                           </td>
-                          <td className={CELL}>
-                            {r.is_loaded ? (
-                              <span className="font-semibold text-[#059669]">{t('load_yes')}</span>
-                            ) : (
-                              <span className="font-semibold text-slate-400">{t('load_no')}</span>
-                            )}
-                          </td>
                           <td className={NUM}>{loaded ? f1(r.volume_final) : '-'}</td>
                           <td className={NUM}>{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>
                           <td className={CELL}>
@@ -420,7 +408,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#ecfdf5] font-bold">
-                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={10}>
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={9}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>
@@ -480,7 +468,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                         <th className={cn(CELL, 'font-bold')}>{t('th_post')}</th>
                         <th className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
                         <th className={cn(CELL, 'font-bold')}>{t('th_dir')}</th>
-                        <th className={cn(CELL, 'font-bold')}>{t('th_load')}</th>
                         <th className={cn(CELL, 'font-bold')}>{t('th_m3')}</th>
                         <th className={cn(CELL, 'font-bold')}>{t('th_ton')}</th>
                         <th className={cn(CELL, 'font-bold')}>{t('grp_mat')}</th>
@@ -508,13 +495,6 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                               >
                                 {t(`dir_${r.direction}`)}
                               </span>
-                            </td>
-                            <td className={CTR}>
-                              {r.is_loaded ? (
-                                <span className="font-semibold text-[#059669]">{t('load_yes')}</span>
-                              ) : (
-                                <span className="font-semibold text-slate-400">{t('load_no')}</span>
-                              )}
                             </td>
                             <td className={NUM}>{loaded ? f1(r.volume_final) : '-'}</td>
                             <td className={NUM}>{r.weight_kg > 0 ? f2(r.weight_kg / 1000) : '-'}</td>

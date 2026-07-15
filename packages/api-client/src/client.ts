@@ -437,8 +437,6 @@ export interface QuarryStats {
   events: number;
   trucks: number;
   volume: number;
-  loaded: number;
-  not_loaded: number;
   unidentified: number;
   cameras: number;
   cameras_active: number;
@@ -465,8 +463,6 @@ export interface CargoQuarryRow {
 
 export interface DistrictCargo {
   trucks_total: number;
-  loaded: number;
-  not_loaded: number;
   unidentified: number;
   posts: CargoPost[];
   quarries: CargoQuarryRow[];
@@ -509,7 +505,6 @@ export interface M1Row {
   direction: string;
   is_main: boolean;
   occurred_at: string;
-  is_loaded: boolean;
   material_id: string | null;
   weight_kg: number;
   density: number;
