@@ -8,7 +8,7 @@ import {
   useUpdateEventPlate,
 } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { Card, cn, PlateBadge } from '@karier/ui';
+import { Card, cn, exportM1ToExcel, PlateBadge } from '@karier/ui';
 import { type FormEvent, useMemo, useState } from 'react';
 
 const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
@@ -50,6 +50,8 @@ function fmtDateTime(iso: string): { date: string; time: string } {
 const EYE =
   '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
 const PLAY = '<path d="M6 4v16l14-8z"/>';
+const DOWNLOAD =
+  '<path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>';
 
 function Glyph({ path }: { path: string }) {
   return (
@@ -292,6 +294,24 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
           <p className="text-muted-foreground">{t('loading')}</p>
         ) : (
           <>
+            <div className="mb-2.5 flex justify-end">
+              <button
+                type="button"
+                disabled={filtered.length === 0}
+                onClick={() =>
+                  void exportM1ToExcel({
+                    rows: filtered,
+                    materials: materials ?? [],
+                    lang,
+                    t,
+                  })
+                }
+                className="inline-flex h-[36px] cursor-pointer items-center gap-2 rounded-[9px] border border-[#16a34a]/30 bg-[#f0fdf4] px-[14px] text-[13px] font-semibold text-[#15803d] hover:enabled:bg-[#dcfce7] disabled:cursor-default disabled:opacity-40"
+              >
+                <Glyph path={DOWNLOAD} />
+                {t('export_excel')}
+              </button>
+            </div>
             <div className="mb-2 text-center text-[11.5px] text-slate-400">{t('scrollhint')}</div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-[12.5px]">

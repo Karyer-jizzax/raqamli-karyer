@@ -3,6 +3,7 @@ export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './
 export { AuthProvider, RequireAuth, useAuth, ProfileMenu } from './auth';
 export { JizzaxMap } from './map';
 export { ProtocolDocument, ProtocolViewer } from './protocol';
+export { exportM1ToExcel, type ExportM1Options } from './export-events';
 
 // shadcn/ui primitives + helpers
 export { cn } from './lib/utils';

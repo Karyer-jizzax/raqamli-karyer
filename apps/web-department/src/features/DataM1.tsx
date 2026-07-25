@@ -1,14 +1,16 @@
 import {
+  ApiError,
   type M1Row,
   type Material,
   mediaUrl,
   useM1,
   useMaterials,
   useQuarries,
+  useUpdateEventPlate,
 } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { Card, cn, PlateBadge } from '@karier/ui';
-import { useMemo, useState } from 'react';
+import { Card, cn, exportM1ToExcel, PlateBadge } from '@karier/ui';
+import { type FormEvent, useMemo, useState } from 'react';
 
 const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
 const DIRECTIONS = ['exit', 'enter'] as const;
@@ -49,6 +51,8 @@ function fmtDateTime(iso: string): { date: string; time: string } {
 const EYE =
   '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
 const PLAY = '<path d="M6 4v16l14-8z"/>';
+const DOWNLOAD =
+  '<path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>';
 
 function Glyph({ path }: { path: string }) {
   return (
@@ -70,6 +74,78 @@ function Plate({ row }: { row: M1Row }) {
   return <PlateBadge region={row.plate_region} number={row.plate_number} />;
 }
 
+/** Manual plate entry for a "no_plate" event (CHALKASHLIK — ANPR failed).
+    On save the server re-links the event into its trip automatically. */
+function FixPlateModal({ row, onClose }: { row: M1Row; onClose: () => void }) {
+  const { t } = useTranslation();
+  const update = useUpdateEventPlate();
+  const [region, setRegion] = useState(row.plate_region);
+  const [number, setNumber] = useState(row.plate_number);
+  const [err, setErr] = useState('');
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setErr('');
+    try {
+      await update.mutateAsync({
+        id: row.id,
+        body: { plate_region: region.trim(), plate_number: number.trim() },
+      });
+      onClose();
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : 'Error');
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[130] grid place-items-center bg-[#070d14]/60 p-5"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[88vh] w-full max-w-[420px] overflow-y-auto rounded-[14px] bg-white p-4 shadow-[0_24px_60px_rgba(8,25,50,.4)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-1 font-bold">{t('np_fix_title')}</div>
+        <p className="m-0 mb-3 text-[12.5px] text-muted-foreground">{t('np_fix_hint')}</p>
+        <form onSubmit={onSubmit} className="grid grid-cols-[110px_1fr] gap-2">
+          <input
+            className={FCTRL}
+            placeholder={t('np_region')}
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+          />
+          <input
+            className={FCTRL}
+            placeholder={t('np_number')}
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+            required
+            autoFocus
+          />
+          {err && <span className="col-span-2 text-xs text-destructive">{err}</span>}
+          <div className="col-span-2 mt-1 flex justify-end gap-2">
+            <button
+              type="button"
+              className="h-[38px] cursor-pointer rounded-[9px] border border-[#e2e8f0] bg-white px-[15px] text-[13px] font-medium text-muted-foreground"
+              onClick={onClose}
+            >
+              {t('q_cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={update.isPending || !number.trim()}
+              className="h-[38px] cursor-pointer rounded-[9px] border-none bg-primary px-[15px] text-[13px] font-semibold text-white disabled:opacity-50"
+            >
+              {t('q_save')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
@@ -88,6 +164,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
 
   const [media, setMedia] = useState<{ row: M1Row; mode: 'photo' | 'video' } | null>(null);
   const [history, setHistory] = useState<{ plate_region: string; plate_number: string } | null>(null);
+  const [fix, setFix] = useState<M1Row | null>(null);
 
   const matById = useMemo(() => {
     const m = new Map<string, Material>();
@@ -242,6 +319,27 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
           <p className="text-muted-foreground">{t('loading')}</p>
         ) : (
           <>
+            <div className="mb-2.5 flex justify-end">
+              <button
+                type="button"
+                disabled={filtered.length === 0}
+                onClick={() =>
+                  void exportM1ToExcel({
+                    rows: filtered,
+                    materials: materials ?? [],
+                    lang,
+                    t,
+                    quarryNames: quarryById,
+                    includeQuarry: true,
+                    includeSource: true,
+                  })
+                }
+                className="inline-flex h-[36px] cursor-pointer items-center gap-2 rounded-[9px] border border-[#16a34a]/30 bg-[#f0fdf4] px-[14px] text-[13px] font-semibold text-[#15803d] hover:enabled:bg-[#dcfce7] disabled:cursor-default disabled:opacity-40"
+              >
+                <Glyph path={DOWNLOAD} />
+                {t('export_excel')}
+              </button>
+            </div>
             <div className="mb-2 text-center text-[11.5px] text-slate-400">{t('scrollhint')}</div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-[12.5px]">
@@ -308,10 +406,14 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                           </td>
                           <td className={CTR}>
                             {r.status === 'no_plate' ? (
-                              // ANPR o'qiy olmagan — operator (web-quarry) raqamni kiritadi.
-                              <span className="inline-block rounded-full border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1 text-[11px] font-semibold text-[#dc2626]">
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-full border border-[#fecaca] bg-[#fef2f2] px-2.5 py-1 text-[11px] font-semibold text-[#dc2626] hover:bg-[#fee2e2]"
+                                title={t('np_fix_title')}
+                                onClick={() => setFix(r)}
+                              >
                                 {t('status_no_plate')}
-                              </span>
+                              </button>
                             ) : (
                               <button
                                 type="button"
@@ -395,6 +497,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
           </>
         )}
       </Card>
+
+      {fix && <FixPlateModal row={fix} onClose={() => setFix(null)} />}
 
       {history && (
         <div

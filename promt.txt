@@ -1,24 +1,60 @@
-Fayl: raqamli-karyer/backend/app/api/weigh.py
+# ✅ LOCAL — hammasi bajarildi (8 tuzatish, sinovlar o'tdi, dastur ishlayapti)
 
-1. WeighIn schema'ga qo'sh:
-     vtype: str | None = None
-   (local Dahua kategoriyasini yuboradi: LargeTruck/MicroTruck/Car/Bus/...)
+| # | Tuzatish | Nima qildi |
+|---|---|---|
+| 1 | **Restart'da hodisa yo'qolishi** | Hodisa endi **darhol** navbatga tushadi; video `.part.mp4`ga yozilib, tayyor bo'lgach atomik paydo bo'ladi — outbox to'liq faylni kutadi. Crash/restart hech narsani yo'qotmaydi |
+| 2 | **Outbox abadiy qotishi** | Video 10 daqiqada kelmasa — hodisa **videosiz** ketadi; yozish fail bo'lsa payload darhol tuzatiladi |
+| 3 | **Startup recovery** | Ishga tushishda "bazada bor-u yuborilmagan" hodisalar avtomatik qayta navbatga qo'yiladi |
+| 4 | **Disk to'lishi** | Har 12 soatda 14 kundan eski video/rasmlar o'chiriladi (retention) |
+| 5 | **YOLO pastki-nuqta** | Endi mashinaning **g'ildirak nuqtasi** zonaga solishtiriladi (markaz perspektivada zonadan chiqib ketardi) — kesishlar aniqroq |
+| 6 | **Eng-so'nggi-kadr** | Reader-thread — YOLO doim eng yangi kadrni ko'radi, 8-10s kechikish yig'ilmaydi |
+| 7 | **Overlap kesish** | Videosiz bo'lsa ham yo'nalish ro'yxatga olinadi; hodisa videoli sherigini tanlaydi |
+| 8 | **Single-instance** | Ikkinchi nusxa ochilmaydi (sinab tasdiqladim) — dublikat hodisalar xavfi yopildi |
 
-2. Normallashtiruvchi yordamchi qo'sh:
-     def _norm_vtype(cat: str | None) -> str:
-         c = (cat or "").lower()
-         if "car" in c or "suv" in c or "van" in c or "motor" in c or "bike" in c:
-             return "car"     # yengil
-         return "truck"       # LargeTruck/MidTruck/MicroTruck/Bus -> yuk
+Hammasi compile/ruff toza, tracker+age-limit+`.part` testlari o'tdi, **Holat: hammasi yashil** (PID 11740).
 
-3. Event(...) da vtype ni almashtir (hozir qattiq "truck"):
-     -   vtype="truck",
-     +   vtype=_norm_vtype(payload.vtype),
+---
 
-Dashboard (web-department + web-quarry + web-main):
-- vtype "truck" -> "Yuk avtomobili", "car" -> "Yengil avtomobil" (i18n: uz-lat/uz-cyr/ru)
-- Hodisalar jadvalida ko'rsatilsin; xohlasangiz filtr (yuk/yengil) ham.
+# 📋 RAQAMLI-KARYER — alohida ishlar (push-huquqli kompyuterda)
 
-Tekshiruv: ruff + test_weigh.
-Commit: "Store vehicle type (truck/car) from ANPR vehicle category"
-git push origin main.
+**1. Stub-detektor tasodifiy material tayinlashi (muhim):**
+```
+Fayl: backend/app/api/weigh.py, _resolve_material
+Muammo: karyerda >1 mahsulot bo'lsa va local material_id yubormasa, STUB
+detektorning TASODIFIY taklifi ro'yxatga tushib qolsa inspect'siz qabul
+qilinadi — hodisalar mahsulotlar orasida tasodifiy taqsimlanadi.
+Fix: local_id yo'q + assigned>1 + faqat det taklifi bo'lsa -> inspect=True:
+    -   return by_id[det_id], det_conf, mismatch
+    +   return by_id[det_id], det_conf, True   # stub yagona manba — operator tasdiqlasin
+(local_id ro'yxatda bo'lsa hozirgidek inspect'siz qoladi.)
+Test: test_weigh'ga holat qo'shish. Commit + push.
+```
+
+**2. Kamera nomi noyobligi (chalkashlik oldini olish):**
+```
+Fayl: backend/app/api/v1/quarries.py (create_camera/update_camera)
+Bir karyer ichida ikkita kamera bir xil nom ("raqam" ikkala postda) bo'lsa,
+weigh'dagi name-qidiruv .limit(1) bilan ixtiyoriy postga biriktiradi.
+Fix: yaratish/tahrirlashda shu karyerning boshqa postlarida bir xil name
+yoki code bor-yo'qligini tekshirib 409 qaytarish.
+```
+
+**3. `is_loaded=True` qattiq yozilgan** (weigh.py) — endi yuk faktini netto beradi; maydonni yo netto'dan hisoblash, yo hisobotlardan butunlay chiqarish kerak (hozir chalkashtiradi). Past ustuvorlik.
+
+**4. PROD DEPLOY (eng muhimi — fixlar jonli emas):**
+```
+cd backend && alembic upgrade head   # 0013 + 0014
+backend restart + web-main/web-department/web-quarry deploy
+```
+Shundan keyin jonli bo'ladi: Noma'lum-yo'nalish/inspect (fceaee0), 2 xonali viloyat, yuk/yengil tur, netto-300/2 soat qoidalari, kamera credentiallari.
+
+**5. Test ma'lumotlarni tozalash (prod DB):** `01TEST07/08/09/10`, `20TEST98/99` plateli event+trip+media yozuvlari. (`backend/scripts/`da tozalash skripti qilib qo'ysa bo'ladi.)
+
+---
+
+# 🔧 Sizning qo'lingizda (kod emas)
+
+- **Kameralarga NTP/soat sozlash** — Dahua `.110` ichki soati ~3.5 soat xato: suratlardagi OSD vaqt noto'g'ri (dalil qiymatini buzadi). Kamera web-interfeysida vaqtni to'g'rilang (4 kamerada ham tekshiring).
+- **EXE qayta build** — hozirgi `dist/` bugungi ~15 tuzatishdan oldingi. Tarqatishdan oldin ayting, qayta quraman (`console=False` bilan).
+
+Keyingi mashinalarда yo'nalish aniqligi (pastki-nuqta + latest-frame ta'siri) qanday o'zgarganини `det_debug.log`дан birga ko'ramiz.
