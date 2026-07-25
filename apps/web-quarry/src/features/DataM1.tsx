@@ -189,6 +189,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
 
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {
+    if (f.source && (f.source === 'zavod') !== r.is_main) return false;
     if (f.post && r.post_code !== f.post) return false;
     if (f.camera && r.camera_label !== f.camera) return false;
     if (f.direction && r.direction !== f.direction) return false;
@@ -259,6 +260,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
       {/* Filters */}
       <Card className="rounded-[14px] px-4 py-3.5">
         <div className="flex flex-wrap items-end gap-3">
+          <Sel label={t('th_source')} value={f.source} onChange={set('source')} t={t}
+            opts={[['zavod', t('grp_zavod')], ['karyer', t('grp_karyer')]]} />
           <Sel label={t('filt_post')} value={f.post} onChange={set('post')} t={t}
             opts={postOpts.map((p) => [p, p])} />
           <Sel label={t('filt_camera')} value={f.camera} onChange={set('camera')} t={t}
@@ -304,6 +307,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                     materials: materials ?? [],
                     lang,
                     t,
+                    includeSource: true,
                   })
                 }
                 className="inline-flex h-[36px] cursor-pointer items-center gap-2 rounded-[9px] border border-[#16a34a]/30 bg-[#f0fdf4] px-[14px] text-[13px] font-semibold text-[#15803d] hover:enabled:bg-[#dcfce7] disabled:cursor-default disabled:opacity-40"
@@ -320,6 +324,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_no')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_post')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_camera')}</th>
+                    <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_source')}</th>
                     <th rowSpan={2} className={cn(CELL, 'font-bold')}>{t('th_plate')}</th>
                     <th colSpan={5} className={cn(CELL, 'font-bold')}>{t('grp_events')}</th>
                     <th colSpan={2} className={cn(CELL, AI, 'font-bold')}>{t('grp_ai')}</th>
@@ -342,7 +347,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={14} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
+                      <td colSpan={15} className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}>
                         {t('empty_table')}
                       </td>
                     </tr>
@@ -357,6 +362,18 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                           <td className={CTR}>{i + 1}</td>
                           <td className={CTR}>{r.post_code ?? '—'}</td>
                           <td className={CTR}>{r.camera_label ?? '—'}</td>
+                          <td className={CTR}>
+                            <span
+                              className={cn(
+                                'inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                                r.is_main
+                                  ? 'bg-[#f5f3ff] text-[#6d28d9]'
+                                  : 'bg-[#eff6ff] text-[#1d4ed8]',
+                              )}
+                            >
+                              {t(r.is_main ? 'grp_zavod' : 'grp_karyer')}
+                            </span>
+                          </td>
                           <td className={CTR}>
                             {r.status === 'no_plate' ? (
                               <button
@@ -428,7 +445,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#ecfdf5] font-bold">
-                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={9}>
+                    <td className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')} colSpan={10}>
                       {t('jami')} ({filtered.length})
                     </td>
                     <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{f1(totalVol)}</td>
