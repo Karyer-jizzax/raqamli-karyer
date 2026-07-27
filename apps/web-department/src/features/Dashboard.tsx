@@ -6,6 +6,7 @@ import {
   JizzaxMap,
   localizedName,
   PageHeader,
+  UiButton as Button,
   useAuth,
 } from '@karier/ui';
 import { BarChart3Icon, CameraIcon, HomeIcon, type LucideIcon, MountainIcon } from 'lucide-react';
@@ -124,21 +125,22 @@ export function Dashboard() {
         {/* Map + selected district */}
         <div className="grid gap-4">
           <section className="relative rounded-2xl border bg-card p-3.5 shadow-card">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="icon"
               title={t('dash_all_quarries')}
               aria-label={t('dash_all_quarries')}
               aria-pressed={selected === null}
               onClick={() => setSelected(null)}
               className={cn(
-                'absolute top-3.5 right-3.5 z-[1] grid size-[34px] cursor-pointer place-items-center rounded-[9px] border',
-                'transition-colors active:scale-[0.97]',
-                'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-                selected ? 'bg-primary text-primary-foreground' : 'bg-card text-primary',
+                'absolute top-3.5 right-3.5 z-[1] size-[34px] active:scale-[0.97]',
+                selected
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                  : 'text-primary hover:bg-primary-tint hover:text-primary',
               )}
             >
               <HomeIcon className="size-[17px]" strokeWidth={1.8} />
-            </button>
+            </Button>
             {geo ? (
               <JizzaxMap
                 districts={geo.districts}

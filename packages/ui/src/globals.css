@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-/* Legacy design tokens + .kk-* classes — kept so the not-yet-migrated apps
-   (web-department, web-quarry) that still use inline styles keep rendering. */
+/* Print/A4 styles for the shared ProtocolViewer. All three apps are on
+   Tailwind now; this file only carries what @page/@media print needs. */
 @import './tokens.css';
 
 /* Scan the shared UI package and every app for Tailwind class names. Paths are
@@ -171,5 +171,18 @@
     color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Reduced motion means gentler, not none: keep the color and opacity
+     transitions that explain a state change, drop everything that moves. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-property: color, background-color, border-color, opacity, box-shadow !important;
+      transition-duration: 120ms !important;
+    }
   }
 }

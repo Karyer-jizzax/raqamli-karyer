@@ -12,6 +12,7 @@ import { type ReactNode } from 'react';
 import { LangSwitcher } from './components';
 import { cn } from './lib/utils';
 import { Eyebrow } from './primitives';
+import { Button } from './ui/button';
 
 /** Brand lockup + language switcher + profile menu. Identical in both apps. */
 export function AppHeader({ title, children }: { title: string; children?: ReactNode }) {
@@ -67,19 +68,16 @@ export function Breadcrumb({ items, onHome }: { items: Crumb[]; onHome?: () => v
   return (
     <nav aria-label={t('nav_breadcrumb')} className="flex min-w-0 items-center gap-1.5 text-xs">
       {onHome && (
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="icon"
           onClick={onHome}
           title={t('dash_back')}
           aria-label={t('dash_back')}
-          className={cn(
-            'grid size-7 shrink-0 cursor-pointer place-items-center rounded-lg border bg-card text-primary',
-            'transition-colors hover:bg-primary-tint active:scale-[0.97]',
-            'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-          )}
+          className="size-7 shrink-0 rounded-lg text-primary hover:bg-primary-tint hover:text-primary active:scale-[0.97]"
         >
           <HomeIcon className="size-4" strokeWidth={1.8} />
-        </button>
+        </Button>
       )}
       {items.map((c, i) => {
         const last = i === items.length - 1;

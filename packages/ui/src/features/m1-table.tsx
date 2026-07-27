@@ -48,12 +48,11 @@ const DIRECTIONS = ['exit', 'enter'] as const;
 
 type Lang = ReturnType<typeof currentLang>;
 
-/** Small ghost icon button for the photo/video columns. */
+/** Small outline icon button for the photo/video columns. */
 const IC_BTN = cn(
-  'inline-grid size-7 cursor-pointer place-items-center rounded-[7px] border bg-card text-primary',
-  'transition-colors hover:enabled:border-primary hover:enabled:bg-primary-tint',
-  'active:enabled:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-  'disabled:cursor-default disabled:opacity-30',
+  'size-7 rounded-[7px] text-primary',
+  'hover:enabled:border-primary hover:enabled:bg-primary-tint hover:enabled:text-primary',
+  'active:enabled:scale-[0.97] disabled:opacity-30',
 );
 
 function materialName(m: Material | undefined, lang: Lang): string {
@@ -439,22 +438,22 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                         </td>
                         <td className={GRID_CTR}>
                           {r.status === 'no_plate' ? (
-                            <button
-                              type="button"
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className={cn(
-                                'cursor-pointer rounded-full border border-danger/30 bg-danger-tint px-2.5 py-1 text-2xs font-semibold text-danger',
-                                'transition-colors hover:bg-danger/15 active:scale-[0.97]',
-                                'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
+                                'h-auto rounded-full border-danger/30 bg-danger-tint px-2.5 py-1 text-2xs font-semibold text-danger',
+                                'hover:bg-danger/15 hover:text-danger active:scale-[0.97]',
                               )}
                               title={t('np_fix_title')}
                               onClick={() => setFix(r)}
                             >
                               {t('status_no_plate')}
-                            </button>
+                            </Button>
                           ) : (
-                            <button
-                              type="button"
-                              className="cursor-pointer border-none bg-transparent p-0 focus-visible:outline-none hover:[&>span]:shadow-[0_0_0_2px_var(--primary)] focus-visible:[&>span]:shadow-[0_0_0_2px_var(--primary)]"
+                            <Button
+                              variant="ghost"
+                              className="h-auto rounded-md p-0 hover:bg-transparent focus-visible:ring-0 hover:[&>span]:shadow-[0_0_0_2px_var(--primary)] focus-visible:[&>span]:shadow-[0_0_0_2px_var(--primary)]"
                               title={t('veh_history_hint')}
                               onClick={() =>
                                 setHistory({
@@ -464,7 +463,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                               }
                             >
                               <PlateBadge region={r.plate_region} number={r.plate_number} />
-                            </button>
+                            </Button>
                           )}
                         </td>
                         <td className={GRID_CTR}>{vtypeLabel(r.vtype)}</td>
@@ -481,7 +480,9 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                           <span className="tabular-nums">{dt?.time}</span>
                         </td>
                         <td className={GRID_CTR}>
-                          <button
+                          <Button
+                            variant="outline"
+                            size="icon"
                             className={IC_BTN}
                             disabled={!hasPhoto}
                             onClick={() => setMedia({ row: r, mode: 'photo' })}
@@ -489,10 +490,12 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                             aria-label={t('th_photo')}
                           >
                             <EyeIcon className="size-3.5" />
-                          </button>
+                          </Button>
                         </td>
                         <td className={GRID_CTR}>
-                          <button
+                          <Button
+                            variant="outline"
+                            size="icon"
                             className={IC_BTN}
                             disabled={!hasVideo}
                             onClick={() => setMedia({ row: r, mode: 'video' })}
@@ -500,7 +503,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                             aria-label={t('th_video')}
                           >
                             <PlayIcon className="size-3.5" fill="currentColor" strokeWidth={0} />
-                          </button>
+                          </Button>
                         </td>
                         <td className={GRID_NUM}>
                           {r.volume_final > 0 ? f1(r.volume_final) : '-'}

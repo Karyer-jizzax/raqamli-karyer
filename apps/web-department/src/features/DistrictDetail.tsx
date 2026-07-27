@@ -11,6 +11,12 @@ import {
   GRID_ROW,
   localizedName,
   PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   TableSkeleton,
   TONE_DOT,
   UpdatedStamp,
@@ -68,46 +74,47 @@ function CargoTable({
   t: (k: string) => string;
   onOpen: (id: string) => void;
 }) {
-  const th = 'border-b px-2 py-1 text-center text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground';
+  const th =
+    'h-auto border-b px-2 py-1 text-center text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground';
   const td = 'border-b p-2 text-data';
   const tdNum = cn(td, 'text-center font-bold tabular-nums');
   const tdMuted = cn(td, 'text-center font-normal text-muted-foreground tabular-nums');
 
   return (
-    <table className="mt-1.5 w-full border-collapse">
-      <thead>
-        <tr>
-          <th className={th} />
-          <th className={th} colSpan={2} scope="colgroup">{t('dash_ettyu')}</th>
-          <th className={th} colSpan={2} scope="colgroup">{t('dash_diff')}</th>
-        </tr>
-        <tr>
-          <th className={th} />
-          <th className={th} scope="col">{t('rep_count')}</th>
-          <th className={th} scope="col">{t('rep_vol')}</th>
-          <th className={th} scope="col">{t('rep_count')}</th>
-          <th className={th} scope="col">{t('rep_vol')}</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table className="mt-1.5 border-collapse">
+      <TableHeader className="[&_tr]:border-0">
+        <TableRow className="hover:bg-transparent">
+          <TableHead className={th} />
+          <TableHead className={th} colSpan={2} scope="colgroup">{t('dash_ettyu')}</TableHead>
+          <TableHead className={th} colSpan={2} scope="colgroup">{t('dash_diff')}</TableHead>
+        </TableRow>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className={th} />
+          <TableHead className={th} scope="col">{t('rep_count')}</TableHead>
+          <TableHead className={th} scope="col">{t('rep_vol')}</TableHead>
+          <TableHead className={th} scope="col">{t('rep_count')}</TableHead>
+          <TableHead className={th} scope="col">{t('rep_vol')}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {rows.map((r) => (
-          <tr
+          <TableRow
             key={r.id}
             onClick={() => onOpen(r.id)}
             title={t('q_open_hint')}
-            className={cn(GRID_ROW, 'cursor-pointer')}
+            className={cn(GRID_ROW, 'cursor-pointer border-0')}
           >
-            <td className={cn(td, 'font-semibold text-primary underline underline-offset-2')}>
+            <TableCell className={cn(td, 'font-semibold text-primary underline underline-offset-2')}>
               {r.label}
-            </td>
-            <td className={tdNum}>{fn(r.count)}</td>
-            <td className={tdNum}>{fn(r.volume)}</td>
-            <td className={tdMuted}>-</td>
-            <td className={tdMuted}>-</td>
-          </tr>
+            </TableCell>
+            <TableCell className={tdNum}>{fn(r.count)}</TableCell>
+            <TableCell className={tdNum}>{fn(r.volume)}</TableCell>
+            <TableCell className={tdMuted}>-</TableCell>
+            <TableCell className={tdMuted}>-</TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }
 
