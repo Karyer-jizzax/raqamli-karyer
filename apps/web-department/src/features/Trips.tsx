@@ -357,14 +357,11 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     {!quarryId && <th rowSpan={2} className={TH}>{t('q_name')}</th>}
                     <th rowSpan={2} className={TH}>{t('th_plate')}</th>
                     <th rowSpan={2} className={TH}>{t('trip_kind')}</th>
-                    <th colSpan={2} className={TH}>{t('grp_karyer')}</th>
                     <th colSpan={2} className={TH}>{t('grp_zavod')}</th>
                     <th colSpan={2} className={cn(TH, 'bg-[#ecfdf5]')}>{t('grp_ai')}</th>
                     <th rowSpan={2} className={TH}>{t('th_status')}</th>
                   </tr>
                   <tr className="bg-[#f6fbfb] text-[#334155]">
-                    <th className={cn(TH, 'font-semibold')}>{t('dir_enter')}</th>
-                    <th className={cn(TH, 'font-semibold')}>{t('dir_exit')}</th>
                     <th className={cn(TH, 'font-semibold')}>{t('dir_enter')}</th>
                     <th className={cn(TH, 'font-semibold')}>{t('dir_exit')}</th>
                     <th className={cn(TH, 'bg-[#ecfdf5] font-semibold')}>{t('th_m3')}</th>
@@ -375,7 +372,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                   {filtered.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={quarryId ? 10 : 11}
+                        colSpan={quarryId ? 8 : 9}
                         className={cn(CELL, 'py-[22px] text-center text-muted-foreground')}
                       >
                         {t('empty_table')}
@@ -405,8 +402,6 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                             {t(`trip_kind_${r.kind}`)}
                           </span>
                         </td>
-                        <StageCell at={r.kon_enter_at} stage={r.kon_enter} lang={lang} onPreview={setPrev} />
-                        <StageCell at={r.kon_exit_at} stage={r.kon_exit} lang={lang} onPreview={setPrev} />
                         <StageCell at={r.main_enter_at} stage={r.main_enter}
                           weightKg={r.enter_weight_kg} lang={lang} onPreview={setPrev} />
                         <StageCell at={r.main_exit_at} stage={r.main_exit}
@@ -447,7 +442,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                   <tr className="bg-[#ecfdf5] font-bold">
                     <td
                       className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')}
-                      colSpan={quarryId ? 7 : 8}
+                      colSpan={quarryId ? 5 : 6}
                     >
                       {t('jami')} ({filtered.length})
                     </td>
@@ -530,10 +525,8 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
               </button>
             </div>
             <div className="overflow-y-auto px-4 pb-1">
-              {sel.kon_enter || sel.kon_exit || sel.main_enter || sel.main_exit ? (
+              {sel.main_enter || sel.main_exit ? (
                 <>
-                  <StageSection label={t('th_kon_enter')} stage={sel.kon_enter} t={t} />
-                  <StageSection label={t('th_kon_exit')} stage={sel.kon_exit} t={t} />
                   <StageSection label={t('th_main_enter')} stage={sel.main_enter} t={t} />
                   <StageSection label={t('th_main_exit')} stage={sel.main_exit} t={t} />
                 </>
