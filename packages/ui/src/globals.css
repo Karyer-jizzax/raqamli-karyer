@@ -42,6 +42,32 @@
   --chart-3: #16a34a;
   --chart-4: #f59e0b;
   --chart-5: #e11d48;
+
+  /* Surfaces used by the dense inspection screens. --surface-hover derives from
+     the per-app accent, so a trip row hovers green in web-quarry and teal in
+     web-department without either app hard-coding a tint. */
+  --surface-subtle: #f8fafc;
+  --surface-hover: color-mix(in oklab, var(--primary) 5%, white);
+  --grid: #eef2f6;
+
+  /* Status semantics — declared once here, consumed through the Tone helpers in
+     status.tsx. Every screen that shows a stage/status/direction reads these. */
+  --success: #059669;
+  --success-tint: #ecfdf5;
+  --warning: #d97706;
+  --warning-tint: #fffbeb;
+  --danger: #e11d48;
+  --danger-tint: #fff1f2;
+  --info: #1d4ed8;
+  --info-tint: #eff6ff;
+  --stage: #6d28d9;
+  --stage-tint: #f5f3ff;
+
+  /* M-1 column-group tints (Zavod / AI o'lchov / Material / YHXX). */
+  --col-ai: #ecfdf5;
+  --col-ai-rule: #d1fae5;
+  --col-mat: #fff7ed;
+  --col-own: #f1f5f9;
 }
 
 .dark {
@@ -92,6 +118,37 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-grid: var(--grid);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+  --color-stage: var(--stage);
+  --color-stage-tint: var(--stage-tint);
+  --color-col-ai: var(--col-ai);
+  --color-col-ai-rule: var(--col-ai-rule);
+  --color-col-mat: var(--col-mat);
+  --color-col-own: var(--col-own);
+
+  /* Two extra steps below Tailwind's `xs` so the dense screens have a scale
+     instead of the 10/11.5/12.5/13.5/15/17/19px free-for-all they inherited
+     from the HTML mockups. The stock steps (xs 12 · sm 14 · base 16 · lg 18)
+     are untouched so web-main keeps rendering exactly as before. */
+  --text-2xs: 0.6875rem; /* 11px — eyebrow, unit suffix, chip */
+  --text-2xs--line-height: 1.36;
+  --text-data: 0.8125rem; /* 13px — table cell, filter control, info row */
+  --text-data--line-height: 1.38;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 12px 32px rgb(8 25 50 / 0.18);
+  --shadow-modal: 0 24px 60px rgb(8 25 50 / 0.28);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

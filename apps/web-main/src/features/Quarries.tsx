@@ -63,6 +63,7 @@ import {
   ROW_ACTION_DANGER,
   slugCode,
   StatusDot,
+  TH,
 } from '../shared';
 import { QuarryPostsModal } from './QuarryPosts';
 
@@ -421,9 +422,6 @@ function Stats({ quarries, districtCount }: { quarries: Quarry[]; districtCount:
     </div>
   );
 }
-
-const TH =
-  'h-auto px-[18px] py-[11px] text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400';
 
 const PG_BTN =
   'size-[34px] min-w-[34px] rounded-[9px] border border-[#e2e8f0] bg-white px-0 text-slate-400 hover:bg-[#f8fafc] sm:pl-0 sm:pr-0';

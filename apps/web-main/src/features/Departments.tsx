@@ -34,10 +34,8 @@ import {
   ModalForm,
   ROW_ACTION,
   StatusDot,
+  TH,
 } from '../shared';
-
-const TH =
-  'h-auto px-[18px] py-[11px] text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400';
 
 /** Region <select> reused by the create/edit modals. */
 function RegionSelect({

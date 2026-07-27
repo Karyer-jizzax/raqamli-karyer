@@ -1,4 +1,52 @@
 export { Button, Card, StatusPill, LangSwitcher } from './components';
+export {
+  CountPill,
+  Eyebrow,
+  Field,
+  localizedName,
+  ModalForm,
+  ROW_ACTION,
+  ROW_ACTION_DANGER,
+  StatusDot,
+  TH,
+} from './primitives';
+export {
+  Chip,
+  DIRECTION_TONE,
+  M1_STATUS_TONE,
+  SOURCE_TONE,
+  TONE_CHIP,
+  TONE_DOT,
+  TONE_TEXT,
+  TRIP_KIND_TONE,
+  TRIP_STAGE_TONE,
+  type Tone,
+} from './status';
+export {
+  DataGrid,
+  DataTable,
+  EmptyState,
+  ErrorState,
+  GRID_CELL,
+  GRID_CTR,
+  GRID_NUM,
+  GRID_ROW,
+  GRID_TH,
+  GRID_TH_SUB,
+  TableSkeleton,
+  Unit,
+} from './data-table';
+export { FilterBar, FilterDate, FilterSelect, FilterText } from './filters';
+export {
+  AppHeader,
+  Breadcrumb,
+  type Crumb,
+  navLink,
+  PageHeader,
+  Tabs,
+  TopNav,
+  UpdatedStamp,
+} from './shell';
 export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './plate';
 export { AuthProvider, RequireAuth, useAuth, ProfileMenu } from './auth';
 export { JizzaxMap } from './map';

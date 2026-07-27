@@ -29,6 +29,7 @@ import {
   ModalForm,
   ROW_ACTION,
   ROW_ACTION_DANGER,
+  TH,
 } from '../shared';
 
 type MaterialForm = {
@@ -174,9 +175,6 @@ function ConfirmDeleteModal({ material, onClose }: { material: Material; onClose
     </ModalForm>
   );
 }
-
-const TH =
-  'h-auto px-[18px] py-[11px] text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400';
 
 export function Materials() {
   const { t } = useTranslation();
