@@ -15,7 +15,14 @@ import {
   InboxIcon,
   RotateCcwIcon,
 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { cn } from './lib/utils';
 import { Button } from './ui/button';
@@ -73,26 +80,70 @@ function useScrollEdges() {
   return { ref, edges, onScroll: measure };
 }
 
+/** Never shrink below this — a grid worth two rows is worse than a page scroll. */
+const MIN_GRID_HEIGHT = 320;
+
+/**
+ * Grow the grid to the bottom of the viewport.
+ *
+ * A fixed `calc(100vh - Xrem)` cannot know how much chrome sits above it — the
+ * page header, the filter panel and the app nav all vary — so on a laptop
+ * screen it left room for two rows. Measure the real distance from the top of
+ * the document to this element instead, and take everything below it.
+ * `reserve` is the space the caller needs *under* the grid (pagination, totals).
+ */
+function useFillViewport(reserve: number, enabled: boolean) {
+  const [maxHeight, setMaxHeight] = useState<number>();
+  const ref = useRef<HTMLDivElement>(null);
+
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el || !enabled) return;
+    // Document-relative top, so scrolling the page does not resize the grid.
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    setMaxHeight(Math.max(MIN_GRID_HEIGHT, window.innerHeight - top - reserve));
+  }, [reserve, enabled]);
+
+  // No dep array: anything that re-renders this grid (collapsing the filter
+  // panel, a page size change) may have moved it, so re-measure. React bails
+  // out when the value is unchanged, so this settles in one pass.
+  useLayoutEffect(measure);
+
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+
+  return { ref, maxHeight };
+}
+
 /**
  * Scroll shell: horizontal scrolling is contained here, and the sticky header
- * needs this element to be the scroll parent. `maxHeight` keeps the surrounding
- * page chrome fixed so the inspector reads one long list in place.
+ * needs this element to be the scroll parent. By default the grid fills the
+ * viewport; pass `maxHeight` to pin it (a dialog, where the viewport is not
+ * the constraint).
  */
 export function DataTable({
   children,
   className,
-  maxHeight = 'max-h-[calc(100vh-19rem)]',
+  maxHeight,
+  reserve = 96,
 }: {
   children: ReactNode;
   className?: string;
+  /** Tailwind class that pins the height instead of filling the viewport. */
   maxHeight?: string;
+  /** Pixels needed below the grid (pagination, totals row). */
+  reserve?: number;
 }) {
-  const { ref, edges, onScroll } = useScrollEdges();
+  const { ref: scrollRef, edges, onScroll } = useScrollEdges();
+  const { ref: fillRef, maxHeight: fillHeight } = useFillViewport(reserve, !maxHeight);
   return (
-    <div className="relative">
+    <div className="relative" ref={fillRef}>
       <div
-        ref={ref}
+        ref={scrollRef}
         onScroll={onScroll}
+        style={maxHeight ? undefined : { maxHeight: fillHeight }}
         className={cn('overflow-auto rounded-[10px] border border-grid', maxHeight, className)}
       >
         {children}

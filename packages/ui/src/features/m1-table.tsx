@@ -33,7 +33,7 @@ import {
   Unit,
 } from '../data-table';
 import { exportM1ToExcel } from '../export-events';
-import { FilterBar, FilterSelect, FilterText } from '../filters';
+import { FilterBar, FilterSelect, FilterText, useFilterPanel } from '../filters';
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Field, ModalForm } from '../primitives';
@@ -152,10 +152,8 @@ function VehicleHistory({
                     const dt = splitDateTime(r.occurred_at);
                     return (
                       <tr key={r.id} className={GRID_ROW}>
-                        <td className={GRID_CTR}>
-                          {dt?.date}
-                          <br />
-                          <span className="text-muted-foreground tabular-nums">{dt?.time}</span>
+                        <td className={cn(GRID_CTR, 'text-muted-foreground tabular-nums')}>
+                          {dt?.date} <b className="text-foreground">{dt?.time}</b>
                         </td>
                         <td className={GRID_CTR}>{r.post_code ?? '—'}</td>
                         <td className={GRID_CTR}>{r.camera_label ?? '—'}</td>
@@ -200,6 +198,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   );
 
   const [f, setF] = useState<Filters>({});
+  const [filtersOpen, setFiltersOpen] = useFilterPanel();
   const set = (k: string) => (v: string) => setF((p) => setFilter(p, k, v));
   const clear = () => setF({});
 
@@ -280,7 +279,12 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <FilterBar activeCount={activeCount} onClear={clear}>
+      <FilterBar
+        activeCount={activeCount}
+        onClear={clear}
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+      >
         {showQuarry && (
           <FilterSelect
             label={t('q_name')}
@@ -382,7 +386,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                 {t('export_excel')}
               </Button>
             </div>
-            <DataTable>
+            <DataTable reserve={72}>
               <DataGrid>
                 <thead>
                   <tr>
@@ -474,10 +478,8 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                             {t(`dir_${r.direction}`)}
                           </span>
                         </td>
-                        <td className={cn(GRID_CTR, 'text-muted-foreground')}>
-                          {dt?.date}
-                          <br />
-                          <span className="tabular-nums">{dt?.time}</span>
+                        <td className={cn(GRID_CTR, 'text-muted-foreground tabular-nums')}>
+                          {dt?.date} <b className="text-foreground">{dt?.time}</b>
                         </td>
                         <td className={GRID_CTR}>
                           <Button

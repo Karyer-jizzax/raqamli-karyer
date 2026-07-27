@@ -23,7 +23,7 @@ import {
   TableSkeleton,
   Unit,
 } from '../data-table';
-import { FilterBar, FilterSelect, FilterText } from '../filters';
+import { FilterBar, FilterSelect, FilterText, useFilterPanel } from '../filters';
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Chip, TONE_TEXT, TRIP_KIND_TONE, TRIP_STAGE_TONE } from '../status';
@@ -58,22 +58,26 @@ function StageCell({
       </td>
     );
   }
+  // Two lines, not four: date and time share a line, weight and the media
+  // chips share the next. Halving the row height doubles the rows on screen.
   return (
     <td className={GRID_CTR}>
       {dt && (
-        <span className="text-muted-foreground">
-          {dt.date}
-          <br />
-          <b className="text-foreground tabular-nums">{dt.time}</b>
+        <span className="whitespace-nowrap text-muted-foreground tabular-nums">
+          {dt.date} <b className="text-foreground">{dt.time}</b>
         </span>
       )}
-      {weightKg != null && (
-        <div className="font-semibold text-primary tabular-nums">
-          {formatDecimal(weightKg / 1000, lang)}
-          <Unit>t</Unit>
-        </div>
+      {(weightKg != null || stage) && (
+        <span className="flex items-center justify-center gap-1.5">
+          {weightKg != null && (
+            <b className="font-semibold text-primary tabular-nums">
+              {formatDecimal(weightKg / 1000, lang)}
+              <Unit>t</Unit>
+            </b>
+          )}
+          {stage && <MediaChips stage={stage} onPreview={onPreview} />}
+        </span>
       )}
-      {stage && <MediaChips stage={stage} onPreview={onPreview} />}
     </td>
   );
 }
@@ -128,6 +132,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const [prev, setPrev] = useState<Preview | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
+  const [filtersOpen, setFiltersOpen] = useFilterPanel();
   const set = (k: string) => (v: string) => {
     setPage(1);
     setF((p) => setFilter(p, k, v));
@@ -191,7 +196,12 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <FilterBar activeCount={activeCount} onClear={clear}>
+      <FilterBar
+        activeCount={activeCount}
+        onClear={clear}
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+      >
         {showQuarry && (
           <FilterSelect
             label={t('q_name')}

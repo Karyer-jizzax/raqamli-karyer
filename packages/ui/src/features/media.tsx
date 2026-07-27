@@ -39,7 +39,7 @@ export function MediaChips({
   const nImg = stage.image_urls?.length ?? 0;
   if (!nImg && !stage.video_url) return null;
   return (
-    <span className="mt-1 inline-flex items-center justify-center gap-1">
+    <span className="inline-flex items-center justify-center gap-1">
       {nImg > 0 && (
         <span className={CHIP} onMouseEnter={show(false)} onMouseLeave={() => onPreview(null)}>
           <CameraIcon className="size-3.5" strokeWidth={2} />

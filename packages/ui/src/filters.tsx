@@ -7,8 +7,8 @@
  * clearing is disabled when there is nothing to clear.
  */
 import { useTranslation } from '@karier/i18n';
-import { FilterIcon, XIcon } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import { ChevronDownIcon, FilterIcon, XIcon } from 'lucide-react';
+import { type ReactNode, useId, useState } from 'react';
 
 import { cn } from './lib/utils';
 import { CountPill, Eyebrow } from './primitives';
@@ -25,26 +25,49 @@ import {
 /** Radix Select forbids an empty-string item value, so "all" gets a sentinel. */
 const ALL = '__all__';
 
+/**
+ * Collapsible so the grid below keeps the screen. Nine filter controls cost
+ * ~170px of a laptop viewport — on a short screen that is the difference
+ * between two visible rows and ten — so the panel starts closed there and open
+ * where there is room. The header always says how many filters are on.
+ */
 export function FilterBar({
   activeCount,
   onClear,
+  open,
+  onOpenChange,
   children,
   className,
 }: {
   activeCount: number;
   onClear: () => void;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
   children: ReactNode;
   className?: string;
 }) {
   const { t } = useTranslation();
+  const id = useId();
   return (
     <section
-      className={cn('rounded-2xl border bg-card px-4 py-3.5 shadow-card', className)}
+      className={cn('rounded-2xl border bg-card px-4 py-2.5 shadow-card', className)}
       aria-label={t('flt_title')}
     >
-      <header className="mb-2.5 flex items-center gap-2">
-        <FilterIcon className="size-3.5 text-slate-400" strokeWidth={2} />
-        <Eyebrow className="text-slate-400">{t('flt_title')}</Eyebrow>
+      <header className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={open}
+          aria-controls={id}
+          onClick={() => onOpenChange(!open)}
+          className="-ml-2 h-8 gap-1.5 text-data font-medium text-muted-foreground hover:text-foreground"
+        >
+          <FilterIcon className="size-3.5" strokeWidth={2} />
+          <Eyebrow>{t('flt_title')}</Eyebrow>
+          <ChevronDownIcon
+            className={cn('size-3.5 transition-transform duration-150 ease-out', open && 'rotate-180')}
+          />
+        </Button>
         {activeCount > 0 && <CountPill>{activeCount}</CountPill>}
         <Button
           variant="ghost"
@@ -57,10 +80,22 @@ export function FilterBar({
           {t('flt_clear')}
         </Button>
       </header>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-x-3 gap-y-2.5">
-        {children}
-      </div>
+      {open && (
+        <div
+          id={id}
+          className="mt-2.5 grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-x-3 gap-y-2.5"
+        >
+          {children}
+        </div>
+      )}
     </section>
+  );
+}
+
+/** Open where the viewport can spare the ~170px, closed where it cannot. */
+export function useFilterPanel() {
+  return useState(
+    () => typeof window === 'undefined' || window.matchMedia('(min-height: 860px)').matches,
   );
 }
 

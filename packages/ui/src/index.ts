@@ -36,7 +36,7 @@ export {
   TableSkeleton,
   Unit,
 } from './data-table';
-export { FilterBar, FilterDate, FilterSelect, FilterText } from './filters';
+export { FilterBar, FilterDate, FilterSelect, FilterText, useFilterPanel } from './filters';
 export {
   AppHeader,
   Breadcrumb,
