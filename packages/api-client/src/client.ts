@@ -338,6 +338,8 @@ export interface TripParams {
   plate?: string;
   status?: string;
   kind?: string;
+  // 'true' → faqat zavod tarozisiga yetgan qatnovlar
+  main_only?: string;
   limit?: string;
   offset?: string;
 }

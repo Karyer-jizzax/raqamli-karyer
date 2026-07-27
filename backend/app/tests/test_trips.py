@@ -351,3 +351,31 @@ async def test_trip_surfaces_stage_media(client: httpx.AsyncClient, seeded: None
     assert len(stage["image_urls"]) == 1
     assert stage["video_url"] is not None
     assert trips[0]["kon_exit"] is None
+
+
+@pytest.mark.asyncio
+async def test_main_only_hides_trips_without_zavod_event(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """main_only=true — karyerda/yo'lda turgan qatnovlar ro'yxatga tushmaydi."""
+    token = await login(client, "department", "dept123")
+
+    async def listed(plate: str, *, main_only: bool) -> int:
+        params: dict[str, object] = {"plate": plate}
+        if main_only:
+            params["main_only"] = "true"
+        resp = await client.get("/api/v1/trips", params=params, headers=auth_header(token))
+        assert resp.status_code == 200, resp.text
+        return len(resp.json())
+
+    # Faqat karyer hodisalari: kirdi → chiqdi, zavodga yetmagan.
+    kon_plate = _plate()
+    await _send(client, _kon(kon_plate, "in", 0))
+    await _send(client, _kon_exit(kon_plate, 10))
+    assert await listed(kon_plate, main_only=False) == 1
+    assert await listed(kon_plate, main_only=True) == 0
+
+    # Zavod tarozisidan o'tgan qatnov — filtrda ham qoladi.
+    zavod_plate = _plate()
+    await _send(client, _main(zavod_plate, "in", 45000, 0))
+    assert await listed(zavod_plate, main_only=True) == 1

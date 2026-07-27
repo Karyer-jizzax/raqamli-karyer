@@ -4,7 +4,8 @@ import { Card, cn, PlateBadge } from '@karier/ui';
 import { type MouseEvent, useState } from 'react';
 
 const KINDS = ['karyer', 'tashqi'] as const;
-const STAGES = ['karyerda', 'yolda', 'zavodda', 'yakunlandi', 'yuk_emas', 'chala'] as const;
+// Only zavod-side trips are listed, so karyerda/yolda can never appear here.
+const STAGES = ['zavodda', 'yakunlandi', 'yuk_emas', 'chala'] as const;
 const PAGE_SIZES = [10, 25, 50] as const;
 
 // Same table chrome as the M-1 grid (1px #eef2f6 grid, compact, no wrap).
@@ -225,8 +226,11 @@ function StageSection({
 export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
+  // main_only: zavod tarozisiga yetmagan (karyerda/yo'lda) qatnovlar ko'rinmaydi.
   const { data, isLoading } = useTrips(
-    quarryId ? { limit: '200', quarry_id: quarryId } : { limit: '200' },
+    quarryId
+      ? { limit: '200', main_only: 'true', quarry_id: quarryId }
+      : { limit: '200', main_only: 'true' },
   );
 
   const [f, setF] = useState<Record<string, string>>({});

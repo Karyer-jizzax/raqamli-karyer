@@ -65,6 +65,9 @@ async def list_trips(
     plate: Annotated[str | None, Query()] = None,
     trip_status: Annotated[str | None, Query(alias="status")] = None,
     kind: Annotated[str | None, Query()] = None,
+    # Faqat zavod (tarozi) hodisasi bo'lgan qatnovlar — karyerda/yo'lda
+    # turgan, hali zavodga yetmagan qatnovlar chiqarilmaydi.
+    main_only: Annotated[bool, Query()] = False,
     limit: Annotated[int, Query(le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TripOut]:
@@ -91,6 +94,10 @@ async def list_trips(
         stmt = stmt.where(Trip.status == trip_status)
     if kind is not None:
         stmt = stmt.where(Trip.kind == kind)
+    if main_only:
+        stmt = stmt.where(
+            (Trip.main_enter_event_id.is_not(None)) | (Trip.main_exit_event_id.is_not(None))
+        )
 
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
