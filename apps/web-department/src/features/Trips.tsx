@@ -296,15 +296,20 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
     [rows, quarryById],
   );
 
-  // no_cargo (yuk emas) rows never count as material in the totals.
-  const totalNetto = filtered.reduce(
-    (s, r) => s + (r.status === 'no_cargo' ? 0 : (r.netto_kg ?? 0)),
-    0,
-  );
-  const totalM3 = filtered.reduce(
-    (s, r) => s + (r.status === 'no_cargo' ? 0 : (r.volume_m3 ?? 0)),
-    0,
-  );
+  // Hom ashyo (karyerdan keltirilgan) va sotuv (zavoddan chiqarilgan) qarama-
+  // qarshi oqimlar — bitta yig'indiga qo'shilsa raqam ma'nosini yo'qotadi,
+  // shuning uchun har tur alohida sanaladi. no_cargo (yuk emas) qatorlar
+  // materialga kirmaydi, lekin qatnov sifatida sanaladi.
+  const totals = KINDS.map((kind) => {
+    const kindRows = filtered.filter((r) => r.kind === kind);
+    const cargo = kindRows.filter((r) => r.status !== 'no_cargo');
+    return {
+      kind,
+      count: kindRows.length,
+      netto: cargo.reduce((s, r) => s + (r.netto_kg ?? 0), 0),
+      m3: cargo.reduce((s, r) => s + (r.volume_m3 ?? 0), 0),
+    };
+  });
   const tons = (kg: number | null) => (kg == null ? '-' : formatDecimal(kg / 1000, lang));
   const cubes = (m3: number | null) => (m3 == null ? '-' : formatDecimal(m3, lang));
 
@@ -443,29 +448,36 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                   )}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-[#ecfdf5] font-bold">
-                    <td
-                      className={cn(CTR, 'border-t-2 border-t-[#d1fae5]')}
-                      colSpan={quarryId ? 5 : 6}
-                    >
-                      {t('jami')} ({filtered.length})
-                    </td>
-                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{cubes(totalM3)}</td>
-                    <td className={cn(NUM, 'border-t-2 border-t-[#d1fae5]')}>{tons(totalNetto)}</td>
-                    <td className={cn(CELL, 'border-t-2 border-t-[#d1fae5]')} />
-                  </tr>
+                  {totals.map((x, i) => {
+                    const top = i === 0 && 'border-t-2 border-t-[#d1fae5]';
+                    return (
+                      <tr key={x.kind} className="bg-[#ecfdf5] font-bold">
+                        <td className={cn(CTR, top)} colSpan={quarryId ? 5 : 6}>
+                          {t(`trip_kind_${x.kind}`)} ({x.count})
+                        </td>
+                        <td className={cn(NUM, top)}>{cubes(x.m3)}</td>
+                        <td className={cn(NUM, top)}>{tons(x.netto)}</td>
+                        <td className={cn(CELL, top)} />
+                      </tr>
+                    );
+                  })}
                 </tfoot>
               </table>
             </div>
 
             <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-[13px] text-muted-foreground">
-                {t('trips_total')}: <b className="text-foreground">{filtered.length}</b> ·{' '}
-                {t('trips_total_netto')}:{' '}
-                <b className="text-foreground tabular-nums">
-                  {cubes(totalM3)} {t('vol_unit')}
-                </b>{' '}
-                · <b className="text-foreground tabular-nums">{tons(totalNetto)} t</b>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-muted-foreground">
+                <span>
+                  {t('trips_total')}: <b className="text-foreground">{filtered.length}</b>
+                </span>
+                {totals.map((x) => (
+                  <span key={x.kind}>
+                    · {t(`trip_kind_${x.kind}`)}:{' '}
+                    <b className="text-foreground tabular-nums">
+                      {cubes(x.m3)} {t('vol_unit')} / {tons(x.netto)} t
+                    </b>
+                  </span>
+                ))}
               </div>
               <div className="flex items-center gap-2.5">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
