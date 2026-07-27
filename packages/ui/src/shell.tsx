@@ -19,7 +19,7 @@ export function AppHeader({ title, children }: { title: string; children?: React
   const [brand, suffix] = title.split(' — ');
   return (
     <header className="flex h-[58px] shrink-0 items-center gap-3 border-b bg-card px-4 lg:px-[26px]">
-      <div className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-primary text-[15px] font-bold text-primary-foreground">
+      <div className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-primary text-sm font-bold text-primary-foreground">
         K
       </div>
       <strong className="truncate text-base font-semibold tracking-[-0.01em]">
@@ -118,12 +118,14 @@ export function Breadcrumb({ items, onHome }: { items: Crumb[]; onHome?: () => v
 export function PageHeader({
   eyebrow,
   title,
+  subtitle,
   breadcrumb,
   meta,
   actions,
 }: {
   eyebrow: string;
   title: string;
+  subtitle?: ReactNode;
   breadcrumb?: ReactNode;
   meta?: ReactNode;
   actions?: ReactNode;
@@ -133,6 +135,9 @@ export function PageHeader({
       <div className="min-w-0">
         <Eyebrow className="text-slate-400">{eyebrow}</Eyebrow>
         <h1 className="mt-0.5 mb-1.5 truncate text-lg font-semibold tracking-[-0.01em]">{title}</h1>
+        {subtitle && (
+          <p className="m-0 mb-1.5 max-w-[80ch] text-data text-muted-foreground">{subtitle}</p>
+        )}
         {breadcrumb}
       </div>
       <div className="flex flex-wrap items-center gap-2.5">

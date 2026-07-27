@@ -79,11 +79,14 @@ export function FilterSelect({
   value,
   onChange,
   options,
+  allowAll = true,
 }: {
   label: string;
   value: string | undefined;
   onChange: (v: string) => void;
   options: [value: string, label: string][];
+  /** Set false where "no value" is not meaningful (e.g. a year picker). */
+  allowAll?: boolean;
 }) {
   const { t } = useTranslation();
   const id = useId();
@@ -94,7 +97,7 @@ export function FilterSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL}>{t('flt_all')}</SelectItem>
+          {allowAll && <SelectItem value={ALL}>{t('flt_all')}</SelectItem>}
           {options.map(([v, lbl]) => (
             <SelectItem key={v} value={v}>
               {lbl}

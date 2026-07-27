@@ -8,11 +8,18 @@
  * does.
  */
 import { useTranslation } from '@karier/i18n';
-import { AlertTriangleIcon, InboxIcon, RotateCcwIcon } from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  InboxIcon,
+  RotateCcwIcon,
+} from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { cn } from './lib/utils';
 import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 // ── cell chrome ──────────────────────────────────────────────────────────────
 export const GRID_CELL = 'border border-grid px-3 py-2 whitespace-nowrap';
@@ -163,6 +170,78 @@ export function EmptyState({
       <p className="m-0 text-sm font-medium text-foreground">{title}</p>
       {hint && <p className="m-0 max-w-[46ch] text-data text-muted-foreground">{hint}</p>}
       {action && <div className="mt-1.5">{action}</div>}
+    </div>
+  );
+}
+
+// ── pagination ───────────────────────────────────────────────────────────────
+
+/** Rows-per-page + range read-out + prev/next, sized to sit under a grid. */
+export function TablePagination({
+  page,
+  pages,
+  pageSize,
+  pageSizes,
+  total,
+  from,
+  to,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pages: number;
+  pageSize: number;
+  pageSizes: readonly number[];
+  total: number;
+  from: number;
+  to: number;
+  onPage: (p: number) => void;
+  onPageSize: (n: number) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-2.5">
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {t('pg_per')}
+        <Select value={String(pageSize)} onValueChange={(v) => onPageSize(Number(v))}>
+          <SelectTrigger size="sm" className="h-8 w-[68px] px-2.5 text-xs" aria-label={t('pg_per')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizes.map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
+      <span className="text-data text-muted-foreground tabular-nums">
+        {total === 0 ? 0 : from}–{to} / {total}
+      </span>
+      <Button
+        variant="outline"
+        size="icon"
+        className="size-8"
+        disabled={page <= 1}
+        onClick={() => onPage(page - 1)}
+        aria-label={t('pg_prev')}
+      >
+        <ChevronLeftIcon />
+      </Button>
+      <span className="text-data text-foreground tabular-nums">
+        {page}/{pages}
+      </span>
+      <Button
+        variant="outline"
+        size="icon"
+        className="size-8"
+        disabled={page >= pages}
+        onClick={() => onPage(page + 1)}
+        aria-label={t('pg_next')}
+      >
+        <ChevronRightIcon />
+      </Button>
     </div>
   );
 }

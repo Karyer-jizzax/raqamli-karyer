@@ -53,6 +53,11 @@ export { JizzaxMap } from './map';
 export { ProtocolDocument, ProtocolViewer } from './protocol';
 export { exportM1ToExcel, type ExportM1Options } from './export-events';
 
+// Data screens shared by web-department and web-quarry
+export { M1Table } from './features/m1-table';
+export { QuarryOverview } from './features/quarry-overview';
+export { TripsTable } from './features/trips-table';
+
 // shadcn/ui primitives + helpers
 export { cn } from './lib/utils';
 export { Button as UiButton, buttonVariants } from './ui/button';

@@ -61,8 +61,16 @@ export const M1_STATUS_TONE: Record<StatusKey, Tone> = {
   no_plate: 'danger',
 };
 
-/** Gate direction — exit is the billable movement, enter is the return leg. */
-export const DIRECTION_TONE = { exit: 'success', enter: 'warning' } as const;
+/** Gate direction — exit is the billable movement, enter is the return leg.
+ *  `direction` arrives as a plain string, so unknown values fall back to neutral. */
+export const DIRECTION_TONE: Record<string, Tone | undefined> = {
+  exit: 'success',
+  enter: 'warning',
+};
+
+export function directionTone(direction: string): Tone {
+  return DIRECTION_TONE[direction] ?? 'neutral';
+}
 
 /** Trip kind — karyer = raw material in, tashqi = product sold out. */
 export const TRIP_KIND_TONE = { karyer: 'success', tashqi: 'stage' } as const;

@@ -188,7 +188,7 @@ function Home() {
 
 export function App() {
   return (
-    <RequireAuth allowedRoles={['superadmin']} appKey="app_main" accent="#4f46e5">
+    <RequireAuth allowedRoles={['superadmin']} appKey="app_main">
       <Home />
     </RequireAuth>
   );

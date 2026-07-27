@@ -195,6 +195,8 @@ const uzLatn: Dict = {
   dash_all_quarries: "Barcha karyerlar ma'lumoti",
   dash_view_details: 'Batafsil',
   dash_dblclick_hint: 'Batafsil uchun ikki marta bosing',
+  dash_scale_low: 'Kam',
+  dash_scale_high: "Ko'p karyer",
   dash_back: 'Orqaga',
   dash_detail_title:
     "{{region}}, {{district}} tumanida karyerlardan chiqqan avtotransportlarni nazorat qiluvchi eko-postlar bo'yicha MA'LUMOT",
@@ -399,6 +401,8 @@ const uzLatn: Dict = {
   rep_dim: 'Nomi',
   rep_count: 'Soni',
   rep_vol: 'Hajmi (m³)',
+  rep_from: 'Sanadan',
+  rep_to: 'Sanagacha',
 };
 
 const uzCyrl: Dict = {
@@ -591,6 +595,8 @@ const uzCyrl: Dict = {
   dash_all_quarries: 'Барча карьерлар маълумоти',
   dash_view_details: 'Батафсил',
   dash_dblclick_hint: 'Батафсил учун икки марта босинг',
+  dash_scale_low: 'Кам',
+  dash_scale_high: 'Кўп карьер',
   dash_back: 'Орқага',
   dash_detail_title:
     '{{region}}, {{district}} туманида карьерлардан чиққан автотранспортларни назорат қилувчи эко-постлар бўйича МАЪЛУМОТ',
@@ -795,6 +801,8 @@ const uzCyrl: Dict = {
   rep_dim: 'Номи',
   rep_count: 'Сони',
   rep_vol: 'Ҳажми (м³)',
+  rep_from: 'Санадан',
+  rep_to: 'Санагача',
 };
 
 const ru: Dict = {
@@ -987,6 +995,8 @@ const ru: Dict = {
   dash_all_quarries: 'Информация по всем карьерам',
   dash_view_details: 'Подробнее',
   dash_dblclick_hint: 'Двойной клик для подробностей',
+  dash_scale_low: 'Мало',
+  dash_scale_high: 'Много карьеров',
   dash_back: 'Назад',
   dash_detail_title:
     'Данные по эко-постам, контролирующим автотранспорт, выезжающий с карьеров ({{region}}, {{district}})',
@@ -1191,6 +1201,8 @@ const ru: Dict = {
   rep_dim: 'Наименование',
   rep_count: 'Кол-во',
   rep_vol: 'Объём (м³)',
+  rep_from: 'С даты',
+  rep_to: 'По дату',
 };
 
 export const DICTIONARIES: Record<Lang, Dict> = {

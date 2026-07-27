@@ -111,7 +111,8 @@ export function RequireAuth({
   allowedRoles?: Role[];
   /** i18n key of this app's title (e.g. "app_main"), shown as a badge on the login page. */
   appKey?: string;
-  /** Brand accent color for the login background/badge, to visually distinguish each app. */
+  /** Brand accent for the login badge. Defaults to the app's own --primary
+   *  token, so an app only passes this to override its theme. */
   accent?: string;
 }) {
   const { user, loading, logout } = useAuth();
@@ -137,7 +138,7 @@ export function RequireAuth({
 function LoginScreen({
   allowedRoles,
   appKey,
-  accent = '#4f46e5',
+  accent = 'var(--primary)',
 }: {
   allowedRoles?: Role[];
   appKey?: string;
@@ -172,7 +173,7 @@ function LoginScreen({
     }
   }
 
-  const tint = `color-mix(in srgb, ${accent} 8%, #ffffff)`;
+  const tint = `color-mix(in oklab, ${accent} 8%, #ffffff)`;
 
   return (
     // mt-auto/mb-auto on the children (not justify-center) keeps the card
