@@ -4,51 +4,20 @@
  * web-department shows the same view at the end of its drill-down and passes a
  * breadcrumb in.
  */
-import { useDistricts, useQuarries, useQuarryStats, useRegions } from '@karier/api-client';
+import { useDistricts, useM1, useQuarries, useQuarryStats, useRegions } from '@karier/api-client';
 import { formatDateTime, formatNumber, currentLang, useTranslation } from '@karier/i18n';
-import {
-  ActivityIcon,
-  BarChart3Icon,
-  CameraIcon,
-  type LucideIcon,
-  MountainIcon,
-  TruckIcon,
-} from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import type { StatusKey } from '@karier/types';
+import { ActivityIcon, BarChart3Icon, CameraIcon, MountainIcon, TruckIcon } from 'lucide-react';
+import { type ReactNode, useMemo, useState } from 'react';
 
+import { BucketColumns, ChartCard, ChartTable, SplitBar, StatTile } from '../charts';
 import { cn } from '../lib/utils';
+import { type Period, PeriodPicker, periodRange } from '../period';
 import { localizedName } from '../primitives';
 import { PageHeader, Tabs, UpdatedStamp } from '../shell';
-import { Chip, TONE_DOT } from '../status';
+import { Chip, M1_STATUS_TONE, TONE_DOT, TONE_FILL } from '../status';
 import { M1Table } from './m1-table';
 import { TripsTable } from './trips-table';
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  unit,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  unit?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
-      <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary-tint text-primary">
-        <Icon className="size-5" strokeWidth={1.7} />
-      </span>
-      <div className="min-w-0">
-        <div className="text-xs leading-tight text-muted-foreground">{label}</div>
-        <div className="text-xl font-bold text-foreground tabular-nums">
-          {value}
-          {unit && <span className="ml-1 text-2xs font-semibold text-muted-foreground">{unit}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function InfoRow({
   label,
@@ -89,26 +58,73 @@ function StatBox({ label, value, danger }: { label: string; value: string; dange
   );
 }
 
+/**
+ * @param showData  Renders the trips/M-1 tabs underneath. The department's
+ *                  drill-down wants them (it is the end of the trail); the
+ *                  quarry app does not — there the two grids are their own
+ *                  sidebar screens.
+ */
 export function QuarryOverview({
   quarryId,
   breadcrumb,
+  showData = true,
 }: {
   quarryId?: string;
   breadcrumb?: ReactNode;
+  showData?: boolean;
 }) {
   const { t } = useTranslation();
   const lang = currentLang();
 
+  const [period, setPeriod] = useState<Period>({
+    year: String(new Date().getFullYear()),
+    month: '',
+  });
+  const range = periodRange(period);
+
   const { data: districts } = useDistricts();
   const { data: regions } = useRegions();
   const { data: quarries } = useQuarries();
-  const { data: stat } = useQuarryStats(quarryId);
+  const { data: stat } = useQuarryStats(quarryId, range);
+  // The log for the same period — the shape of the working day and the status
+  // split come from it, so the picker scopes every number on the screen.
+  const { data: log, isFetching: logFetching } = useM1(
+    quarryId ? { limit: '500', quarry_id: quarryId, ...range } : { limit: '500', ...range },
+  );
 
   const quarry = quarries?.find((q) => q.id === quarryId);
   const district = districts?.find((d) => d.id === quarry?.district_id);
   const region = regions?.find((r) => r.id === district?.region_id);
 
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
+
+  // Shape of the working day: which hours the gate is busy. Derived from the
+  // period's log — the API has no hourly endpoint and 500 rows is cheap here.
+  const logRows = useMemo(() => log?.rows ?? [], [log]);
+  const hourly = useMemo(() => {
+    const bins = Array.from({ length: 24 }, (_, h) => ({
+      hour: `${String(h).padStart(2, '0')}`,
+      count: 0,
+    }));
+    for (const r of logRows) {
+      const h = new Date(r.occurred_at).getHours();
+      if (!Number.isNaN(h)) bins[h]!.count += 1;
+    }
+    return bins;
+  }, [logRows]);
+
+  const statusSplit = useMemo(() => {
+    const order: StatusKey[] = ['confirm', 'flagged', 'inspect', 'no_plate'];
+    const counts = new Map<string, number>();
+    for (const r of logRows) counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
+    return order.map((k) => ({
+      key: k,
+      label: t(`status_${k}`),
+      value: counts.get(k) ?? 0,
+      color: TONE_FILL[M1_STATUS_TONE[k]],
+    }));
+  }, [logRows, t]);
+
   const updatedAt = stat?.last_event_at ? formatDateTime(stat.last_event_at) : '—';
   const quarryName = quarry?.name ?? (quarryId ? t('loading') : '—');
   const suspended = quarry?.status === 'suspended';
@@ -120,18 +136,19 @@ export function QuarryOverview({
         title={quarryName}
         breadcrumb={breadcrumb}
         meta={<UpdatedStamp at={updatedAt} />}
+        actions={<PeriodPicker value={period} onChange={setPeriod} />}
       />
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3">
-        <StatCard
+        <StatTile
           icon={BarChart3Icon}
           label={t('dash_ore_volume')}
           value={fn(stat?.volume)}
           unit="m³"
         />
-        <StatCard icon={TruckIcon} label={t('dash_trucks_total')} value={fn(stat?.trucks)} />
-        <StatCard icon={ActivityIcon} label={t('dash_events')} value={fn(stat?.events)} />
-        <StatCard icon={CameraIcon} label={t('dash_cameras')} value={fn(stat?.cameras)} />
+        <StatTile icon={TruckIcon} label={t('dash_trucks_total')} value={fn(stat?.trucks)} />
+        <StatTile icon={ActivityIcon} label={t('dash_events')} value={fn(stat?.events)} />
+        <StatTile icon={CameraIcon} label={t('dash_cameras')} value={fn(stat?.cameras)} />
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[300px_1fr]">
@@ -196,7 +213,57 @@ export function QuarryOverview({
         </section>
       </div>
 
-      <DataTabs quarryId={quarryId} />
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_330px]">
+        <ChartCard
+          title={t('an_hourly')}
+          subtitle={t('an_hourly_hint').replace('{{n}}', String(logRows.length))}
+          stale={logFetching}
+          table={
+            <ChartTable
+              head={[t('an_hourly'), t('rep_count')]}
+              rows={hourly
+                .filter((h) => h.count > 0)
+                .map((h) => ({ key: h.hour, label: h.hour, values: [fn(h.count)] }))}
+            />
+          }
+        >
+          {logRows.length ? (
+            <BucketColumns
+              data={hourly}
+              xKey="hour"
+              valueKey="count"
+              format={fn}
+              tooltipLabel={t('an_events_unit')}
+            />
+          ) : (
+            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title={t('an_by_status')}
+          subtitle={t('rep_count')}
+          stale={logFetching}
+          table={
+            <ChartTable
+              head={[t('an_dim'), t('rep_count')]}
+              rows={statusSplit.map((s) => ({
+                key: s.key,
+                label: s.label,
+                values: [fn(s.value)],
+              }))}
+            />
+          }
+        >
+          {logRows.length ? (
+            <SplitBar segments={statusSplit} format={fn} />
+          ) : (
+            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
+          )}
+        </ChartCard>
+      </div>
+
+      {showData && <DataTabs quarryId={quarryId} />}
     </div>
   );
 }

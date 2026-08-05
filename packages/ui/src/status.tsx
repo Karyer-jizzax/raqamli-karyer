@@ -53,12 +53,24 @@ export const TRIP_STAGE_TONE = {
   yuk_emas: 'neutral',
 } as const satisfies Record<string, Tone>;
 
-/** M-1 row status: inspect/no_plate need an operator, flagged needs a second look. */
+/** M-1 row status: inspect/no_plate need an operator, flagged needs a second look.
+ *  Four distinct tones — the status split chart puts them side by side, and two
+ *  segments in the same red would read as one. */
 export const M1_STATUS_TONE: Record<StatusKey, Tone> = {
   confirm: 'success',
-  flagged: 'warning',
-  inspect: 'danger',
+  flagged: 'stage',
+  inspect: 'warning',
   no_plate: 'danger',
+};
+
+/** Chart fill per tone. Charts take a color, not a class — same semantics. */
+export const TONE_FILL: Record<Tone, string> = {
+  success: 'var(--success)',
+  warning: 'var(--warning)',
+  danger: 'var(--danger)',
+  info: 'var(--info)',
+  stage: 'var(--stage)',
+  neutral: 'var(--chart-context)',
 };
 
 /** Gate direction — exit is the billable movement, enter is the return leg.

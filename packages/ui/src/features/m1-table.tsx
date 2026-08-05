@@ -187,7 +187,15 @@ function VehicleHistory({
   );
 }
 
-export function M1Table({ quarryId }: { quarryId?: string } = {}) {
+/**
+ * @param statuses  Restricts the log to these statuses — how the work queues
+ *                  ("Tekshirish kerak", "Huquqbuzarliklar") reuse this grid.
+ *                  The status filter then only offers the allowed ones.
+ */
+export function M1Table({
+  quarryId,
+  statuses,
+}: { quarryId?: string; statuses?: readonly string[] } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const showQuarry = !quarryId;
@@ -220,7 +228,11 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
     return m;
   }, [quarries]);
 
-  const rows = data?.rows ?? [];
+  const allRows = data?.rows;
+  const rows = useMemo(() => {
+    const list = allRows ?? [];
+    return statuses ? list.filter((r) => statuses.includes(r.status)) : list;
+  }, [allRows, statuses]);
 
   // Filter dropdown options derived from the full (unfiltered) result set, so
   // selecting one filter never collapses the others' choices.
@@ -330,7 +342,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
           label={t('filt_status')}
           value={f.status}
           onChange={set('status')}
-          options={STATUSES.map((s) => [s, t(`status_${s}`)])}
+          options={(statuses ?? STATUSES).map((s) => [s, t(`status_${s}`)])}
         />
         <FilterSelect
           label={t('flt_material')}
@@ -354,7 +366,7 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
         ) : filtered.length === 0 ? (
           <EmptyState
             title={activeCount ? t('empty_no_match') : t('empty_no_data')}
-            hint={activeCount ? t('empty_no_match_hint') : t('empty_table')}
+            hint={activeCount ? t('empty_no_match_hint') : t('empty_no_data_hint')}
             action={
               activeCount ? (
                 <Button variant="outline" size="sm" onClick={clear}>

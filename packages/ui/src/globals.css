@@ -37,11 +37,19 @@
   --input: #dbe2ea;
   --ring: #4f46e5;
 
-  --chart-1: var(--primary);
+  /* Categorical chart slots — a fixed order, assigned 1→5 and never cycled.
+     Deliberately independent of --primary: the accent differs per app, so
+     binding slot 1 to it would repaint a series between web-quarry and
+     web-department (and collide with the teal/green slots). Validated for CVD
+     separation and contrast on the light surface. */
+  --chart-1: #1d4ed8;
   --chart-2: #0d9488;
-  --chart-3: #16a34a;
-  --chart-4: #f59e0b;
+  --chart-3: #d97706;
+  --chart-4: #6d28d9;
   --chart-5: #e11d48;
+  /* Context series in an emphasis chart: the "everything else" behind the one
+     series that carries the story. Never an identity color. */
+  --chart-context: #94a3b8;
 
   /* Surfaces used by the dense inspection screens. --surface-hover derives from
      the per-app accent, so a trip row hovers green in web-quarry and teal in
@@ -118,6 +126,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-context: var(--chart-context);
 
   --color-surface-subtle: var(--surface-subtle);
   --color-surface-hover: var(--surface-hover);

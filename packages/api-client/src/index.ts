@@ -97,6 +97,7 @@ export {
   type ProtocolDocument,
   type ReportRow,
   type ReportResponse,
+  type ReportParams,
   type Detection,
   type AnalyzeResponse,
 } from './client';

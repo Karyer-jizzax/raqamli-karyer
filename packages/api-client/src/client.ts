@@ -591,7 +591,11 @@ export const createProtocol = (
 ) => api.post<ProtocolDocument>(`/events/${eventId}/protocol`, signatures);
 export const getEventProtocol = (eventId: string) =>
   api.get<ProtocolDocument>(`/events/${eventId}/protocol`);
-export const getReport = (n: number) => api.get<ReportResponse>(`/stats/reports/${n}`);
+export interface ReportParams extends DateRangeParams {
+  district_id?: string;
+}
+export const getReport = (n: number, params: ReportParams = {}) =>
+  api.get<ReportResponse>(`/stats/reports/${n}${dateRangeQuery(params)}`);
 
 export const getRegions = () => api.get<Region[]>('/regions');
 export const getRegionGeo = (regionId: string) => api.get<RegionGeo>(`/regions/${regionId}/geo`);

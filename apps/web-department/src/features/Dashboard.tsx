@@ -1,17 +1,42 @@
-import { type DistrictGeo, useOverview, useRegionGeo, useRegions } from '@karier/api-client';
+import {
+  type DistrictGeo,
+  useDynamics,
+  useOverview,
+  useRegionGeo,
+  useRegions,
+} from '@karier/api-client';
 import { currentLang, formatNumber, monthName, useTranslation } from '@karier/i18n';
 import {
+  ChartCard,
+  ChartLegend,
+  ChartTable,
   cn,
-  FilterSelect,
   JizzaxMap,
   localizedName,
   PageHeader,
+  type Period,
+  PeriodPicker,
+  periodRange,
+  previousPeriod,
+  deltaPct,
+  StatTile,
+  TrendColumns,
   UiButton as Button,
   useAuth,
 } from '@karier/ui';
-import { BarChart3Icon, CameraIcon, HomeIcon, type LucideIcon, MountainIcon } from 'lucide-react';
+import {
+  ActivityIcon,
+  BarChart3Icon,
+  CameraIcon,
+  HomeIcon,
+  type LucideIcon,
+  MountainIcon,
+  ScanSearchIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+import { ReportCard } from './ReportCard';
 
 function StatRow({
   label,
@@ -56,52 +81,81 @@ export function Dashboard() {
   const { data: geo } = useRegionGeo(regionId ?? undefined);
   const lang = currentLang();
 
-  const thisYear = new Date().getFullYear();
-  const [period, setPeriod] = useState<{ year: string; month: string }>({
-    year: String(thisYear),
+  const [period, setPeriod] = useState<Period>({
+    year: String(new Date().getFullYear()),
     month: '',
   });
 
-  const params: { region_id?: string; district_id?: string; year?: string; month?: string } =
-    selected ? { district_id: selected } : regionId ? { region_id: regionId } : {};
-  if (period.year) params.year = period.year;
-  if (period.month) params.month = period.month;
-  const { data: overview } = useOverview(params);
-  const selectedDistrict = geo?.districts.find((d: DistrictGeo) => d.id === selected);
+  const scope: { region_id?: string; district_id?: string } = selected
+    ? { district_id: selected }
+    : regionId
+      ? { region_id: regionId }
+      : {};
+  const asOverviewParams = (p: Period) => ({ ...scope, year: p.year, ...(p.month ? { month: p.month } : {}) });
 
+  const { data: overview } = useOverview(asOverviewParams(period));
+  // The same numbers one period back — the stat tiles' deltas, nothing else.
+  const { data: before } = useOverview(asOverviewParams(previousPeriod(period)));
+  const { data: dynamics, isFetching: dynFetching } = useDynamics({
+    year: Number(period.year),
+    ...(selected ? { district_id: selected } : {}),
+  });
+
+  const selectedDistrict = geo?.districts.find((d: DistrictGeo) => d.id === selected);
   const regionTitle = region ? localizedName(region) : '';
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
+
+  const buckets = dynamics?.buckets ?? [];
+  const trend = buckets.map((b) => ({
+    month: String(b.month).padStart(2, '0'),
+    name: monthName(b.month, lang),
+    confirmed: b.confirmed,
+    unconfirmed: Math.max(0, b.total - b.confirmed),
+  }));
+  const trendSeries = [
+    { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
+    { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
+  ];
 
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 p-4 lg:p-6">
       <PageHeader
         eyebrow={t('sec_oversight')}
         title={regionTitle || t('nav_dashboard')}
-        actions={
-          <div className="flex items-end gap-2">
-            <div className="w-[120px]">
-              <FilterSelect
-                label={t('as_year')}
-                value={period.year}
-                allowAll={false}
-                onChange={(v) => setPeriod((p) => ({ ...p, year: v }))}
-                options={[thisYear, thisYear - 1, thisYear - 2].map((y) => [String(y), String(y)])}
-              />
-            </div>
-            <div className="w-[150px]">
-              <FilterSelect
-                label={t('as_month')}
-                value={period.month}
-                onChange={(v) => setPeriod((p) => ({ ...p, month: v }))}
-                options={Array.from({ length: 12 }, (_, i) => [
-                  String(i + 1),
-                  monthName(i + 1, lang),
-                ])}
-              />
-            </div>
-          </div>
-        }
+        actions={<PeriodPicker value={period} onChange={setPeriod} />}
       />
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
+        <StatTile
+          icon={ActivityIcon}
+          label={t('dash_events')}
+          value={fn(overview?.events)}
+          delta={deltaPct(overview?.events, before?.events)}
+          deltaLabel={t('an_vs_prev')}
+        />
+        <StatTile
+          icon={BarChart3Icon}
+          label={t('dash_ore_volume')}
+          value={fn(Math.round(overview?.total_volume ?? 0))}
+          unit="m³"
+          delta={deltaPct(overview?.total_volume, before?.total_volume)}
+          deltaLabel={t('an_vs_prev')}
+        />
+        <StatTile
+          icon={ScanSearchIcon}
+          label={t('an_detection')}
+          value={`${fn(Math.round(overview?.avg_confidence ?? 0))}%`}
+          good="up"
+          delta={deltaPct(overview?.avg_confidence, before?.avg_confidence)}
+          deltaLabel={t('an_vs_prev')}
+        />
+        <StatTile icon={MountainIcon} label={t('dash_quarries')} value={fn(overview?.quarries)} />
+        <StatTile
+          icon={CameraIcon}
+          label={t('dash_cameras_active')}
+          value={`${fn(overview?.cameras_active)} / ${fn(overview?.cameras)}`}
+        />
+      </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[296px_1fr]">
         {/* Region totals */}
@@ -174,6 +228,46 @@ export function Dashboard() {
             </section>
           )}
         </div>
+      </div>
+
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <ChartCard
+          title={`${t('an_dynamics')} · ${period.year}`}
+          subtitle={t('an_dynamics_hint')}
+          stale={dynFetching}
+          legend={<ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />}
+          table={
+            <ChartTable
+              head={[t('an_month'), t('an_confirmed'), t('an_unconfirmed')]}
+              rows={trend.map((r) => ({
+                key: r.month,
+                label: r.month,
+                values: [fn(r.confirmed), fn(r.unconfirmed)],
+              }))}
+            />
+          }
+        >
+          {trend.length ? (
+            <TrendColumns
+              data={trend}
+              series={trendSeries}
+              xKey="month"
+              format={fn}
+              labelFor={(m) => trend.find((r) => r.month === m)?.name ?? m}
+            />
+          ) : (
+            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
+          )}
+        </ChartCard>
+
+        <ReportCard
+          n={4}
+          title={t('an_by_district')}
+          subtitle={`${t('dash_ore_volume')} · ${t('an_top_hint')}`}
+          metric="volume"
+          range={periodRange(period)}
+          districtId={selected ?? undefined}
+        />
       </div>
     </div>
   );

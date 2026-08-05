@@ -1,6 +1,7 @@
 /**
- * App chrome shared by web-department and web-quarry: the brand header, the
- * top nav, the per-page header with its breadcrumb trail, and the tab control.
+ * Per-screen chrome shared by web-department and web-quarry: the breadcrumb
+ * trail, the page header, the freshness stamp and the tab control. The app
+ * frame around them is `app-shell.tsx`.
  *
  * Nothing here imports react-router — navigation arrives as callbacks so the
  * package stays router-free.
@@ -9,50 +10,9 @@ import { useTranslation } from '@karier/i18n';
 import { ChevronRightIcon, HomeIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 
-import { LangSwitcher } from './components';
 import { cn } from './lib/utils';
 import { Eyebrow } from './primitives';
 import { Button } from './ui/button';
-
-/** Brand lockup + language switcher + profile menu. Identical in both apps. */
-export function AppHeader({ title, children }: { title: string; children?: ReactNode }) {
-  // "Karier Kontrol — Departament" → render the suffix (from the dash) muted.
-  const [brand, suffix] = title.split(' — ');
-  return (
-    <header className="flex h-[58px] shrink-0 items-center gap-3 border-b bg-card px-4 lg:px-[26px]">
-      <div className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-primary text-sm font-bold text-primary-foreground">
-        K
-      </div>
-      <strong className="truncate text-base font-semibold tracking-[-0.01em]">
-        {brand}
-        {suffix && <span className="font-medium text-slate-400"> — {suffix}</span>}
-      </strong>
-      <div className="ml-auto flex items-center gap-3.5">
-        <LangSwitcher />
-        {children}
-      </div>
-    </header>
-  );
-}
-
-/** Underlined top nav. Apps supply their own router links styled with `navLink`. */
-export function TopNav({ children }: { children: ReactNode }) {
-  return (
-    <nav className="flex gap-[26px] overflow-x-auto border-b bg-card px-4 lg:px-[26px]">
-      {children}
-    </nav>
-  );
-}
-
-export function navLink(active: boolean) {
-  return cn(
-    'border-b-[3px] px-0.5 py-3.5 text-sm whitespace-nowrap no-underline transition-colors',
-    'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-    active
-      ? 'border-primary font-semibold text-primary'
-      : 'border-transparent font-medium text-muted-foreground hover:text-foreground',
-  );
-}
 
 export interface Crumb {
   label: string;

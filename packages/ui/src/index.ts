@@ -17,6 +17,7 @@ export {
   SOURCE_TONE,
   TONE_CHIP,
   TONE_DOT,
+  TONE_FILL,
   TONE_TEXT,
   TRIP_KIND_TONE,
   TRIP_STAGE_TONE,
@@ -38,15 +39,26 @@ export {
 } from './data-table';
 export { FilterBar, FilterDate, FilterSelect, FilterText, useFilterPanel } from './filters';
 export {
-  AppHeader,
-  Breadcrumb,
-  type Crumb,
-  navLink,
-  PageHeader,
-  Tabs,
-  TopNav,
-  UpdatedStamp,
-} from './shell';
+  type DateRange,
+  deltaPct,
+  type Period,
+  PeriodPicker,
+  periodRange,
+  previousPeriod,
+} from './period';
+export { AppShell, type NavEntry } from './app-shell';
+export {
+  BucketColumns,
+  ChartCard,
+  ChartLegend,
+  ChartTable,
+  RankBars,
+  type Segment,
+  SplitBar,
+  StatTile,
+  TrendColumns,
+} from './charts';
+export { Breadcrumb, type Crumb, PageHeader, Tabs, UpdatedStamp } from './shell';
 export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './plate';
 export { AuthProvider, RequireAuth, useAuth, ProfileMenu } from './auth';
 export { JizzaxMap } from './map';

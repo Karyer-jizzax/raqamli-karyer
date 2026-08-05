@@ -27,6 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^2.6.0",
     "tw-animate-css": "^1.0.0",
     "xlsx": "^0.18.5"

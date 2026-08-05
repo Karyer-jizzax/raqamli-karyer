@@ -140,10 +140,18 @@ async def report(
     db: DbDep,
     user: UserDep,
     region_id: Annotated[UUID | None, Query()] = None,
+    district_id: Annotated[UUID | None, Query()] = None,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
 ) -> ReportResponse:
     if n not in (2, 3, 4, 5):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Report topilmadi")
     eff_region = _effective_region(user, region_id)
+    # The dashboard scopes every card to one period, so a report that ignored
+    # the picker would silently show all-time numbers next to filtered ones.
+    period = stats_svc.period_conds(date_from, date_to)
+    # A district filter (and the region scope) needs the quarry -> district join.
+    needs_join = eff_region is not None or district_id is not None
 
     if n == 4:
         # By district (events -> quarry -> district)
@@ -155,18 +163,22 @@ async def report(
         )
         if eff_region is not None:
             stmt = stmt.where(District.region_id == eff_region)
-        stmt = stmt.group_by(col).order_by(func.count(Event.id).desc())
+        if district_id is not None:
+            stmt = stmt.where(District.id == district_id)
+        stmt = stmt.where(*period).group_by(col).order_by(func.count(Event.id).desc())
         dimension = "district"
     else:
         dimension, col = _REPORT_DIMS[n]
         stmt = select(col, func.count(Event.id), func.coalesce(func.sum(Event.volume_final), 0))
-        if eff_region is not None:
-            stmt = (
-                stmt.join(Quarry, Quarry.id == Event.quarry_id)
-                .join(District, District.id == Quarry.district_id)
-                .where(District.region_id == eff_region)
+        if needs_join:
+            stmt = stmt.join(Quarry, Quarry.id == Event.quarry_id).join(
+                District, District.id == Quarry.district_id
             )
-        stmt = stmt.group_by(col).order_by(func.count(Event.id).desc())
+            if eff_region is not None:
+                stmt = stmt.where(District.region_id == eff_region)
+            if district_id is not None:
+                stmt = stmt.where(District.id == district_id)
+        stmt = stmt.where(*period).group_by(col).order_by(func.count(Event.id).desc())
 
     rows = (await db.execute(stmt)).all()
     return ReportResponse(
@@ -196,12 +208,14 @@ async def m1(
     material_id: Annotated[str | None, Query()] = None,
     vtype: Annotated[str | None, Query()] = None,
     plate: Annotated[str | None, Query()] = None,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
     limit: Annotated[int, Query(le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> M1Response:
     eff_region = _effective_region(user, region_id)
 
-    base = select(Event)
+    base = select(Event).where(*stats_svc.period_conds(date_from, date_to))
     if district_id is not None or eff_region is not None:
         base = base.join(Quarry, Quarry.id == Event.quarry_id)
         if district_id is not None:

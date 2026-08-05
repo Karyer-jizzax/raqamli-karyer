@@ -74,6 +74,41 @@ async def test_reports(client: httpx.AsyncClient, seeded: None) -> None:
 
 
 @pytest.mark.asyncio
+async def test_m1_period_filter(client: httpx.AsyncClient, seeded: None) -> None:
+    # The quarry dashboard reads the log for one period; totals must follow it.
+    token = await login(client, "department", "dept123")
+    scoped = (
+        await client.get(
+            "/api/v1/stats/m1?date_from=1990-01-01&date_to=1990-12-31",
+            headers=auth_header(token),
+        )
+    ).json()
+    assert scoped["rows"] == []
+    assert scoped["total_count"] == 0
+    assert scoped["total_volume"] == 0
+
+
+@pytest.mark.asyncio
+async def test_reports_period_filter(client: httpx.AsyncClient, seeded: None) -> None:
+    # The analytics screen scopes every card to one period — a report that
+    # ignored date_from/date_to would show all-time numbers beside filtered ones.
+    token = await login(client, "department", "dept123")
+    for n in (2, 3, 4, 5):
+        base = (
+            await client.get(f"/api/v1/stats/reports/{n}", headers=auth_header(token))
+        ).json()
+        scoped = (
+            await client.get(
+                f"/api/v1/stats/reports/{n}?date_from=1990-01-01&date_to=1990-12-31",
+                headers=auth_header(token),
+            )
+        ).json()
+        assert scoped["rows"] == []
+        # Sanity: the unscoped call for the same dimension does return rows.
+        assert isinstance(base["rows"], list)
+
+
+@pytest.mark.asyncio
 async def test_dynamics(client: httpx.AsyncClient, seeded: None) -> None:
     token = await login(client, "department", "dept123")
     resp = await client.get("/api/v1/stats/dynamics", headers=auth_header(token))

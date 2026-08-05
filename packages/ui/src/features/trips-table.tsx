@@ -110,7 +110,15 @@ function TripDialog({ trip, onClose }: { trip: TripRecord; onClose: () => void }
   );
 }
 
-export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
+/**
+ * @param stages  Restricts the grid to these stages — how the violations queue
+ *                reuses it for "chala" trips. The stage filter then only
+ *                offers the allowed ones.
+ */
+export function TripsTable({
+  quarryId,
+  stages,
+}: { quarryId?: string; stages?: readonly string[] } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const showQuarry = !quarryId;
@@ -148,7 +156,10 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
     return m;
   }, [quarries]);
 
-  const rows = data ?? [];
+  const rows = useMemo(() => {
+    const list = data ?? [];
+    return stages ? list.filter((r) => stages.includes(r.stage)) : list;
+  }, [data, stages]);
 
   // Client-side filtering over the single fetch (mirrors the M-1 grid).
   const filtered = rows.filter((r) => {
@@ -220,7 +231,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
           label={t('filt_status')}
           value={f.stage}
           onChange={set('stage')}
-          options={STAGES.map((s) => [s, t(`stage_${s}`)])}
+          options={(stages ?? STAGES).map((s) => [s, t(`stage_${s}`)])}
         />
         <FilterText
           label={t('filt_plate')}

@@ -106,7 +106,7 @@ async def overview(
     }
 
 
-def _period_conds(date_from: date | None, date_to: date | None) -> list[ColumnElement[bool]]:
+def period_conds(date_from: date | None, date_to: date | None) -> list[ColumnElement[bool]]:
     """Inclusive [date_from, date_to] filter on Event.occurred_at."""
     conds: list[ColumnElement[bool]] = []
     if date_from is not None:
@@ -140,7 +140,7 @@ async def quarry_stats(
 ) -> dict:
     """Per-quarry dashboard numbers (QuarryDetail page)."""
     ev_stmt = select(*_CARGO_AGGS).where(
-        Event.quarry_id == quarry_id, *_period_conds(date_from, date_to)
+        Event.quarry_id == quarry_id, *period_conds(date_from, date_to)
     )
     events, trucks, volume, unidentified, last_at = (await db.execute(ev_stmt)).one()
 
@@ -171,7 +171,7 @@ async def district_cargo(
     date_to: date | None = None,
 ) -> dict:
     """District cargo dashboard: totals + per-post strip + per-quarry table."""
-    period = _period_conds(date_from, date_to)
+    period = period_conds(date_from, date_to)
 
     totals_stmt = (
         select(*_CARGO_AGGS)

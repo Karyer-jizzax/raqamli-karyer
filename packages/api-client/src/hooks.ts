@@ -41,6 +41,7 @@ import {
   getQuarryMaterials,
   getQuarryPosts,
   getReport,
+  type ReportParams,
   getTripRules,
   updateTripRules,
   type TripRules,
@@ -370,7 +371,13 @@ export function useRegionGeo(regionId: string | undefined) {
 export function useOverview(
   params: { region_id?: string; district_id?: string; year?: string; month?: string } = {},
 ) {
-  return useQuery({ queryKey: ['overview', params], queryFn: () => getOverview(params) });
+  return useQuery({
+    queryKey: ['overview', params],
+    queryFn: () => getOverview(params),
+    // Changing the period must not blank the tiles — hold the last numbers
+    // (the card dims them) instead of flashing an empty state.
+    placeholderData: (prev) => prev,
+  });
 }
 
 export function useQuarryStats(quarryId: string | undefined, params: DateRangeParams = {}) {
@@ -378,6 +385,7 @@ export function useQuarryStats(quarryId: string | undefined, params: DateRangePa
     queryKey: ['quarry-stats', quarryId, params],
     queryFn: () => getQuarryStats(quarryId!, params),
     enabled: !!quarryId,
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -389,16 +397,31 @@ export function useDistrictCargo(districtId: string | undefined, params: DateRan
   });
 }
 
-export function useReport(n: number, enabled = true) {
-  return useQuery({ queryKey: ['report', n], queryFn: () => getReport(n), enabled });
+export function useReport(n: number, params: ReportParams = {}, enabled = true) {
+  return useQuery({
+    queryKey: ['report', n, params],
+    queryFn: () => getReport(n, params),
+    enabled,
+    // Analytics cards re-fetch as the period changes; keep the old numbers on
+    // screen (dimmed by the card) instead of flashing a skeleton.
+    placeholderData: (prev) => prev,
+  });
 }
 
 export function useDynamics(params: { year?: number; district_id?: string } = {}) {
-  return useQuery({ queryKey: ['dynamics', params], queryFn: () => getDynamics(params) });
+  return useQuery({
+    queryKey: ['dynamics', params],
+    queryFn: () => getDynamics(params),
+    placeholderData: (prev) => prev,
+  });
 }
 
 export function useM1(params: Record<string, string> = {}) {
-  return useQuery({ queryKey: ['m1', params], queryFn: () => getM1(params) });
+  return useQuery({
+    queryKey: ['m1', params],
+    queryFn: () => getM1(params),
+    placeholderData: (prev) => prev,
+  });
 }
 
 export function useTrips(params: TripParams = {}) {
