@@ -1,7 +1,23 @@
-import { type CargoPost, useDistrictCargo, useDistricts, useRegions } from '@karier/api-client';
-import { currentLang, formatDateTime, formatNumber, useTranslation } from '@karier/i18n';
+import {
+  type CargoPost,
+  useDistrictCargo,
+  useDistricts,
+  useDynamics,
+  useRegions,
+  useReport,
+} from '@karier/api-client';
+import {
+  currentLang,
+  formatDateTime,
+  formatNumber,
+  monthName,
+  useTranslation,
+} from '@karier/i18n';
 import {
   Breadcrumb,
+  ChartCard,
+  ChartLegend,
+  ChartTable,
   Chip,
   cn,
   type Crumb,
@@ -11,6 +27,8 @@ import {
   GRID_ROW,
   localizedName,
   PageHeader,
+  RankBars,
+  StatTile,
   Table,
   TableBody,
   TableCell,
@@ -19,9 +37,16 @@ import {
   TableRow,
   TableSkeleton,
   TONE_DOT,
+  TrendColumns,
   UpdatedStamp,
 } from '@karier/ui';
-import { ActivityIcon, TruckIcon } from 'lucide-react';
+import {
+  ActivityIcon,
+  BarChart3Icon,
+  CameraIcon,
+  MountainIcon,
+  TruckIcon,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -30,6 +55,9 @@ const DEFAULT_RANGE = {
   from: `${new Date().getFullYear()}-01-01`,
   to: isoDay(new Date()),
 };
+
+/** How many peer districts the ranking plots; this district is always among them. */
+const TOP_N = 8;
 
 /** One eco-post: its code, throughput and camera health. */
 function EcoPostCard({ post, lang, t }: { post: CargoPost; lang: ReturnType<typeof currentLang>; t: (k: string) => string }) {
@@ -118,24 +146,6 @@ function CargoTable({
   );
 }
 
-function StatBox({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div
-      className={cn(
-        'flex flex-1 items-center justify-between gap-2 rounded-lg border px-3 py-[9px]',
-        danger ? 'border-danger/20 bg-danger-tint' : 'bg-surface-subtle',
-      )}
-    >
-      <span className={cn('text-data', danger ? 'text-danger' : 'text-muted-foreground')}>
-        {label}:
-      </span>
-      <b className={cn('text-sm tabular-nums', danger ? 'text-danger' : 'text-foreground')}>
-        {value}
-      </b>
-    </div>
-  );
-}
-
 export function DistrictDetail() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -149,6 +159,16 @@ export function DistrictDetail() {
   const { data: cargo, isLoading, isError, refetch } = useDistrictCargo(districtId, {
     date_from: range.from || undefined,
     date_to: range.to || undefined,
+  });
+  // M4 without a district filter: every district in the region over the same
+  // range, which is what puts this one's numbers in context.
+  const { data: byDistrict, isFetching: rankFetching } = useReport(4, {
+    date_from: range.from || undefined,
+    date_to: range.to || undefined,
+  });
+  const { data: dynamics, isFetching: dynFetching } = useDynamics({
+    year: Number(range.from?.slice(0, 4)) || new Date().getFullYear(),
+    ...(districtId ? { district_id: districtId } : {}),
   });
 
   const district = districts?.find((d) => d.id === districtId);
@@ -164,6 +184,70 @@ export function DistrictDetail() {
       })),
     [cargo?.quarries],
   );
+
+  // KPI numbers come off the cargo payload rather than /stats/overview, which
+  // buckets by year+month and would ignore the from/to filter above it.
+  const totals = useMemo(
+    () => ({
+      events: (cargo?.quarries ?? []).reduce((s, q) => s + q.count, 0),
+      volume: (cargo?.quarries ?? []).reduce((s, q) => s + q.volume, 0),
+      quarries: (cargo?.quarries ?? []).length,
+      cameras: (cargo?.posts ?? []).reduce((s, p) => s + p.cameras, 0),
+      camerasActive: (cargo?.posts ?? []).reduce((s, p) => s + p.cameras_active, 0),
+    }),
+    [cargo],
+  );
+
+  // M4 keys districts by their latin name; join back to the district list to get
+  // the localized label, the current district's identity, and the region filter.
+  const ranking = useMemo(() => {
+    const peers = (districts ?? []).filter((d) => d.region_id === district?.region_id);
+    const byName = new Map(peers.map((d) => [d.name_uz_latn, d]));
+    const rows = (byDistrict?.rows ?? [])
+      .filter((r) => byName.has(r.key))
+      .map((r) => {
+        const d = byName.get(r.key)!;
+        return {
+          id: d.id,
+          label: localizedName(d),
+          count: r.count,
+          volume: Math.round(r.volume),
+          current: d.id === districtId,
+        };
+      })
+      .sort((a, b) => b.volume - a.volume);
+    const total = rows.reduce((s, r) => s + r.volume, 0);
+    const index = rows.findIndex((r) => r.current);
+    return {
+      rows,
+      total,
+      rank: index >= 0 ? index + 1 : null,
+      share: total > 0 && index >= 0 ? Math.round((rows[index]!.volume / total) * 100) : null,
+    };
+  }, [byDistrict?.rows, districts, district?.region_id, districtId]);
+
+  // Top N, but never drop this district off the chart — it is the whole point.
+  const rankBars = useMemo(() => {
+    const head = ranking.rows.slice(0, TOP_N);
+    const self = ranking.rows.find((r) => r.current);
+    const shown = self && !head.includes(self) ? [...head, self] : head;
+    return shown.map((r) => ({
+      label: r.label,
+      value: r.volume,
+      color: r.current ? 'var(--primary)' : 'var(--chart-context)',
+    }));
+  }, [ranking.rows]);
+
+  const trend = (dynamics?.buckets ?? []).map((b) => ({
+    month: String(b.month).padStart(2, '0'),
+    name: monthName(b.month, lang),
+    confirmed: b.confirmed,
+    unconfirmed: Math.max(0, b.total - b.confirmed),
+  }));
+  const trendSeries = [
+    { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
+    { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
+  ];
 
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
   const districtLabel = district ? localizedName(district) : t('loading');
@@ -203,6 +287,22 @@ export function DistrictDetail() {
         <TableSkeleton rows={6} cols={5} />
       ) : (
         <>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
+            <StatTile icon={ActivityIcon} label={t('dash_events')} value={fn(totals.events)} />
+            <StatTile
+              icon={BarChart3Icon}
+              label={t('dash_ore_volume')}
+              value={fn(Math.round(totals.volume))}
+              unit="m³"
+            />
+            <StatTile icon={MountainIcon} label={t('dash_quarries')} value={fn(totals.quarries)} />
+            <StatTile
+              icon={CameraIcon}
+              label={t('dash_cameras_active')}
+              value={`${fn(totals.camerasActive)} / ${fn(totals.cameras)}`}
+            />
+          </div>
+
           {/* Eco-post cards strip */}
           {posts.length > 0 ? (
             <div className="flex gap-2.5 overflow-x-auto pb-1">
@@ -260,10 +360,74 @@ export function DistrictDetail() {
                 <p className="mt-2.5 mb-0 text-data text-muted-foreground">{t('q_empty')}</p>
               )}
 
-              <div className="mt-3.5">
-                <StatBox label={t('dash_unidentified')} value={fn(cargo?.unidentified)} danger />
-              </div>
             </section>
+          </div>
+
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t('an_cross_district')}
+              subtitle={
+                ranking.rank
+                  ? `${t('an_rank')}: ${ranking.rank}/${ranking.rows.length} · ${t('an_share')}: ${ranking.share}%`
+                  : t('an_cross_district_hint')
+              }
+              stale={rankFetching}
+              legend={
+                <ChartLegend
+                  items={[
+                    { label: t('an_this_district'), color: 'var(--primary)' },
+                    { label: t('an_other_districts'), color: 'var(--chart-context)' },
+                  ]}
+                />
+              }
+              table={
+                <ChartTable
+                  head={[t('an_dim'), t('rep_count'), t('rep_vol')]}
+                  rows={ranking.rows.map((r) => ({
+                    key: r.id,
+                    label: r.label,
+                    values: [fn(r.count), fn(r.volume)],
+                  }))}
+                />
+              }
+            >
+              {rankBars.length ? (
+                <RankBars rows={rankBars} format={fn} />
+              ) : (
+                <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
+              )}
+            </ChartCard>
+
+            <ChartCard
+              title={`${t('an_dynamics')} · ${range.from?.slice(0, 4) ?? ''}`}
+              subtitle={t('an_dynamics_hint')}
+              stale={dynFetching}
+              legend={
+                <ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />
+              }
+              table={
+                <ChartTable
+                  head={[t('an_month'), t('an_confirmed'), t('an_unconfirmed')]}
+                  rows={trend.map((r) => ({
+                    key: r.month,
+                    label: r.month,
+                    values: [fn(r.confirmed), fn(r.unconfirmed)],
+                  }))}
+                />
+              }
+            >
+              {trend.length ? (
+                <TrendColumns
+                  data={trend}
+                  series={trendSeries}
+                  xKey="month"
+                  format={fn}
+                  labelFor={(m) => trend.find((r) => r.month === m)?.name ?? m}
+                />
+              ) : (
+                <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
+              )}
+            </ChartCard>
           </div>
         </>
       )}

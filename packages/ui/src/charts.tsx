@@ -23,6 +23,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   LabelList,
   ResponsiveContainer,
   Tooltip,
@@ -305,7 +306,9 @@ export function TrendColumns({
 
 /**
  * Ranked horizontal bars — magnitude over nominal categories, so every bar
- * wears the same hue and the value rides the tip.
+ * wears the same hue and the value rides the tip. A row may override that hue
+ * to single itself out of the ranking (e.g. "you are here"); the label still
+ * carries the identity, color only reinforces it.
  */
 export function RankBars({
   rows,
@@ -313,7 +316,7 @@ export function RankBars({
   height,
   format = (v: number) => String(v),
 }: {
-  rows: { label: string; value: number }[];
+  rows: { label: string; value: number; color?: string }[];
   color?: string;
   height?: number;
   format?: (v: number) => string;
@@ -338,12 +341,21 @@ export function RankBars({
             active && payload?.length ? (
               <TooltipBox
                 title={String(payload[0]?.payload?.label ?? '')}
-                rows={[{ label: '', value: format(Number(payload[0]?.value ?? 0)), color }]}
+                rows={[
+                  {
+                    label: '',
+                    value: format(Number(payload[0]?.value ?? 0)),
+                    color: payload[0]?.payload?.color ?? color,
+                  },
+                ]}
               />
             ) : null
           }
         />
         <Bar dataKey="value" fill={color} maxBarSize={20} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+          {rows.map((r, i) => (
+            <Cell key={`${r.label}-${i}`} fill={r.color ?? color} />
+          ))}
           <LabelList
             dataKey="value"
             position="right"

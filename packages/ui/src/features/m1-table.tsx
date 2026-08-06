@@ -60,7 +60,7 @@ function materialName(m: Material | undefined, lang: Lang): string {
   return lang === 'ru' ? m.name_ru : lang === 'uz-cyrl' ? m.name_uz_cyrl : m.name_uz_latn;
 }
 
-/** Manual plate entry for a "no_plate" event (CHALKASHLIK — ANPR failed).
+/** Manual plate entry for a "no_plate" event (RAQAMSIZ — ANPR failed).
     On save the server re-links the event into its trip automatically. */
 function FixPlateModal({ row, onClose }: { row: M1Row; onClose: () => void }) {
   const { t } = useTranslation();

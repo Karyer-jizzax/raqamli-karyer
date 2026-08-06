@@ -1,0 +1,273 @@
+# Karyer tarozi punkti tizimi — texnik dokumentatsiya
+
+**Versiya:** 1.0 · **Sana:** 2026-08-05
+**Maqsad:** Karyer tarozi punktidagi local dastur (Agent) hodisalarni — vazn, 10 soniyalik video, vaqt — web saytga yuboradi va jonli video oqimini uzatadi. Ushbu hujjat sayt (server) jamoasi qo'shishi kerak bo'lgan qismlarni va umumiy arxitekturani tavsiflaydi.
+
+---
+
+## 1. Umumiy arxitektura
+
+```
+   KARYER (local tarmoq)                      SERVER / SAYT
+┌───────────────────────────┐           ┌──────────────────────────┐
+│  IP Kamera(lar)  ──RTSP──►│           │  Web sayt + Adminka      │
+│                           │  HTTPS    │   ├─ Hodisalar API       │
+│  KELI D12 tarozi ──COM──► │──────────►│   ├─ Agent config API    │
+│                           │  hodisa+  │   └─ Karyer/token bosh.  │
+│  LOCAL AGENT (Windows)    │  video    │                          │
+│   ├─ tarozi o'qish        │           │  MediaMTX (jonli video)  │
+│   ├─ video bufer (30-60s) │──RTSP────►│   └─ HLS/WebRTC tarqatish│
+│   ├─ hodisa navbati       │  push     │                          │
+│   └─ sifat monitori       │           └──────────────────────────┘
+└───────────────────────────┘
+```
+
+**Asosiy tamoyillar:**
+- Kamera login/parol/IP — **faqat localda**. Server kameraga hech qachon to'g'ridan ulanmaydi.
+- Internet o'chsa: hodisalar diskdagi navbatda saqlanadi, internet kelganda avtomatik yuboriladi. Jonli oqim tabiiy ravishda to'xtaydi va o'zi qayta ulanadi.
+- Local → server yo'nalishida faqat **chiquvchi** ulanishlar (karyer tarmog'ida port ochish, oq IP kerak emas).
+
+---
+
+## 2. Karyer va Agent bog'lanishi (token)
+
+### 2.1. Oqim
+
+1. Adminkada karyer yaratiladi → tizim shu karyer uchun **agent-token** generatsiya qiladi (masalan `KRY_a7f3c9e2b1...`, kamida 32 belgi, tasodifiy).
+2. Token local dasturga **bir marta** kiritiladi va localda saqlanadi.
+3. Agentning har bir so'rovi `Authorization: Bearer <token>` sarlavhasi bilan keladi.
+4. Server tokendan karyerni aniqlaydi — qo'shimcha "bog'lash" jadvali kerak emas.
+
+### 2.2. Adminka talablari
+
+- Karyer sahifasida: token ko'rish / **qayta generatsiya** / **bekor qilish** tugmalari.
+- Token bekor qilinsa — eski token bilan kelgan so'rovlarga `401` qaytariladi.
+- Har bir karyer sahifasida agent holati: oxirgi heartbeat vaqti (`online` — oxirgi 2 daqiqada ko'rilgan, aks holda `offline`).
+
+---
+
+## 3. Server API (sayt jamoasi qo'shadi)
+
+Barcha endpointlar HTTPS. Autentifikatsiya: `Authorization: Bearer <agent-token>`.
+
+### 3.1. `POST /api/agent/events` — hodisa qabul qilish
+
+**Muhim:** video bu so'rovda YUBORILMAYDI — u alohida, keyin yuklanadi (3.1a). Sababi: sekin internetda (144 kbps gacha) hodisa foto bilan bir necha soniyada yetib borishi kerak, video esa daqiqalab yuklanishi mumkin. Saytda hodisa avval foto bilan ko'rinadi, video tayyor bo'lganda paydo bo'ladi.
+
+`multipart/form-data`:
+
+| Maydon | Turi | Tavsif |
+|---|---|---|
+| `event` | JSON (text qism) | hodisa ma'lumotlari (quyida) |
+| `photo` | fayl (`image/jpeg`) | hodisa paytidagi kadr, ~100-200 KB (majburiy — sekin internetda operator raqamni shundan o'qiydi) |
+
+`event` JSON sxemasi:
+
+```json
+{
+  "event_id": "b3e1c9f0-4a2d-4e8f-9c1a-7d5e2f8a0b3c",
+  "occurred_at": "2026-08-05T14:32:10+05:00",
+  "weight_kg": 24580,
+  "weight_stable": true,
+  "scale": "KELI-D12",
+  "camera_id": "cam1",
+  "vehicle_number": null,
+  "agent_version": "1.0.0"
+}
+```
+
+Izohlar:
+- `event_id` — agent tomonida yaratiladigan UUID. **Idempotentlik kaliti**: server bir xil `event_id` ikkinchi marta kelsa, `200 OK` qaytaradi lekin dublikat yozmaydi (offline navbat qayta yuborishi mumkin).
+- `vehicle_number` — hozircha `null` (ANPR yo'q). Operator saytda videoni ko'rib qo'lda kiritadi — sayt UI'da shu maydonni tahrirlash imkoni bo'lsin.
+- Javoblar: `201` — qabul qilindi; `200` — dublikat; `401` — token noto'g'ri; `413` — fayl juda katta; `422` — JSON xato.
+
+### 3.1a. `PUT /api/agent/events/{event_id}/video` — hodisa videosini yuklash
+
+- Tana: `video/mp4` (H.264), maksimal 50 MB.
+- Hodisa (3.1) muvaffaqiyatli yuborilgach, agent videoni shu endpointga alohida yuklaydi. Sekin internetda bu daqiqalab davom etishi mumkin — normal holat.
+- Uzilib qolsa agent boshidan qayta yuklaydi (idempotent — bir xil `event_id` uchun qayta PUT eski faylni almashtiradi).
+- Saytda video kelmagan hodisa "video yuklanmoqda…" holatida ko'rsatiladi.
+- Javoblar: `200/201` — saqlandi; `404` — bunday `event_id` yo'q; `413` — katta.
+
+### 3.2. `GET /api/agent/config` — agent sozlamalarini olish
+
+Agent har 60 soniyada so'raydi. Bu orqali **adminkadan turib masofadan sozlash** mumkin bo'ladi (jumladan video sifati).
+
+```json
+{
+  "video_quality": "auto",
+  "quality_profiles_override": null,
+  "live_stream_enabled": true,
+  "event_pre_seconds": 5,
+  "event_post_seconds": 5,
+  "min_event_weight_kg": 500,
+  "stable_seconds": 3,
+  "heartbeat_interval_sec": 60
+}
+```
+
+- `video_quality`: `"auto" | "snapshot" | "low" | "medium" | "high"` (4-bo'limga qarang).
+- `min_event_weight_kg` — bu vazndan past o'lchovlar hodisa hisoblanmaydi (odam chiqib ketishi, shovqin).
+- `stable_seconds` — vazn shu muddat o'zgarmasa "barqaror" hisoblanadi va hodisa yaratiladi.
+- Adminkada karyer sahifasida shu sozlamalarni tahrirlash formasi bo'lsin.
+
+### 3.3. `POST /api/agent/heartbeat` — holat
+
+Har 60 soniyada:
+
+```json
+{
+  "agent_version": "1.0.0",
+  "scale_ok": true,
+  "cameras": [{ "id": "cam1", "ok": true }],
+  "queue_size": 0,
+  "upload_kbps_avg": 1840,
+  "live_streaming": true,
+  "current_quality": "medium"
+}
+```
+
+Server bu ma'lumotni karyer sahifasida ko'rsatadi: agent online/offline, tarozi ulanganmi, kameralar ishlayaptimi, navbatda nechta hodisa kutyapti, joriy oqim sifati.
+
+### 3.4. `POST /api/agent/live-snapshot` — sekin internet uchun jonli kadr
+
+- Tana: `image/jpeg` (~20-30 KB), sarlavhada `X-Camera-Id: cam1`.
+- Server oxirgi kadrni xotirada/keshsda saqlaydi; sayt `GET /api/live-snapshot/<karyer_id>/cam1` orqali oladi va sahifada har 2-3 soniyada yangilaydi.
+- Faqat `snapshot` profilida ishlatiladi (4-bo'lim); tezroq internetda MediaMTX jonli oqim ishlaydi.
+
+### 3.5. Sayt UI (minimal)
+
+- **Hodisalar ro'yxati** (karyer bo'yicha filtr, sana oralig'i): vaqt, vazn, foto-kadr, video tugmasi, avtomobil raqami (tahrirlanadigan).
+- **Hodisa sahifasi**: video pleer (mp4), vazn, vaqt, raqam kiritish maydoni.
+- **Jonli ko'rish sahifasi**: MediaMTX'dan HLS/WebRTC pleer (5-bo'lim); agent `snapshot` rejimida bo'lsa — avtomatik ravishda yangilanuvchi JPEG ko'rinishga o'tadi (3.4). Qaysi rejimda ekani heartbeat'dagi `current_quality`dan ma'lum.
+- **Hodisa videosi holati**: video hali yuklanmagan bo'lsa "video yuklanmoqda…" belgisi (3.1a).
+- **Karyer sozlamalari**: token boshqaruvi + 3.2 dagi config formasi.
+
+---
+
+## 4. Video sifati — internet tezligiga qarab
+
+### 4.1. Profillar
+
+| Profil | Jonli ko'rinish | Bitrate (jonli) | Hodisa klipi | Taxminan kerak tezlik |
+|---|---|---|---|---|
+| `snapshot` | JPEG kadr har 3s | ~60-100 kbps | 480p, 500 kbps | **≥ 128 kbps upload** |
+| `low` | 640×360, 10 fps video | 400 kbps | 480p, 800 kbps | ≥ 0.7 Mbps upload |
+| `medium` | 1280×720, 15 fps | 1200 kbps | 720p, 2000 kbps | ≥ 2 Mbps upload |
+| `high` | 1920×1080, 25 fps | 2500 kbps | 1080p, 4000 kbps | ≥ 4 Mbps upload |
+
+- **`snapshot` — juda sekin internet uchun (144 kbps ham):** jonli video o'rniga agent har 2-3 soniyada bitta JPEG kadr yuboradi (`POST /api/agent/live-snapshot`, tana: JPEG, ~20-30 KB). Sayt sahifasi rasmni avtomatik yangilab turadi — operator karyerni "sekin video" kabi ko'radi. MediaMTX bu rejimda ishlatilmaydi.
+- **Hodisa klipi har doim jonli oqimdan sifatliroq** — raqam videodan o'qilishi kerak. Klip real vaqt talab qilmaydi: 144 kbps'da 480p/500kbps 10s klip (~650 KB) ≈ 40-60 soniyada yetib boradi — normal.
+- Hodisa **fotosi** esa har qanday tezlikda bir necha soniyada yetadi (3.1) — operator raqamni kutmasdan ko'radi.
+
+### 4.2. `auto` rejimi (tavsiya etilgan standart)
+
+Agent har 5 daqiqada o'rtacha yuklash tezligini o'lchaydi (heartbeat'dagi `upload_kbps_avg`) va profilni tanlaydi:
+
+```
+if upload < 128 kbps  → jonli ko'rinish OFF (faqat hodisalar: foto darhol, video navbat bilan)
+elif upload < 700     → snapshot   (JPEG har 3s — 144-256 kbps kanallar uchun)
+elif upload < 2000    → low
+elif upload < 4000    → medium
+else                  → high
+```
+
+- Pasayish darhol (bufer to'lib borsa), ko'tarilish ehtiyotkor (5 daqiqa barqaror bo'lsa) — "sakrash"ning oldini oladi.
+- Adminkadan `video_quality` qo'lda tanlansa (`low/medium/high`), auto o'chadi va majburan shu profil ishlaydi.
+
+### 4.3. Trafik ustuvorligi — jonli oqim asosiy ishga xalaqit bermasligi kafolati
+
+Jonli ko'rish "qo'shimcha qavat" — asosiy jarayon (vazn → hodisa → yuborish) unga bog'lanmagan va usiz ham to'liq ishlaydi. Kanal uchun raqobatda ustuvorlik qat'iy:
+
+```
+1. Hodisa JSON + foto     — darhol; jonli oqim shu paytda kutadi/siqiladi
+2. Hodisa videosi         — yuklanayotganda jonli oqim bitrate'i pasaytiriladi
+3. Jonli oqim / snapshot  — faqat bo'sh qolgan kanaldan foydalanadi
+```
+
+- Agent hodisa yuborishni boshlaganda jonli oqimni vaqtincha pasaytiradi (yoki snapshot intervalini kattalashtiradi); yuklash tugagach tiklaydi. Operator 1-2 soniyalik kadr qotishini ko'rishi mumkin — bu normal.
+- Tarozi o'qish (COM), video bufer va navbat — internetdan mustaqil modullar; jonli oqim uzilishi yoki MediaMTX ishlamay qolishi ularga ta'sir qilmaydi.
+- Kamera tomonida: bufer main-stream'dan, jonli ko'rinish sub-stream'dan olinadi — IP kameralar bir necha parallel mijozni qo'llab-quvvatlaydi.
+
+### 4.4. Texnik izoh (agent tomonida)
+
+- Ko'p IP kameralarda **ikkita oqim** bor: main (yuqori sifat) va sub (past sifat). Agent hodisa klipini **main stream** buferidan kesadi, jonli oqimga esa profil bo'yicha main yoki sub'ni transkodlaydi/uzatadi. Kamera sub-stream sozlamalari profillarga yaqin qilib qo'yilsa, transkodlashsiz (`-c copy`) uzatish mumkin — protsessorga yuk deyarli nolga tushadi.
+
+---
+
+## 5. Jonli video — MediaMTX relay
+
+Kamera lokal tarmoqda, sayt foydalanuvchilari unga to'g'ridan ulana olmaydi. Yechim: agent oqimni serverga **push** qiladi, server tarqatadi.
+
+### 5.1. Serverda MediaMTX o'rnatish
+
+[MediaMTX](https://github.com/bluenviron/mediamtx) — bitta binar, konfiguratsiya namunasi:
+
+```yml
+# mediamtx.yml
+paths:
+  "~^karyer_(.+)$":            # karyer_<karyer_id> yo'llari
+    source: publisher
+    publishUser: agent
+    publishPass: <KUCHLI_PAROL>   # yoki har karyerga alohida
+readTimeout: 10s
+hls: yes
+hlsVariant: lowLatency
+webrtc: yes
+```
+
+- Agent push qiladi: `rtsp://agent:parol@server:8554/karyer_<id>_cam1`
+- Sayt pleeri o'qiydi: `https://server:8888/karyer_<id>_cam1/index.m3u8` (HLS) yoki WebRTC (`:8889`) — past kechikish kerak bo'lsa WebRTC.
+- MediaMTX oldiga nginx/reverse-proxy qo'yib HTTPS bilan yopish tavsiya etiladi. Ko'rish havolalarini faqat saytga kirgan foydalanuvchilarga bering (sayt sessiyasi orqali; to'g'ridan URL tarqatmaslik).
+
+### 5.2. Nima uchun push-relay
+
+- Karyer tarmog'ida port ochilmaydi (xavfsiz, sozlash oson)
+- Saytda 1 kishi ko'rsa ham, 50 kishi ko'rsa ham — karyer internetidan **bitta oqim** ketadi
+- Internet uzilsa agent o'zi qayta ulanadi (retry har 5s)
+
+---
+
+## 6. Hodisa hayot sikli va offline navbat
+
+```
+Vazn > min_event_weight_kg va stable_seconds barqaror
+   │
+   ├─► Buferdan klip: [t-5s ... t+5s] (pre/post config'dan)
+   ├─► JPEG kadr (t vaqtida)
+   ├─► event.json + video.mp4 + photo.jpg → navbat papkasiga yoziladi
+   │        C:\ProgramData\TaroziAgent\queue\<event_id>\
+   │
+   └─► Yuboruvchi modul navbatni ketma-ket yuboradi
+          ├─ muvaffaqiyat (201/200) → papka o'chiriladi
+          ├─ tarmoq xatosi → 30s kutib qayta (exponensial: 30s→1m→5m, cheksiz)
+          └─ 4xx (422 va h.k.) → "failed" papkasiga ko'chiriladi + heartbeat'da bildiriladi
+```
+
+- Bitta mashina qayta-qayta hodisa yaratmasligi uchun: vazn barqarorlashgach bitta hodisa, keyin vazn `min_event_weight_kg` dan pastga tushmaguncha yangi hodisa ochilmaydi.
+- Disk to'lib ketmasligi uchun: navbat 5 GB dan oshsa eng eski yuborilmagan hodisaning **videosi** siqiladi yoki o'chiriladi, JSON saqlanadi (sozlanadi).
+
+---
+
+## 7. Xavfsizlik xulosasi
+
+| Narsa | Qayerda | Izoh |
+|---|---|---|
+| Kamera IP/login/parol | Faqat localda (shifrlangan config) | Serverga hech qachon yuborilmaydi |
+| Agent-token | Adminka beradi, localda saqlanadi | Bekor qilish/almashtirish adminkadan |
+| Hodisa/config/heartbeat | HTTPS | Oddiy HTTP qabul qilinmasin |
+| MediaMTX publish | Login-parol bilan | Ko'rish — faqat sayt sessiyasi orqali |
+
+---
+
+## 8. Joriy etish bosqichlari
+
+1. **Server:** 3.1–3.3 endpointlar + token boshqaruvi (adminka) — *sayt jamoasi*
+2. **Server:** MediaMTX o'rnatish + sayt sahifasida HLS/WebRTC pleer — *sayt jamoasi*
+3. **Local:** Agent — tarozi o'qish (tayyor protokol: COM, 9600 7E1, KELI TF=0), video bufer (FFmpeg), navbat, config-polling
+4. **Sinov:** internetni ataylab uzib ko'rish (hodisalar yig'ilib keyin yuborilishi), sekin internetda auto-sifat pasayishi
+5. **Ishga tushirish:** har karyerga token berish, agent o'rnatish
+
+---
+
+*Tarozi ulanish parametrlari (ma'lumot uchun): KELI D12, RS232, 9600 baud 7E1, TF=0 uzluksiz rejim, freym: STX + ishora + 6 raqam + kasr + XOR + ETX. USB-RS232: CH340, drayver 3.5.2019.1 (yangilamaslik!).*

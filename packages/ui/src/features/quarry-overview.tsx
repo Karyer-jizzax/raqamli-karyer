@@ -186,8 +186,6 @@ export function QuarryOverview({
             <b className="text-xl text-primary tabular-nums">{fn(stat?.trucks)}</b>
           </p>
 
-          <StatBox label={t('dash_unidentified')} value={fn(stat?.unidentified)} danger />
-
           <h3 className="mt-4 mb-2 text-data font-semibold text-foreground">{t('dash_cameras')}</h3>
           <div className="flex flex-wrap gap-1.5">
             {Array.from({ length: stat?.cameras ?? 0 }, (_, i) => {

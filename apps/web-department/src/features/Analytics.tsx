@@ -16,7 +16,7 @@ import {
   TrendColumns,
   useAuth,
 } from '@karier/ui';
-import { ActivityIcon, BarChart3Icon, ScanSearchIcon } from 'lucide-react';
+import { ActivityIcon, BarChart3Icon } from 'lucide-react';
 import { useState } from 'react';
 
 import { ReportCard } from './ReportCard';
@@ -98,14 +98,6 @@ export function Analytics() {
           value={fn(Math.round(overview?.total_volume ?? 0))}
           unit="m³"
           delta={deltaPct(overview?.total_volume, before?.total_volume)}
-          deltaLabel={t('an_vs_prev')}
-        />
-        <StatTile
-          icon={ScanSearchIcon}
-          label={t('an_detection')}
-          value={`${fn(Math.round(overview?.avg_confidence ?? 0))}%`}
-          good="up"
-          delta={deltaPct(overview?.avg_confidence, before?.avg_confidence)}
           deltaLabel={t('an_vs_prev')}
         />
       </div>
