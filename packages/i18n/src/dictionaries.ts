@@ -226,9 +226,9 @@ const uzLatn: Dict = {
   set_min_netto: 'Netto chegarasi (kg)',
   set_min_netto_hint:
     "Netto shu qiymatdan kam bo'lsa qatnov «Yuk emas» deb belgilanadi (xodim mashinasi).",
-  set_timeout: 'Huquqbuzarlik muddati (soat)',
+  set_timeout: 'Yakunlanmagan qatnov muddati (soat)',
   set_timeout_hint:
-    "Zavodga kirib shu vaqt ichida chiqmagan (yoki kirishsiz chiqqan) qatnov «Huquqbuzarlik» deb ko'rsatiladi.",
+    "Zavodga kirib shu vaqt ichida chiqmagan (yoki kirishsiz chiqqan) qatnov «Yakunlanmagan» deb ko'rsatiladi.",
   set_link_window: "Karyer–zavod oraliq vaqti (soat)",
   set_link_window_hint:
     "Karyerdan chiqqan mashina shu vaqt ichida zavodga kirsa qatnov «Hom ashyo» zanjiriga ulanadi; kechiksa zavod hodisasi alohida «Sotuv» qatnovi sifatida ochiladi.",
@@ -372,9 +372,9 @@ const uzLatn: Dict = {
   stage_yolda: "Yo'lda",
   stage_zavodda: 'Zavodda',
   stage_yakunlandi: 'Yakunlandi',
-  stage_chala: 'Huquqbuzarlik',
+  stage_chala: 'Yakunlanmagan',
   stage_yuk_emas: 'Yuk emas',
-  status_no_plate: 'Raqamsiz — raqam kiriting',
+  status_no_plate: 'Raqamsiz',
   np_fix_title: "Raqamni qo'lda kiritish",
   np_fix_hint: "ANPR raqamni o'qiy olmadi. Foto/videodan raqamni aniqlab kiriting — hodisa qatnovga avtomatik juftlanadi.",
   np_region: 'Viloyat kodi (01)',
@@ -726,9 +726,9 @@ const uzCyrl: Dict = {
   set_min_netto: 'Нетто чегараси (кг)',
   set_min_netto_hint:
     'Нетто шу қийматдан кам бўлса қатнов «Юк эмас» деб белгиланади (ходим машинаси).',
-  set_timeout: 'Ҳуқуқбузарлик муддати (соат)',
+  set_timeout: 'Якунланмаган қатнов муддати (соат)',
   set_timeout_hint:
-    'Заводга кириб шу вақт ичида чиқмаган (ёки киришсиз чиққан) қатнов «Ҳуқуқбузарлик» деб кўрсатилади.',
+    'Заводга кириб шу вақт ичида чиқмаган (ёки киришсиз чиққан) қатнов «Якунланмаган» деб кўрсатилади.',
   set_link_window: 'Карьер–завод оралиқ вақти (соат)',
   set_link_window_hint:
     'Карьердан чиққан машина шу вақт ичида заводга кирса қатнов «Хом ашё» занжирига уланади; кечикса завод ҳодисаси алоҳида «Сотув» қатнови сифатида очилади.',
@@ -872,9 +872,9 @@ const uzCyrl: Dict = {
   stage_yolda: 'Йўлда',
   stage_zavodda: 'Заводда',
   stage_yakunlandi: 'Якунланди',
-  stage_chala: 'Ҳуқуқбузарлик',
+  stage_chala: 'Якунланмаган',
   stage_yuk_emas: 'Юк эмас',
-  status_no_plate: 'Рақамсиз — рақам киритинг',
+  status_no_plate: 'Рақамсиз',
   np_fix_title: 'Рақамни қўлда киритиш',
   np_fix_hint: 'ANPR рақамни ўқий олмади. Фото/видеодан рақамни аниқлаб киритинг — ҳодиса қатновга автоматик жуфтланади.',
   np_region: 'Вилоят коди (01)',
@@ -1229,9 +1229,9 @@ const ru: Dict = {
   set_link_window: 'Интервал карьер–завод (часы)',
   set_link_window_hint:
     'Если машина, выехавшая с карьера, въезжает на завод в течение этого времени, рейс связывается в цепочку «Сырьё»; при опоздании заводское событие открывается отдельным рейсом «Продажа».',
-  set_timeout: 'Срок нарушения (часы)',
+  set_timeout: 'Срок незавершённого рейса (часы)',
   set_timeout_hint:
-    'Рейс, въехавший на завод и не выехавший за это время (или выехавший без въезда), помечается как «Нарушение».',
+    'Рейс, въехавший на завод и не выехавший за это время (или выехавший без въезда), помечается как «Незавершённый».',
   set_saved: 'Сохранено',
   set_apply_note:
     'Новые значения действуют с этого момента — ранее завершённые рейсы не пересчитываются.',
@@ -1372,9 +1372,9 @@ const ru: Dict = {
   stage_yolda: 'В пути',
   stage_zavodda: 'На заводе',
   stage_yakunlandi: 'Завершён',
-  stage_chala: 'Нарушение',
+  stage_chala: 'Незавершённый',
   stage_yuk_emas: 'Не груз',
-  status_no_plate: 'Без номера — введите номер',
+  status_no_plate: 'Без номера',
   np_fix_title: 'Ввести номер вручную',
   np_fix_hint: 'ANPR не распознал номер. Определите номер по фото/видео и введите его — событие автоматически свяжется с рейсом.',
   np_region: 'Код региона (01)',
