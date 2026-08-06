@@ -28,7 +28,19 @@ def mediamtx(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_stream_path_sanitizes_each_part() -> None:
     # Karyer kodidagi tire va bo'sh joy RTSP URL'ni buzmasligi kerak.
-    assert stream_path("DEMO-1", "P-TAROZI C1") == "karyer_demo_1_p_tarozi_c1"
+    assert stream_path("DEMO-1", "P-TAROZI C1") == "karyer_demo_1_P_TAROZI_C1"
+
+
+def test_camera_case_survives_the_round_trip() -> None:
+    """Agent shablonga kamera nomini AYNAN qo'yadi (masalan `DAHUASBJN`).
+
+    Kamera bo'lagini kichik harfga tushirsak, agent `…_DAHUASBJN`ga push
+    qilib, pleer `…_dahuasbjn`ni so'rardi — muzokaralar o'tadi, ekran qora
+    qoladi. Shuning uchun ikkala tomon bir xil satr chiqarishi shart."""
+    template = stream_path_template("TIANGSHANG78ZD-Q52138")
+    assert template.format(camera_id="DAHUASBJN") == stream_path(
+        "TIANGSHANG78ZD-Q52138", "DAHUASBJN"
+    )
 
 
 def test_path_template_keeps_placeholder() -> None:

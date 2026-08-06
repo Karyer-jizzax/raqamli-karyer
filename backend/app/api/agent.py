@@ -45,6 +45,7 @@ from app.services.live import (
     publish_url,
     publish_url_template,
     put_snapshot,
+    stream_path,
     stream_path_template,
 )
 from app.services.plates import payer_type, split_plate
@@ -295,6 +296,16 @@ async def agent_config(db: DbDep, agent: AgentDep) -> dict[str, object]:
             # Bir nechta kamera bo'lsa `{camera_id}` o'rniga o'z nomini qo'yadi.
             "push_url_template": publish_url_template(code),
             "path_template": stream_path_template(code),
+            # Eng ishonchli yo'l: heartbeat'da aytilgan har bir kamera uchun
+            # tayyor manzil. Shablonni to'ldirishda registr yoki belgi farqi
+            # bo'lsa, agent va sayt boshqa-boshqa yo'lni ko'rsatib qolardi.
+            "cameras": {
+                cam: {
+                    "path": stream_path(code, cam),
+                    "push_url": publish_url(code, cam),
+                }
+                for cam in cameras
+            },
         },
     }
 

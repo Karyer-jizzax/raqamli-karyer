@@ -72,9 +72,19 @@ def _slug(value: str) -> str:
     return "".join(c if c.isalnum() else "_" for c in value).lower()
 
 
+def _camera_slug(value: str) -> str:
+    """Kamera bo'lagi — **registr saqlanadi**.
+
+    Sababi: agent yo'lni shablondan yasaydi va `{camera_id}` o'rniga o'z
+    kamera nomini aynan qo'yadi. Biz esa ko'rish havolasini o'zimiz yasaymiz.
+    Ikkalasi bir xil chiqishi shart, aks holda agent `…_DAHUASBJN`ga push
+    qiladi, pleer esa `…_dahuasbjn`ni so'rab qora ekran ko'rsatadi."""
+    return "".join(c if c.isalnum() else "_" for c in value)
+
+
 def stream_path(quarry_code: str, camera_id: str) -> str:
     """MediaMTX yo'li: `karyer_<kod>_<kamera>` (mediamtx.yml dagi `~^karyer_`)."""
-    return f"karyer_{_slug(quarry_code)}_{_slug(camera_id)}"
+    return f"karyer_{_slug(quarry_code)}_{_camera_slug(camera_id)}"
 
 
 # Agent yo'lni o'zi to'ldiradi: bir nechta kamera bo'lsa har biriga alohida
