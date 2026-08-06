@@ -74,8 +74,7 @@ function EcoPostCard({ post, lang, t }: { post: CargoPost; lang: ReturnType<type
         <TruckIcon className="size-3.5 text-primary" strokeWidth={1.8} />
         <b className="tabular-nums">{formatNumber(post.trucks, lang)}</b>
       </div>
-      <div className="mb-1 text-2xs text-muted-foreground">{t('dash_cameras')}:</div>
-      <div className="flex gap-1">
+      <div className="flex gap-1" title={t('dash_cameras')}>
         {Array.from({ length: post.cameras }, (_, i) => (
           <span
             key={i}
