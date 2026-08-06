@@ -21,17 +21,18 @@
  */
 import { type AgentStatus, type AgentStream, fetchLiveSnapshot } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
-import { CameraOffIcon, RadioIcon, VideoOffIcon } from 'lucide-react';
+import { CameraOffIcon, Maximize2Icon, RadioIcon, VideoOffIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { Chip, TONE_DOT } from '../status';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
 /** Kadr yangilash oralig'i — doc §4.1: snapshot profilida har 2-3 soniya. */
 const SNAPSHOT_INTERVAL_MS = 3000;
 
 // ── snapshot rejimi ─────────────────────────────────────────────────────────
-function SnapshotCamera({ stream }: { stream: AgentStream }) {
+function SnapshotPlayer({ stream }: { stream: AgentStream }) {
   const { t } = useTranslation();
   const [src, setSrc] = useState('');
   const [failed, setFailed] = useState(false);
@@ -66,14 +67,10 @@ function SnapshotCamera({ stream }: { stream: AgentStream }) {
     };
   }, [stream.snapshot_url]);
 
-  return (
-    <Frame camera={stream.camera_id} badge={t('live_snapshot_mode')}>
-      {src ? (
-        <img src={src} alt="" className="block size-full object-contain" />
-      ) : (
-        <Placeholder icon={CameraOffIcon} text={t(failed ? 'live_no_frame' : 'live_connecting')} />
-      )}
-    </Frame>
+  return src ? (
+    <img src={src} alt="" className="block size-full object-contain" />
+  ) : (
+    <Placeholder icon={CameraOffIcon} text={t(failed ? 'live_no_frame' : 'live_connecting')} />
   );
 }
 
@@ -115,7 +112,7 @@ async function playWhep(url: string, video: HTMLVideoElement): Promise<RTCPeerCo
   return pc;
 }
 
-function StreamCamera({ stream }: { stream: AgentStream }) {
+function StreamPlayer({ stream, controls }: { stream: AgentStream; controls?: boolean }) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<'connecting' | 'playing' | 'error'>('connecting');
@@ -158,12 +155,15 @@ function StreamCamera({ stream }: { stream: AgentStream }) {
   }, [stream.webrtc_url, stream.hls_url]);
 
   return (
-    <Frame camera={stream.camera_id} badge={t('live_stream_mode')}>
+    <>
       <video
         ref={videoRef}
         autoPlay
         muted
         playsInline
+        // Boshqaruv tugmalari faqat modalda: jadvaldagi kichik kadrda ular
+        // bosishga xalaqit berardi (butun kadr — "kattalashtirish" tugmasi).
+        controls={controls}
         className={cn('block size-full bg-black object-contain', state !== 'playing' && 'hidden')}
       />
       {state !== 'playing' && (
@@ -172,28 +172,105 @@ function StreamCamera({ stream }: { stream: AgentStream }) {
           text={t(state === 'error' ? 'live_error' : 'live_connecting')}
         />
       )}
-    </Frame>
+    </>
   );
 }
 
-// ── umumiy qismlar ──────────────────────────────────────────────────────────
-function Frame({
-  camera,
-  badge,
-  children,
+/** Rejimga mos pleer — jadvalda ham, modalda ham shu ishlatiladi. */
+function Player({
+  stream,
+  mode,
+  controls,
 }: {
-  camera: string;
-  badge: string;
-  children: React.ReactNode;
+  stream: AgentStream;
+  mode: 'hls' | 'snapshot';
+  controls?: boolean;
 }) {
+  return mode === 'snapshot' ? (
+    <SnapshotPlayer stream={stream} />
+  ) : (
+    <StreamPlayer stream={stream} controls={controls} />
+  );
+}
+
+// ── jadvaldagi katak ────────────────────────────────────────────────────────
+/** Bitta kamera kartasi. Kadr bosilsa — modalda kattalashadi.
+ *
+ * `paused` — shu kamera modalda ochilgan: kadr modal ostida ko'rinmaydi,
+ * shuning uchun pleerni umuman ulamaymiz. Aks holda bitta kameraga ikkita
+ * ulanish ketardi (karyerning kanalidan emas, lekin brauzerdan bekorga). */
+function CameraTile({
+  stream,
+  mode,
+  paused,
+  onOpen,
+}: {
+  stream: AgentStream;
+  mode: 'hls' | 'snapshot';
+  paused: boolean;
+  onOpen: () => void;
+}) {
+  const { t } = useTranslation();
   return (
-    <article className="overflow-hidden rounded-2xl border bg-card shadow-card">
+    <article className="group overflow-hidden rounded-2xl border bg-card shadow-card">
       <header className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
-        <b className="truncate text-data text-foreground">{camera}</b>
-        <Chip tone="neutral">{badge}</Chip>
+        <b className="truncate text-data text-foreground">{stream.camera_id}</b>
+        <Chip tone="neutral">{t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}</Chip>
       </header>
-      <div className="relative aspect-video bg-black">{children}</div>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={t('live_open', { camera: stream.camera_id })}
+        className={cn(
+          'relative block aspect-video w-full cursor-pointer bg-black',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        )}
+      >
+        {paused ? (
+          <Placeholder icon={Maximize2Icon} text={t('live_open_here')} />
+        ) : (
+          <Player stream={stream} mode={mode} />
+        )}
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute top-2 right-2 grid size-7 place-items-center rounded-lg',
+            'bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100',
+          )}
+        >
+          <Maximize2Icon className="size-3.5" strokeWidth={2} />
+        </span>
+      </button>
     </article>
+  );
+}
+
+/** Tanlangan kamera — kattaroq kadr va pleer boshqaruvi bilan. */
+function CameraDialog({
+  stream,
+  mode,
+  onClose,
+}: {
+  stream: AgentStream;
+  mode: 'hls' | 'snapshot';
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="gap-0 overflow-hidden p-0 sm:max-w-[900px]"
+      >
+        <DialogHeader className="flex-row items-center justify-between gap-2 border-b px-4 py-3 pr-12">
+          <DialogTitle className="text-sm font-semibold">{stream.camera_id}</DialogTitle>
+          <Chip tone="neutral">{t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}</Chip>
+        </DialogHeader>
+        <div className="relative aspect-video w-full bg-black">
+          <Player stream={stream} mode={mode} controls />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -269,6 +346,10 @@ function Meta({ label, value }: { label: string; value: string }) {
 /** Karyerning barcha kameralari — agent aytgan rejimda. */
 export function LiveGrid({ status }: { status: AgentStatus }) {
   const { t } = useTranslation();
+  // Kattalashtirilgan kamera. Kamera identifikatorini saqlaymiz, obyektni
+  // emas: holat 30 soniyada yangilanadi va eski obyekt "muzlab" qolardi.
+  const [openCamera, setOpenCamera] = useState<string | null>(null);
+  const opened = status.streams.find((s) => s.camera_id === openCamera) ?? null;
 
   if (status.live_mode === 'off' || status.streams.length === 0) {
     return (
@@ -282,15 +363,24 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
     );
   }
 
+  const mode = status.live_mode === 'snapshot' ? 'snapshot' : 'hls';
+
   return (
-    <div className="grid gap-3.5 md:grid-cols-2">
-      {status.streams.map((s) =>
-        status.live_mode === 'snapshot' ? (
-          <SnapshotCamera key={s.camera_id} stream={s} />
-        ) : (
-          <StreamCamera key={s.camera_id} stream={s} />
-        ),
+    <>
+      <div className="grid gap-3.5 md:grid-cols-2">
+        {status.streams.map((s) => (
+          <CameraTile
+            key={s.camera_id}
+            stream={s}
+            mode={mode}
+            paused={s.camera_id === openCamera}
+            onOpen={() => setOpenCamera(s.camera_id)}
+          />
+        ))}
+      </div>
+      {opened && (
+        <CameraDialog stream={opened} mode={mode} onClose={() => setOpenCamera(null)} />
       )}
-    </div>
+    </>
   );
 }
