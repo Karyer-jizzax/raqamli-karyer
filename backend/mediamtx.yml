@@ -9,8 +9,14 @@
 # Yo'l nomi: karyer_<karyer_kodi>_<kamera_id> — backend `services/live.py`
 # aynan shu ko'rinishda yasaydi (harf/raqamdan boshqa belgilar `_` ga aylanadi).
 #
-# Ishga tushirish (docker-compose.prod.yml ichida `mediamtx` servisi bor):
-#   MEDIAMTX_PUBLISH_PASS=<kuchli-parol> docker compose -f docker-compose.prod.yml up -d mediamtx
+# Bu fayl — **namuna** (parolsiz, git'da kuzatiladi). Prodda uni tahrirlamang:
+# keyingi CI `git pull` konflikt berib deploy'ni sindiradi. O'rniga serverda
+# parolli nusxa yasang va `.env`da ko'rsating:
+#
+#   cp mediamtx.yml mediamtx.local.yml      # mediamtx.local.yml git'ga tushmaydi
+#   # publishPass'ni to'ldiring — .env'dagi MEDIAMTX_PUBLISH_PASS bilan bir xil
+#   echo 'MEDIAMTX_CONFIG=./mediamtx.local.yml' >> .env
+#   docker compose -f docker-compose.prod.yml --profile live up -d mediamtx
 
 # Faqat kerakli protokollar: RTSP (agent push) + HLS/WebRTC (sayt).
 rtmp: no
@@ -29,11 +35,13 @@ hls: yes
 hlsAddress: :8888
 hlsVariant: lowLatency
 hlsAlwaysRemux: no
+# Sayt boshqa domenda (www.raqamli-karyer.uz), oqim esa api.… da — so'rov
+# cross-origin bo'ladi. CORS sarlavhasini MediaMTX beradi; nginx'da qayta
+# qo'shmang, aks holda ikkita qiymat kelib brauzer rad etadi.
+hlsAllowOrigin: '*'
 
 webrtc: yes
 webrtcAddress: :8889
-# Sayt boshqa domenda turadi (raqamli-karyer.uz), WHEP so'rovi cross-origin
-# bo'ladi — brauzer uchun ruxsat.
 webrtcAllowOrigin: '*'
 # Server NAT ortida bo'lsa tashqi IP shu yerda ko'rsatiladi:
 # webrtcAdditionalHosts: [api.raqamli-karyer.uz]

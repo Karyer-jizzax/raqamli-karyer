@@ -286,6 +286,8 @@ async def test_config_read_and_remote_update(client: httpx.AsyncClient, seeded: 
     assert config["video_quality"] == "auto"
     assert config["min_event_weight_kg"] == 500
     assert config["heartbeat_interval_sec"] == 60
+    # Bir nechta kamerali agent yo'lni o'zi yasaydi — shablon buzilmasin.
+    assert config["live_stream"]["path_template"].endswith("_{camera_id}")
 
     updated = await client.put(
         f"/api/v1/quarries/{quarry['id']}/agent/config",

@@ -20,6 +20,9 @@ backend/uv.lock.bak
 .env
 .env.local
 *.local
+# MediaMTX'ning parolli nusxasi (serverda yaratiladi, MEDIAMTX_CONFIG bilan
+# ko'rsatiladi) — repodagi mediamtx.yml esa parolsiz namuna bo'lib qoladi.
+backend/mediamtx.local.yml
 
 # editor / os
 .vscode/

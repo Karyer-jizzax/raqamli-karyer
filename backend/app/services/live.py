@@ -66,20 +66,36 @@ def clear_snapshots() -> None:
 # ── MediaMTX havolalari (doc.txt §5) ──────────────────────────────────────
 
 
+def _slug(value: str) -> str:
+    """Yo'l bo'lagida faqat harf/raqam/pastki chiziq qoladi — karyer kodidagi
+    tire yoki bo'sh joy RTSP URL'ni buzmasin."""
+    return "".join(c if c.isalnum() else "_" for c in value).lower()
+
+
 def stream_path(quarry_code: str, camera_id: str) -> str:
-    """MediaMTX yo'li: `karyer_<kod>_<kamera>` (mediamtx.yml dagi `~^karyer_`).
-
-    Yo'lda faqat harf/raqam/pastki chiziq qoladi — karyer kodidagi tire yoki
-    bo'sh joy RTSP URL'ni buzmasin."""
-    safe = "".join(c if c.isalnum() else "_" for c in f"{quarry_code}_{camera_id}").lower()
-    return f"karyer_{safe}"
+    """MediaMTX yo'li: `karyer_<kod>_<kamera>` (mediamtx.yml dagi `~^karyer_`)."""
+    return f"karyer_{_slug(quarry_code)}_{_slug(camera_id)}"
 
 
-def publish_url(quarry_code: str, camera_id: str) -> str | None:
-    """Agent RTSP push qiladigan manzil (login-parol bilan) — config javobida.
+# Agent yo'lni o'zi to'ldiradi: bir nechta kamera bo'lsa har biriga alohida
+# yo'l kerak, biz esa uning kamera nomlarini oldindan bilmaymiz.
+CAMERA_PLACEHOLDER = "{camera_id}"
 
-    MediaMTX sozlanmagan bo'lsa None: agent jonli oqimni o'chirib qo'yadi,
-    asosiy ish (hodisa yuborish) unga bog'liq emas (doc.txt §4.3)."""
+
+def stream_path_template(quarry_code: str) -> str:
+    """`karyer_<kod>_{camera_id}` — agent `{camera_id}`ni o'zi almashtiradi.
+
+    Alohida funksiya, chunki `stream_path`ga shablonni berib bo'lmaydi:
+    u kamera nomini tozalaydi va `{camera_id}` `_camera_id_`ga aylanib,
+    shablon ishlamay qolardi."""
+    return f"karyer_{_slug(quarry_code)}_{CAMERA_PLACEHOLDER}"
+
+
+def _rtsp_base() -> str | None:
+    """RTSP manzili login-parol bilan; MediaMTX sozlanmagan bo'lsa None.
+
+    None bo'lsa agent jonli oqimni o'chirib qo'yadi — asosiy ish (hodisa
+    yuborish) unga bog'liq emas (doc.txt §4.3)."""
     base = settings.mediamtx_rtsp_url.rstrip("/")
     if not base:
         return None
@@ -87,7 +103,19 @@ def publish_url(quarry_code: str, camera_id: str) -> str | None:
         scheme, _, host = base.partition("//")
         creds = f"{settings.mediamtx_publish_user}:{settings.mediamtx_publish_pass}"
         base = f"{scheme}//{creds}@{host}"
-    return f"{base}/{stream_path(quarry_code, camera_id)}"
+    return base
+
+
+def publish_url(quarry_code: str, camera_id: str) -> str | None:
+    """Agent RTSP push qiladigan manzil (bitta kamera uchun)."""
+    base = _rtsp_base()
+    return None if base is None else f"{base}/{stream_path(quarry_code, camera_id)}"
+
+
+def publish_url_template(quarry_code: str) -> str | None:
+    """Bir nechta kamerali agent uchun: `…/karyer_<kod>_{camera_id}`."""
+    base = _rtsp_base()
+    return None if base is None else f"{base}/{stream_path_template(quarry_code)}"
 
 
 def hls_url(quarry_code: str, camera_id: str) -> str | None:

@@ -41,7 +41,12 @@ from app.schemas.agent import AgentEventIn, AgentHeartbeatIn
 from app.services.agents import agent_by_token
 from app.services.detection import get_detector
 from app.services.ingest import resolve_camera, resolve_material
-from app.services.live import publish_url, put_snapshot, stream_path
+from app.services.live import (
+    publish_url,
+    publish_url_template,
+    put_snapshot,
+    stream_path_template,
+)
 from app.services.plates import payer_type, split_plate
 from app.services.storage import save_bytes
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
@@ -285,9 +290,11 @@ async def agent_config(db: DbDep, agent: AgentDep) -> dict[str, object]:
     return {
         **agent.config_payload(),
         "live_stream": {
+            # Bitta kamerali agent shuni o'zgarishsiz ishlatadi.
             "push_url": publish_url(code, cameras[0] if cameras else "cam1"),
-            # Bir nechta kamera bo'lsa agent har biriga o'z yo'lini yasaydi.
-            "path_template": stream_path(code, "{camera_id}"),
+            # Bir nechta kamera bo'lsa `{camera_id}` o'rniga o'z nomini qo'yadi.
+            "push_url_template": publish_url_template(code),
+            "path_template": stream_path_template(code),
         },
     }
 

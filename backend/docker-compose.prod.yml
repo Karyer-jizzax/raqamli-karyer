@@ -53,11 +53,13 @@ services:
     container_name: karier-mediamtx
     restart: unless-stopped
     profiles: ["live"]
-    # Publish paroli mediamtx.yml ichida turadi (`publishPass`) va backend
-    # .env'dagi MEDIAMTX_PUBLISH_PASS bilan bir xil bo'lishi shart — backend
-    # o'sha parolni agentga config javobida beradi.
     volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
+      # Repodagi mediamtx.yml — namuna (parolsiz). Prodda `.env`da
+      # MEDIAMTX_CONFIG=./mediamtx.local.yml ko'rsatiladi: shu nusxaga parol
+      # yoziladi va u git'ga tushmaydi. Kuzatilayotgan faylni serverda
+      # tahrirlash mumkin emas — keyingi CI `git pull` konflikt berib,
+      # deploy'ni sindiradi.
+      - ${MEDIAMTX_CONFIG:-./mediamtx.yml}:/mediamtx.yml:ro
     ports:
       # RTSP — agent shu portga push qiladi (tashqariga ochiq bo'lishi shart).
       - "8554:8554"
