@@ -156,14 +156,6 @@ export function Analytics() {
           range={range}
           districtId={district || undefined}
         />
-        <ReportCard
-          n={5}
-          title={t('an_by_status')}
-          subtitle={t('rep_count')}
-          form="split"
-          range={range}
-          districtId={district || undefined}
-        />
       </div>
     </div>
   );
