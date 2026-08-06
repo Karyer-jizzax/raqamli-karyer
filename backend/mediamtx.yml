@@ -1,4 +1,4 @@
-# MediaMTX — jonli video relay (doc.txt §5).
+# MediaMTX — jonli video relay (doc.txt §5). Sinovdan o'tgan versiya: v1.20.0.
 #
 # Nima uchun relay: kamera karyerning ichki tarmog'ida, sayt foydalanuvchisi
 # unga to'g'ridan ulana olmaydi. Agent oqimni serverga PUSH qiladi, MediaMTX
@@ -14,7 +14,7 @@
 # parolli nusxa yasang va `.env`da ko'rsating:
 #
 #   cp mediamtx.yml mediamtx.local.yml      # mediamtx.local.yml git'ga tushmaydi
-#   # publishPass'ni to'ldiring — .env'dagi MEDIAMTX_PUBLISH_PASS bilan bir xil
+#   # AGENT_PASSWORD → .env'dagi MEDIAMTX_PUBLISH_PASS bilan bir xil parol
 #   echo 'MEDIAMTX_CONFIG=./mediamtx.local.yml' >> .env
 #   docker compose -f docker-compose.prod.yml --profile live up -d mediamtx
 
@@ -38,22 +38,36 @@ hlsAlwaysRemux: no
 # Sayt boshqa domenda (www.raqamli-karyer.uz), oqim esa api.… da — so'rov
 # cross-origin bo'ladi. CORS sarlavhasini MediaMTX beradi; nginx'da qayta
 # qo'shmang, aks holda ikkita qiymat kelib brauzer rad etadi.
-hlsAllowOrigin: '*'
+hlsAllowOrigins: ['*']
 
 webrtc: yes
 webrtcAddress: :8889
-webrtcAllowOrigin: '*'
-# Server NAT ortida bo'lsa tashqi IP shu yerda ko'rsatiladi:
-# webrtcAdditionalHosts: [api.raqamli-karyer.uz]
+webrtcAllowOrigins: ['*']
+# WebRTC media alohida ulanish orqali oqadi (signalizatsiya 8889'da, media
+# esa ICE'da). Konteyner ichidagi 172.x manzillar tashqaridan ko'rinmaydi,
+# shuning uchun nomzod sifatida ochiq domen e'lon qilinadi. UDP yopiq
+# tarmoqlar uchun TCP nomzodi ham yoqilgan — brauzer ishlayotganini tanlaydi.
+webrtcAdditionalHosts: [api.raqamli-karyer.uz]
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+
+# ── kim nima qila oladi ────────────────────────────────────────────────────
+# Ko'rish autentifikatsiyasi qasddan yo'q: HLS/WebRTC portlari faqat
+# 127.0.0.1'ga bog'langan, nginx ularni HTTPS ostida uzatadi va havolalarni
+# faqat saytga kirgan foydalanuvchi oladi (doc §5.1, §7). Yozish esa —
+# faqat agent tokeni bilan.
+authInternalUsers:
+  - user: agent
+    pass: AGENT_PASSWORD
+    permissions:
+      - action: publish
+  - user: any
+    permissions:
+      - action: read
+      - action: playback
 
 paths:
   # Har bir karyer-kamera uchun alohida yo'l; oldindan e'lon qilinmaydi —
   # agent push qilganda paydo bo'ladi.
   '~^karyer_(.+)$':
     source: publisher
-    # Faqat agent yoza oladi (parol backend config javobida agentga beriladi).
-    publishUser: agent
-    publishPass: CHANGE_ME_STRONG_PASSWORD
-    # Ko'rish autentifikatsiyasi qasddan yo'q: MediaMTX portlari tashqariga
-    # ochilmaydi, nginx ularni HTTPS ostida uzatadi va havolalarni faqat
-    # saytga kirgan foydalanuvchi oladi (doc §5.1, §7).

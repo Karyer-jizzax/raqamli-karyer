@@ -63,10 +63,14 @@ services:
     ports:
       # RTSP — agent shu portga push qiladi (tashqariga ochiq bo'lishi shart).
       - "8554:8554"
-      # HLS/WebRTC — nginx orqali HTTPS ostida uzatiladi, shuning uchun
-      # faqat localhost.
+      # HLS/WebRTC signalizatsiyasi — nginx orqali HTTPS ostida uzatiladi,
+      # shuning uchun faqat localhost.
       - "127.0.0.1:8888:8888"
       - "127.0.0.1:8889:8889"
+      # WebRTC media (ICE) — brauzer bilan to'g'ridan ulanish, nginx orqali
+      # o'tmaydi. UDP asosiy yo'l; TCP — UDP yopiq tarmoqlar uchun zaxira.
+      - "8189:8189/udp"
+      - "8189:8189/tcp"
 
 volumes:
   karier_pgdata:
