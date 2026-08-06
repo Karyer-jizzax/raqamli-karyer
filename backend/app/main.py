@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.agent import router as agent_router
 from app.api.local import router as local_router
 from app.api.v1.router import api_router
 from app.api.weigh import router as weigh_router
@@ -34,6 +35,9 @@ app.include_router(weigh_router, prefix="/api")
 
 # Local-server provisioning (GET /api/local/config) — provision-JWT auth.
 app.include_router(local_router, prefix="/api")
+
+# Tarozi punkti agenti (doc.txt §3) — /api/agent/*, agent-token bilan.
+app.include_router(agent_router, prefix="/api")
 
 # Serve uploaded media (camera frames). Swap for S3/CDN in production.
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)

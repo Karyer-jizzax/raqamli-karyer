@@ -6,12 +6,14 @@ scale, and out-of-order arrival (main enter before its kon exit).
 """
 
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
+import pytest_asyncio
 
-from app.tests.conftest import auth_header, login
+from app.tests.conftest import auth_header, login, purge_events
 
 KEY = {"X-API-Key": "KARYER-01-SECRET"}
 # event_time is naive UZ local (UTC+5). Anchor at "now" so the read-side
@@ -19,9 +21,30 @@ KEY = {"X-API-Key": "KARYER-01-SECRET"}
 _UZ_TZ = timezone(timedelta(hours=5))
 T0 = datetime.now(_UZ_TZ).replace(tzinfo=None, microsecond=0)
 
+# Shu modul yozgan hodisalar — har testdan keyin tozalanadi (pastdagi fixture).
+_EVENTS: list[str] = []
+
 
 def _plate() -> str:
     return "01A" + uuid.uuid4().hex[:5].upper()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _purge_after_test() -> AsyncGenerator[None, None]:
+    """Har test o'z hodisalarini o'chirib ketadi.
+
+    Bu testlar qatnov oynasini sinash uchun ataylab **kelajak sanali** hodisa
+    yozadi (`_at(+120)` va h.k.). Baza doimiy bo'lgani uchun ular yig'ilib
+    boradi va bir necha ishga tushirishdan keyin hodisalar ro'yxatining
+    birinchi 50 qatorini egallab, "yaratilgan hodisa ro'yxatda ko'rinadi"
+    turidagi testlarni yiqitadi. Ildizi shu yerda yopiladi."""
+    start = len(_EVENTS)
+    try:
+        yield
+    finally:
+        created = _EVENTS[start:]
+        del _EVENTS[start:]
+        await purge_events(list(created))
 
 
 def _at(minutes: int) -> str:
@@ -63,7 +86,9 @@ def _main(plate: str, direction: str, weight: float | None, minutes: int) -> dic
 async def _send(client: httpx.AsyncClient, payload: dict[str, object]) -> dict[str, object]:
     resp = await client.post("/api/weigh", headers=KEY, json=payload)
     assert resp.status_code == 200, resp.text
-    return resp.json()
+    body = resp.json()
+    _EVENTS.append(str(body["id"]))
+    return body
 
 
 async def _trips_of(client: httpx.AsyncClient, plate: str) -> list[dict[str, object]]:
@@ -342,6 +367,7 @@ async def test_trip_surfaces_stage_media(client: httpx.AsyncClient, seeded: None
         ],
     )
     assert resp.status_code == 200, resp.text
+    _EVENTS.append(str(resp.json()["id"]))
 
     trips = await _trips_of(client, plate)
     assert len(trips) == 1

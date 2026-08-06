@@ -41,6 +41,24 @@ class Settings(BaseSettings):
     # without enter) longer than this is a violation → shown as "incomplete".
     trip_open_timeout_hours: int = 2
 
+    # ── Tarozi punkti agenti (doc.txt) ────────────────────────────────────
+    # Hodisa videosi alohida yuklanadi (PUT .../video) — doc §3.1a limiti.
+    agent_max_video_mb: int = 50
+    # Hodisa fotosi ~100-200 KB; qolganini rad etamiz (413) — sekin kanalda
+    # katta fayl navbatni bo'g'ib qo'yadi.
+    agent_max_photo_mb: int = 8
+    # Jonli JPEG kadr (§3.4) shundan eski bo'lsa "eskirgan" hisoblanadi —
+    # sayt "oqim yo'q" deb ko'rsatadi, eski kadrni jonli deb ko'rsatmaydi.
+    live_snapshot_ttl_sec: int = 30
+
+    # MediaMTX relay (doc.txt §5). Bo'sh bo'lsa jonli video umuman e'lon
+    # qilinmaydi — agent snapshot rejimida ishlaydi, hodisalar esa o'z holicha.
+    mediamtx_rtsp_url: str = ""  # rtsp://api.raqamli-karyer.uz:8554
+    mediamtx_publish_user: str = "agent"
+    mediamtx_publish_pass: str = ""
+    mediamtx_hls_url: str = ""  # https://stream.raqamli-karyer.uz
+    mediamtx_webrtc_url: str = ""  # https://stream.raqamli-karyer.uz/whep
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

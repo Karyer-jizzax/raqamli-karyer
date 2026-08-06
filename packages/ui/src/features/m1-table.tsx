@@ -15,7 +15,7 @@ import {
   useUpdateEventPlate,
 } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
-import { DownloadIcon, EyeIcon, PlayIcon } from 'lucide-react';
+import { DownloadIcon, EyeIcon, LoaderIcon, PlayIcon } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
 import {
@@ -507,17 +507,30 @@ export function M1Table({
                           </Button>
                         </td>
                         <td className={GRID_CTR}>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className={IC_BTN}
-                            disabled={!hasVideo}
-                            onClick={() => setMedia({ row: r, mode: 'video' })}
-                            title={t('th_video')}
-                            aria-label={t('th_video')}
-                          >
-                            <PlayIcon className="size-3.5" fill="currentColor" strokeWidth={0} />
-                          </Button>
+                          {r.video_pending ? (
+                            // Agent hodisasi: foto darhol keldi, klip sekin
+                            // kanalda hali yuklanmoqda (doc.txt §3.1a) —
+                            // "video yo'q" emas, "hali kelmadi".
+                            <span
+                              className="inline-flex items-center gap-1 text-2xs text-muted-foreground"
+                              title={t('ev_video_pending')}
+                            >
+                              <LoaderIcon className="size-3.5 opacity-70" strokeWidth={1.8} />
+                              {t('ev_video_pending_short')}
+                            </span>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={IC_BTN}
+                              disabled={!hasVideo}
+                              onClick={() => setMedia({ row: r, mode: 'video' })}
+                              title={t('th_video')}
+                              aria-label={t('th_video')}
+                            >
+                              <PlayIcon className="size-3.5" fill="currentColor" strokeWidth={0} />
+                            </Button>
+                          )}
                         </td>
                         <td className={GRID_NUM}>
                           {r.volume_final > 0 ? f1(r.volume_final) : '-'}

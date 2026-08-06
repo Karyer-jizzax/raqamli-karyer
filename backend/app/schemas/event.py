@@ -87,6 +87,11 @@ class EventOut(BaseModel):
     status: str
     owner_name: str
     stir: str
+    # Hodisa manbasi: local (ANPR server) | agent (tarozi punkti) | manual.
+    source: str = "local"
     # Captured media (populated from the Event.media relationship).
     image_urls: list[str] = []
     video_url: str | None = None
+    # Agent hodisasining klipi hali yuklanmoqda (doc.txt §3.1a) — UI shu
+    # bayroqqa qarab "video yuklanmoqda…" ko'rsatadi.
+    video_pending: bool = False

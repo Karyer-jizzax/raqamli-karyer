@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  createAgentToken,
+  getQuarryAgent,
+  revokeAgentToken,
+  updateAgentConfig,
+  type AgentConfig,
   createCamera,
   createDistrict,
   createEvent,
@@ -149,6 +154,46 @@ export function useDeleteQuarry() {
 
 export function useProvisionToken() {
   return useMutation({ mutationFn: createProvisionToken });
+}
+
+// ── tarozi punkti agenti ─────────────────────────────────────────────────────
+// Agent har 60 soniyada heartbeat yuboradi (doc.txt §3.3) — kartani 30
+// soniyada yangilaymiz, shunda "online → offline" o'tishi bir daqiqadan
+// ko'proq kechikmaydi.
+export function useQuarryAgent(quarryId: string | undefined, poll = true) {
+  return useQuery({
+    queryKey: ['quarry-agent', quarryId],
+    queryFn: () => getQuarryAgent(quarryId!),
+    enabled: !!quarryId,
+    refetchInterval: poll ? 30_000 : false,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCreateAgentToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createAgentToken,
+    onSuccess: (_d, quarryId) => qc.invalidateQueries({ queryKey: ['quarry-agent', quarryId] }),
+  });
+}
+
+export function useRevokeAgentToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: revokeAgentToken,
+    onSuccess: (_d, quarryId) => qc.invalidateQueries({ queryKey: ['quarry-agent', quarryId] }),
+  });
+}
+
+export function useUpdateAgentConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quarryId, body }: { quarryId: string; body: Partial<AgentConfig> }) =>
+      updateAgentConfig(quarryId, body),
+    onSuccess: (_d, { quarryId }) =>
+      qc.invalidateQueries({ queryKey: ['quarry-agent', quarryId] }),
+  });
 }
 
 export function useQuarryPosts(quarryId: string | undefined) {

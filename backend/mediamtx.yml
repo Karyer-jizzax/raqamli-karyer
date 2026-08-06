@@ -1,0 +1,51 @@
+# MediaMTX — jonli video relay (doc.txt §5).
+#
+# Nima uchun relay: kamera karyerning ichki tarmog'ida, sayt foydalanuvchisi
+# unga to'g'ridan ulana olmaydi. Agent oqimni serverga PUSH qiladi, MediaMTX
+# esa uni HLS/WebRTC orqali tarqatadi. Karyer tarmog'ida port ochish yoki oq IP
+# kerak emas; saytda 1 kishi ham, 50 kishi ham ko'rsa — karyer kanalidan bitta
+# oqim ketadi.
+#
+# Yo'l nomi: karyer_<karyer_kodi>_<kamera_id> — backend `services/live.py`
+# aynan shu ko'rinishda yasaydi (harf/raqamdan boshqa belgilar `_` ga aylanadi).
+#
+# Ishga tushirish (docker-compose.prod.yml ichida `mediamtx` servisi bor):
+#   MEDIAMTX_PUBLISH_PASS=<kuchli-parol> docker compose -f docker-compose.prod.yml up -d mediamtx
+
+# Faqat kerakli protokollar: RTSP (agent push) + HLS/WebRTC (sayt).
+rtmp: no
+srt: no
+
+# ── agent → server ─────────────────────────────────────────────────────────
+rtsp: yes
+rtspAddress: :8554
+# Agent uzilib qolsa oqim tez yopilsin — "o'lik" yo'l ko'rish tomonda
+# soatlab qotib turmasin.
+readTimeout: 10s
+writeTimeout: 10s
+
+# ── server → sayt ──────────────────────────────────────────────────────────
+hls: yes
+hlsAddress: :8888
+hlsVariant: lowLatency
+hlsAlwaysRemux: no
+
+webrtc: yes
+webrtcAddress: :8889
+# Sayt boshqa domenda turadi (raqamli-karyer.uz), WHEP so'rovi cross-origin
+# bo'ladi — brauzer uchun ruxsat.
+webrtcAllowOrigin: '*'
+# Server NAT ortida bo'lsa tashqi IP shu yerda ko'rsatiladi:
+# webrtcAdditionalHosts: [api.raqamli-karyer.uz]
+
+paths:
+  # Har bir karyer-kamera uchun alohida yo'l; oldindan e'lon qilinmaydi —
+  # agent push qilganda paydo bo'ladi.
+  '~^karyer_(.+)$':
+    source: publisher
+    # Faqat agent yoza oladi (parol backend config javobida agentga beriladi).
+    publishUser: agent
+    publishPass: CHANGE_ME_STRONG_PASSWORD
+    # Ko'rish autentifikatsiyasi qasddan yo'q: MediaMTX portlari tashqariga
+    # ochilmaydi, nginx ularni HTTPS ostida uzatadi va havolalarni faqat
+    # saytga kirgan foydalanuvchi oladi (doc §5.1, §7).

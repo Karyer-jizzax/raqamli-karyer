@@ -100,6 +100,40 @@ jadvalga o'tadi. Excel eksporti hali yo'q (M-1 eksporti bor) — kichik qolgan i
 
 ---
 
+## A2.6 Tarozi punkti agenti (`doc.txt`) ✅ BAJARILDI — 2026-08-06
+
+Ikkinchi, mustaqil ingest yo'li: KELI D12 tarozisi + kamera. ANPR yo'q, kanal
+144 kbps'gacha sekin bo'lishi mumkin — shuning uchun hodisa **foto bilan darhol**,
+video esa **keyin alohida** keladi.
+
+**Backend** (`app/api/agent.py`, `app/api/v1/agents.py`, migratsiya `0015`)
+- `quarry_agents` jadvali: token (berish/qayta generatsiya/bekor qilish), sozlama
+  (doc §3.2), oxirgi heartbeat (doc §3.3). `events.source` ustuni qo'shildi.
+- `POST /api/agent/events` (multipart, foto majburiy, `event_id` idempotent),
+  `PUT /api/agent/events/{id}/video`, `GET /api/agent/config`,
+  `POST /api/agent/heartbeat`, `POST /api/agent/live-snapshot`.
+- Sayt tomoni: `GET/POST/DELETE /quarries/{id}/agent[/token]`,
+  `PUT .../agent/config`, `GET /live-snapshot/{quarry}/{camera}`.
+- Material/kamera aniqlash mantiqi `services/ingest.py`ga ko'chirildi — `/api/weigh`
+  bilan bitta manba (ikki xil qoida bo'lib qolmasin).
+- 10 ta yangi test (`test_agent.py`).
+
+**Frontend**
+- web-main: karyer qatorida 📻 tugmasi → token + holat + sozlama modali.
+- web-quarry: `/live` sahifasi — WebRTC (WHEP) → HLS → JPEG kadr rejimi.
+- Karyer sahifasida (ikkala ilovada) agent holati chizig'i; M-1 jadvalida
+  "video yuklanmoqda…" holati.
+
+**Infratuzilma:** `backend/mediamtx.yml`, `docker-compose.prod.yml --profile live`,
+`.env.example`dagi `MEDIAMTX_*`. Sozlanmasa jonli oqim e'lon qilinmaydi —
+hodisalar oqimi ta'sirlanmaydi.
+
+**Qolgani:** agent hodisasi yo'nalishni bilmagani uchun qatnov (Trip) zanjiriga
+ulanmaydi — kerak bo'lsa alohida qaror; departament ilovasida jonli ko'rish
+sahifasi (hozir faqat karyer ilovasida).
+
+---
+
 ## A3. Ulanmagan funksiyalarni ishga tushirish (3-navbat)
 
 - **Protokol/dalolatnoma** — `ProtocolViewer` ni hodisa qatoridan ochish, `POST /protocols` bilan yaratish, chop etish (print CSS).

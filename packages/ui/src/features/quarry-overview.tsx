@@ -4,7 +4,14 @@
  * web-department shows the same view at the end of its drill-down and passes a
  * breadcrumb in.
  */
-import { useDistricts, useM1, useQuarries, useQuarryStats, useRegions } from '@karier/api-client';
+import {
+  useDistricts,
+  useM1,
+  useQuarries,
+  useQuarryAgent,
+  useQuarryStats,
+  useRegions,
+} from '@karier/api-client';
 import { formatDateTime, formatNumber, currentLang, useTranslation } from '@karier/i18n';
 import type { StatusKey } from '@karier/types';
 import { ActivityIcon, BarChart3Icon, CameraIcon, MountainIcon, TruckIcon } from 'lucide-react';
@@ -16,6 +23,7 @@ import { type Period, PeriodPicker, periodRange } from '../period';
 import { localizedName } from '../primitives';
 import { PageHeader, Tabs, UpdatedStamp } from '../shell';
 import { Chip, M1_STATUS_TONE, TONE_DOT, TONE_FILL } from '../status';
+import { AgentStatusStrip } from './live-view';
 import { M1Table } from './m1-table';
 import { TripsTable } from './trips-table';
 
@@ -86,6 +94,7 @@ export function QuarryOverview({
   const { data: regions } = useRegions();
   const { data: quarries } = useQuarries();
   const { data: stat } = useQuarryStats(quarryId, range);
+  const { data: agent } = useQuarryAgent(quarryId);
   // The log for the same period — the shape of the working day and the status
   // split come from it, so the picker scopes every number on the screen.
   const { data: log, isFetching: logFetching } = useM1(
@@ -208,6 +217,18 @@ export function QuarryOverview({
             })}
             {!stat?.cameras && <span className="text-data text-muted-foreground">—</span>}
           </div>
+
+          {/* Tarozi agenti — karyerdagi dastur tirikmi. Kamera chiroqlari
+              bazadagi sozlamani ko'rsatadi, bu esa hozirgi haqiqatni: agent
+              o'lgan bo'lsa hodisalar ham kelmayotgan bo'ladi (doc.txt §3.3). */}
+          {agent?.token_issued_at && (
+            <>
+              <h3 className="mt-4 mb-2 text-data font-semibold text-foreground">
+                {t('agent_section')}
+              </h3>
+              <AgentStatusStrip status={agent} flat />
+            </>
+          )}
         </section>
       </div>
 

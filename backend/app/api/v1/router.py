@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    agents,
     auth,
     events,
     materials,
@@ -24,6 +25,7 @@ api_router.include_router(materials.router)
 api_router.include_router(regions.router)
 api_router.include_router(organizations.router)
 api_router.include_router(quarries.router)
+api_router.include_router(agents.router)
 api_router.include_router(events.router)
 api_router.include_router(trips.router)
 api_router.include_router(protocols.router)

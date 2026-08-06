@@ -288,3 +288,52 @@ serverdan oladi.
 **X-API-Key tekshiruvi endi ikki xil:** global `WEIGH_API_KEYS` (.env) YOKI karyerning
 o'z `api_key`si. Karyer kaliti faqat o'z karyeri uchun amal qiladi — A karyer kaliti
 bilan B karyer nomidan hodisa yuborib bo'lmaydi.
+
+---
+
+## 10. Tarozi punkti agenti (`/api/agent/*`) ✅
+
+Bu — **ikkinchi**, mustaqil ingest yo'li (`doc.txt`). ANPR local serveridan farqi:
+raqamni o'qimaydi (operator saytda kiritadi), vaznni KELI D12 tarozisidan oladi va
+sekin kanalga (144 kbps gacha) moslashgan: hodisa **foto bilan darhol**, video esa
+**keyin alohida** yuboriladi.
+
+Auth: `Authorization: Bearer <agent-token>` — token karyerni bildiradi.
+Token web-main'da karyer qatoridagi 📻 tugmasidan beriladi/qayta generatsiya
+qilinadi/bekor qilinadi. Bekor qilingan token → `401`.
+
+| Endpoint | Nima qiladi |
+|---|---|
+| `POST /api/agent/events` | `multipart/form-data`: `event` (JSON) + `photo` (majburiy). `201` — yangi, `200` — dublikat (`event_id` idempotentlik kaliti), `422` — foto/JSON xato |
+| `PUT /api/agent/events/{event_id}/video` | Tana `video/mp4` (≤ `AGENT_MAX_VIDEO_MB`). Qayta PUT eski faylni almashtiradi; `404` — bunday hodisa yo'q |
+| `GET /api/agent/config` | doc §3.2 sozlamalari + `live_stream` bloki (MediaMTX push manzili) |
+| `POST /api/agent/heartbeat` | Holat (tarozi, kameralar, navbat, kanal tezligi, joriy sifat); javobda joriy config ham keladi |
+| `POST /api/agent/live-snapshot` | Tana `image/jpeg`, `X-Camera-Id` sarlavhasi. Faqat xotirada saqlanadi (`204`) |
+
+Sayt tomoni (JWT bilan):
+
+| Endpoint | Nima qiladi |
+|---|---|
+| `GET /api/v1/quarries/{id}/agent` | Agent holati + config + jonli ko'rish havolalari. Token faqat superadminga |
+| `POST /api/v1/quarries/{id}/agent/token` | Token berish / qayta generatsiya (superadmin) |
+| `DELETE /api/v1/quarries/{id}/agent/token` | Tokenni bekor qilish (superadmin) |
+| `PUT /api/v1/quarries/{id}/agent/config` | Masofadan sozlash (superadmin) |
+| `GET /api/v1/live-snapshot/{quarry_id}/{camera_id}` | Oxirgi JPEG kadr (snapshot rejimi) |
+
+**Hodisa qanday yoziladi.** Agent hodisasi odatdagi `events` jadvaliga tushadi
+(`source="agent"`), shuning uchun M-1 jurnali, hisobotlar va eksport avtomatik
+ishlaydi. Farqlar:
+
+- Raqam kelmagani uchun holat `no_plate` — operator "Tekshirish kerak" navbatida
+  fotodan o'qib kiritadi (mavjud `PATCH /events/{id}/plate`).
+- `weight_stable=false` bo'lsa holat `inspect` — o'lchov barqarorlashmagan.
+- Yo'nalish (kirish/chiqish) bu punktda o'lchanmaydi (`direction="unknown"`),
+  shuning uchun hodisa **qatnov (Trip) zanjiriga ulanmaydi** — soxta "yakunlangan
+  qatnov" yasalmaydi.
+- Video hali kelmagan bo'lsa `video_pending=true` — jadvalda "yuklanmoqda…".
+
+**Jonli video.** `MEDIAMTX_*` sozlanmagan bo'lsa jonli oqim e'lon qilinmaydi va
+agent snapshot rejimida ishlayveradi — hodisalar oqimiga umuman ta'sir qilmaydi
+(doc §4.3). Sozlanganda: agent `rtsp://…:8554/karyer_<kod>_<kamera>` ga push
+qiladi, sayt WebRTC (WHEP) yoki HLS orqali ko'radi. Server tarafi:
+`backend/mediamtx.yml` + `docker-compose.prod.yml --profile live`.

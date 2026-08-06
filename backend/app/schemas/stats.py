@@ -98,8 +98,12 @@ class M1Row(BaseModel):
     stir: str
     owner_name: str
     status: str
+    # local (ANPR server) | agent (tarozi punkti) | manual
+    source: str = "local"
     image_urls: list[str] = []
     video_url: str | None = None
+    # Agent hodisasi: klip alohida yuklanadi (doc.txt §3.1a) — hali kelmagan.
+    video_pending: bool = False
 
 
 class M1Response(BaseModel):

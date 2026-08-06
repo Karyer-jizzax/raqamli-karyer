@@ -517,8 +517,12 @@ export interface M1Row {
   stir: string;
   owner_name: string;
   status: 'confirm' | 'flagged' | 'inspect' | 'no_plate';
+  // Hodisa manbasi: local (ANPR server) | agent (tarozi punkti) | manual
+  source?: string;
   image_urls: string[];
   video_url: string | null;
+  // Agent hodisasining klipi hali yuklanmoqda (doc.txt §3.1a)
+  video_pending?: boolean;
 }
 
 export interface M1Response {
@@ -722,6 +726,73 @@ export const createProvisionToken = (quarryId: string) =>
     // '' when API_BASE is same-origin — fall back to the page origin.
     server_url: MEDIA_ORIGIN || window.location.origin,
   });
+
+// ── tarozi punkti agenti (doc.txt) ──────────────────────────────────────────
+// Karyerdagi local dastur: tarozi + kamera. Token bilan ulanadi, sozlamasini
+// serverdan o'qiydi va har 60s holat yuboradi — shu holat karyer sahifasida
+// ko'rinadi. Token faqat superadminga qaytariladi (boshqa rollarda null).
+export type AgentVideoQuality = 'auto' | 'snapshot' | 'low' | 'medium' | 'high';
+
+export interface AgentConfig {
+  video_quality: AgentVideoQuality;
+  quality_profiles_override: Record<string, unknown> | null;
+  live_stream_enabled: boolean;
+  event_pre_seconds: number;
+  event_post_seconds: number;
+  min_event_weight_kg: number;
+  stable_seconds: number;
+  heartbeat_interval_sec: number;
+}
+
+export interface AgentStream {
+  camera_id: string;
+  hls_url: string | null;
+  webrtc_url: string | null;
+  // Snapshot rejimida sahifa shu manzilni har 2-3 soniyada yangilaydi.
+  snapshot_url: string;
+}
+
+export interface AgentStatus {
+  quarry_id: string;
+  token: string | null;
+  token_issued_at: string | null;
+  revoked_at: string | null;
+  is_active: boolean;
+  online: boolean;
+  last_seen_at: string | null;
+  agent_version: string;
+  scale_ok: boolean;
+  cameras: { id: string; ok: boolean }[];
+  queue_size: number;
+  upload_kbps_avg: number;
+  live_streaming: boolean;
+  current_quality: string;
+  config: AgentConfig | null;
+  live_mode: 'hls' | 'snapshot' | 'off';
+  streams: AgentStream[];
+}
+
+export const getQuarryAgent = (quarryId: string) =>
+  api.get<AgentStatus>(`/quarries/${quarryId}/agent`);
+export const createAgentToken = (quarryId: string) =>
+  api.post<AgentStatus>(`/quarries/${quarryId}/agent/token`);
+export const revokeAgentToken = (quarryId: string) =>
+  api.del(`/quarries/${quarryId}/agent/token`);
+export const updateAgentConfig = (quarryId: string, body: Partial<AgentConfig>) =>
+  api.put<AgentStatus>(`/quarries/${quarryId}/agent/config`, body);
+
+/** Jonli kadrni olish (snapshot rejimi).
+ *
+ * `<img src>` sarlavha yubora olmaydi, kadr esa autentifikatsiya talab qiladi —
+ * shuning uchun blob sifatida olib, `URL.createObjectURL` bilan ko'rsatiladi. */
+export async function fetchLiveSnapshot(path: string): Promise<Blob> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const resp = await fetch(`${MEDIA_ORIGIN}${path}`, { headers, cache: 'no-store' });
+  if (!resp.ok) throw new ApiError(resp.status, `Kadr yo'q: ${resp.status}`);
+  return await resp.blob();
+}
 
 export const getQuarries = () => api.get<Quarry[]>('/quarries');
 export const createQuarry = (body: {

@@ -6,13 +6,30 @@ video, event_uid idempotency, and media surfacing on the created event.
 
 import json
 import uuid
+from collections.abc import AsyncGenerator
 
 import httpx
 import pytest
+import pytest_asyncio
 
-from app.tests.conftest import auth_header, login
+from app.tests.conftest import auth_header, login, purge_quarries
 
 KEY = {"X-API-Key": "KARYER-01-SECRET"}
+
+# Material testi o'z karyerini yaratadi — har testdan keyin o'chiriladi, aks
+# holda adminkadagi karyerlar ro'yxati soxta qatorlar bilan o'sib boradi.
+_QUARRIES: list[str] = []
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _purge_after_test() -> AsyncGenerator[None, None]:
+    start = len(_QUARRIES)
+    try:
+        yield
+    finally:
+        created = _QUARRIES[start:]
+        del _QUARRIES[start:]
+        await purge_quarries(list(created))
 
 
 def _payload(event_uid: str, **over: object) -> dict[str, object]:
@@ -149,6 +166,7 @@ async def test_weigh_detector_only_material_needs_inspect(
             headers=admin,
         )
     ).json()
+    _QUARRIES.append(str(quarry["id"]))
     post = (
         await client.post(
             f"/api/v1/quarries/{quarry['id']}/posts",

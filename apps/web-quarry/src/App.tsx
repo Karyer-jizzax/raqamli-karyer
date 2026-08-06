@@ -4,6 +4,7 @@ import {
   CameraIcon,
   ClipboardListIcon,
   LayoutDashboardIcon,
+  RadioIcon,
   SearchCheckIcon,
   TruckIcon,
 } from 'lucide-react';
@@ -13,6 +14,7 @@ import { Cameras } from './features/Cameras';
 import { Dashboard } from './features/Dashboard';
 import { Events } from './features/Events';
 import { Inbox, INBOX_STATUSES } from './features/Inbox';
+import { Live } from './features/Live';
 import { Trips } from './features/Trips';
 
 /** Sidebar entry ↔ route. The shell stays router-free, so the map lives here. */
@@ -21,6 +23,7 @@ const NAV: (NavEntry & { path: string })[] = [
   { key: 'trips', path: '/trips', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'events', path: '/events', labelKey: 'ev_list', icon: ClipboardListIcon },
   { key: 'inbox', path: '/inbox', labelKey: 'nav_inbox', icon: SearchCheckIcon },
+  { key: 'live', path: '/live', labelKey: 'nav_live', icon: RadioIcon },
   { key: 'cameras', path: '/cameras', labelKey: 'nav_cameras', icon: CameraIcon },
 ];
 
@@ -54,6 +57,8 @@ function Shell() {
         <Route path="/events" element={<Events />} />
         {/* Operator work queue: unreadable plates + unconfirmed material */}
         <Route path="/inbox" element={<Inbox />} />
+        {/* Jonli ko'rish: agent tanlagan rejim (oqim yoki JPEG kadr) */}
+        <Route path="/live" element={<Live />} />
         <Route path="/cameras" element={<Cameras />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

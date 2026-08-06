@@ -21,7 +21,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.formparsers import MultiPartException
@@ -29,10 +29,10 @@ from starlette.formparsers import MultiPartException
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.event import Event
-from app.models.material import Material
 from app.models.media import Media
-from app.models.quarry import Camera, Post, Quarry, quarry_materials
+from app.models.quarry import Quarry
 from app.services.detection import get_detector
+from app.services.ingest import resolve_camera, resolve_material
 from app.services.plates import payer_type, split_plate
 from app.services.storage import save_bytes
 from app.services.trips import link_event
@@ -107,60 +107,6 @@ def _parse_event_time(raw: str) -> datetime:
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "event_time formati xato") from exc
     return naive.replace(tzinfo=_UZ_TZ)
-
-
-async def _resolve_material(
-    db: AsyncSession,
-    quarry_id: object,
-    local_id: str | None,
-    local_conf: float | None,
-    det_id: str | None,
-    det_conf: float,
-) -> tuple[Material | None, float, bool]:
-    """Hodisa materialini aniqlash. Asosiy manba — karyerga biriktirilgan
-    mahsulotlar ro'yxati; lokal YOLO taklifi ham, backend detektori ham shu
-    ro'yxat bilan cheklanadi. Qaytaradi: (material, confidence, inspect?).
-
-    * 1 ta biriktirilgan  → har doim o'sha (AI shart emas).
-    * bir nechta          → lokal taklif ro'yxatda bo'lsa → qabul; bo'lmasa
-                            detektor taklifi ro'yxatda bo'lsa → yoziladi, lekin
-                            inspect (detektor yagona manba — operator
-                            tasdiqlasin); hech biri mos kelmasa → birinchisi
-                            yoziladi va inspect.
-    * ro'yxat bo'sh       → eski xatti-harakat: lokal taklif > detektor.
-    """
-    assigned = list(
-        (
-            await db.execute(
-                select(Material)
-                .join(quarry_materials, quarry_materials.c.material_id == Material.id)
-                .where(quarry_materials.c.quarry_id == quarry_id)
-                .order_by(Material.default_density)
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-    if len(assigned) == 1:
-        return assigned[0], 100.0, False
-
-    if assigned:
-        by_id = {m.id: m for m in assigned}
-        if local_id and local_id in by_id:
-            return by_id[local_id], float(local_conf or 0.0), False
-        if det_id and det_id in by_id:
-            # Detektor taklifi yagona manba (lokal yo'q yoki ro'yxatdan
-            # tashqarida) — tasodifiy taqsimlanib ketmasin, operator ko'rsin.
-            return by_id[det_id], det_conf, True
-        return assigned[0], 0.0, True
-
-    for cand_id, conf in ((local_id, float(local_conf or 0.0)), (det_id, det_conf)):
-        if cand_id:
-            material = await db.get(Material, cand_id)
-            if material is not None:
-                return material, conf, False
-    return None, 0.0, False
 
 
 @router.get("/ping")
@@ -243,22 +189,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         }
 
     # Resolve the camera by name/code within the quarry; fall back to first post.
-    cam = (
-        await db.execute(
-            select(Camera)
-            .join(Post, Post.id == Camera.post_id)
-            .where(Post.quarry_id == quarry.id)
-            .where(or_(Camera.name == payload.camera_name, Camera.code == payload.camera_name))
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-    if cam is not None:
-        post_id, camera_id = cam.post_id, cam.id
-    else:
-        post_id = (
-            await db.execute(select(Post.id).where(Post.quarry_id == quarry.id).limit(1))
-        ).scalar_one_or_none()
-        camera_id = None
+    post_id, camera_id = await resolve_camera(db, quarry.id, payload.camera_name)
 
     plate_region, plate_number = split_plate(payload.plate)
     weight_kg = int(payload.weight) if payload.weight else 0
@@ -276,7 +207,7 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
 
     # Material: karyerga biriktirilgan mahsulotlar ro'yxati asosida (lokal YOLO
     # taklifi va detektor shu ro'yxat bilan cheklanadi, mos kelmasa inspect).
-    material, material_confidence, material_inspect = await _resolve_material(
+    material, material_confidence, material_inspect = await resolve_material(
         db,
         quarry.id,
         payload.material_id,

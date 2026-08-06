@@ -284,8 +284,10 @@ async def m1(
                 stir=e.stir,
                 owner_name=e.owner_name,
                 status=e.status,
+                source=e.source,
                 image_urls=e.image_urls,
                 video_url=e.video_url,
+                video_pending=e.video_pending,
             )
             for e, post_code, cam_code, cam_name in rows
         ],

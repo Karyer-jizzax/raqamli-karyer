@@ -6,11 +6,28 @@ that api_key is then valid on /api/weigh for THIS quarry only.
 """
 
 import uuid
+from collections.abc import AsyncGenerator
 
 import httpx
 import pytest
+import pytest_asyncio
 
-from app.tests.conftest import auth_header, login
+from app.tests.conftest import auth_header, login, purge_quarries
+
+# Shu modul yaratgan karyerlar — har testdan keyin o'chiriladi.
+_QUARRIES: list[str] = []
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _purge_after_test() -> AsyncGenerator[None, None]:
+    """Karyer hodisa/kamera bilan birga o'chadi (FK tartibi purge ichida)."""
+    start = len(_QUARRIES)
+    try:
+        yield
+    finally:
+        created = _QUARRIES[start:]
+        del _QUARRIES[start:]
+        await purge_quarries(list(created))
 
 
 async def _make_quarry(client: httpx.AsyncClient, headers: dict[str, str]) -> dict[str, str]:
@@ -22,6 +39,7 @@ async def _make_quarry(client: httpx.AsyncClient, headers: dict[str, str]) -> di
         headers=headers,
     )
     assert create.status_code == 201, create.text
+    _QUARRIES.append(str(create.json()["id"]))
     return {"id": create.json()["id"], "code": code}
 
 
@@ -111,8 +129,8 @@ async def test_provision_token_and_local_config(
         },
     )
     assert other.status_code == 401
-    # No cleanup: the weigh event references the camera (FK), so the quarry
-    # can't be deleted — like test_weigh, we leave the rows in the dev DB.
+    # Tozalash autouse fixture'da: hodisa → media → qatnov → karyer tartibida
+    # o'chadi, shuning uchun kameraga FK havolasi to'siq bo'lmaydi.
 
 
 @pytest.mark.asyncio
@@ -146,3 +164,4 @@ async def test_provision_token_requires_superadmin(
     )
     assert resp.status_code == 403
     await client.delete(f"/api/v1/quarries/{quarry['id']}", headers=admin)
+    _QUARRIES.remove(str(quarry["id"]))  # test o'zi o'chirdi

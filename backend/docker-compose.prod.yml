@@ -45,6 +45,27 @@ services:
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
 
+  # Jonli video relay (doc.txt §5). Ixtiyoriy: o'chirilgan bo'lsa agent
+  # snapshot rejimida ishlaydi, hodisalar oqimi esa umuman ta'sirlanmaydi.
+  # Ishga tushirish: docker compose -f docker-compose.prod.yml --profile live up -d
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: karier-mediamtx
+    restart: unless-stopped
+    profiles: ["live"]
+    # Publish paroli mediamtx.yml ichida turadi (`publishPass`) va backend
+    # .env'dagi MEDIAMTX_PUBLISH_PASS bilan bir xil bo'lishi shart — backend
+    # o'sha parolni agentga config javobida beradi.
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      # RTSP — agent shu portga push qiladi (tashqariga ochiq bo'lishi shart).
+      - "8554:8554"
+      # HLS/WebRTC — nginx orqali HTTPS ostida uzatiladi, shuning uchun
+      # faqat localhost.
+      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:8889:8889"
+
 volumes:
   karier_pgdata:
   karier_media:

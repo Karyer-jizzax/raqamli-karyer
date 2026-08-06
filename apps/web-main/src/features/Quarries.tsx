@@ -48,6 +48,7 @@ import {
   PackageIcon,
   PencilIcon,
   PlusIcon,
+  RadioIcon,
   SearchIcon,
   Trash2Icon,
 } from 'lucide-react';
@@ -65,6 +66,7 @@ import {
   StatusDot,
   TH,
 } from '../shared';
+import { QuarryAgentModal } from './QuarryAgent';
 import { QuarryPostsModal } from './QuarryPosts';
 
 function NewQuarryModal({ onClose }: { onClose: () => void }) {
@@ -445,6 +447,7 @@ function QuarryTable({
   const [linking, setLinking] = useState<Quarry | null>(null);
   const [managingPosts, setManagingPosts] = useState<Quarry | null>(null);
   const [provisioning, setProvisioning] = useState<Quarry | null>(null);
+  const [agentFor, setAgentFor] = useState<Quarry | null>(null);
 
   if (isLoading)
     return <p className="px-[18px] py-4 text-sm text-muted-foreground">{t('loading')}</p>;
@@ -522,6 +525,15 @@ function QuarryTable({
                       onClick={() => setProvisioning(it)}
                     >
                       <KeyRoundIcon />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={ROW_ACTION}
+                      aria-label={t('agent_action', { name: it.name })}
+                      onClick={() => setAgentFor(it)}
+                    >
+                      <RadioIcon />
                     </Button>
                     <Button
                       variant="ghost"
@@ -606,6 +618,7 @@ function QuarryTable({
       {provisioning && (
         <ProvisionTokenModal quarry={provisioning} onClose={() => setProvisioning(null)} />
       )}
+      {agentFor && <QuarryAgentModal quarry={agentFor} onClose={() => setAgentFor(null)} />}
     </div>
   );
 }

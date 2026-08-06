@@ -44,6 +44,11 @@ class Event(Base, UUIDMixin, TimestampMixin):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     is_loaded: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Hodisa qayerdan keldi: "local" — ANPR local server (/api/weigh),
+    # "agent" — tarozi punkti agenti (/api/agent/events, doc.txt), "manual" —
+    # operator qo'lda kiritgan. Agent hodisasining videosi keyin alohida
+    # yuklanadi, shuning uchun UI "video yuklanmoqda…" holatini shundan biladi.
+    source: Mapped[str] = mapped_column(String(16), default="local")
     vtype: Mapped[str] = mapped_column(String(16), default="truck")
     payer_type: Mapped[str] = mapped_column(String(16), default="legal")
 
@@ -87,3 +92,12 @@ class Event(Base, UUIDMixin, TimestampMixin):
     def video_url(self) -> str | None:
         """First video clip URL, if any (main scale events only)."""
         return next((m.url for m in self.media if m.kind == "video"), None)
+
+    @property
+    def video_pending(self) -> bool:
+        """Agent hodisasining videosi hali yetib kelmaganmi (doc.txt §3.1a).
+
+        Agent avval foto bilan hodisani yuboradi (sekin internetda bir necha
+        soniya), videoni esa keyin alohida PUT qiladi (daqiqalab davom etishi
+        mumkin) — shu oraliqda UI "video yuklanmoqda…" ko'rsatadi."""
+        return self.source == "agent" and self.video_url is None
