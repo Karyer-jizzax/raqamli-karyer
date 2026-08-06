@@ -337,3 +337,28 @@ agent snapshot rejimida ishlayveradi — hodisalar oqimiga umuman ta'sir qilmayd
 (doc §4.3). Sozlanganda: agent `rtsp://…:8554/karyer_<kod>_<kamera>` ga push
 qiladi, sayt WebRTC (WHEP) yoki HLS orqali ko'radi. Server tarafi:
 `backend/mediamtx.yml` + `docker-compose.prod.yml --profile live`.
+
+### 10.1. Jonli video — serverni yoqish (2026-08-06 da o'rnatilgan holat)
+
+1. Parol: `openssl rand -hex 16` — **ikki joyda bir xil** bo'ladi.
+2. `cp mediamtx.yml mediamtx.local.yml` (git kuzatmaydi), parolni `authInternalUsers`
+   ichiga yozing. Kuzatiladigan `mediamtx.yml`ni serverda tahrirlamang — keyingi CI
+   `git pull` konflikt berib deploy'ni sindiradi.
+3. Backend `.env`: `MEDIAMTX_CONFIG=./mediamtx.local.yml` + `MEDIAMTX_RTSP_URL`,
+   `MEDIAMTX_PUBLISH_USER/PASS`, `MEDIAMTX_HLS_URL`, `MEDIAMTX_WEBRTC_URL`.
+4. Nginx: `backend/deploy/nginx-live.conf.example` dagi ikki blok
+   (`proxy_redirect` bilan — usiz HLS backendga borib 404 beradi).
+5. Portlar: 8554/tcp (RTSP push) va 8189 udp+tcp (WebRTC ICE) tashqaridan ochiq
+   bo'lsin. 8888/8889 faqat localhost — ular nginx orqali chiqadi.
+6. `docker compose -f docker-compose.prod.yml --profile live up -d mediamtx`
+7. Adminka → Karyer → Agent → `video_quality` = `low` (`auto` local agentda
+   hozircha snapshot degani).
+
+**Kamera kodeki: H.264 bo'lishi shart.** Agent SUB-oqimni transkodlashsiz uzatadi,
+shuning uchun kamera H.265/HEVC bersa, oqim serverga tushadi-yu brauzerda ochilmaydi:
+WebRTC H.265ni umuman qo'llamaydi, HLS'da esa faqat Safari o'ynatadi. Kamera
+web-interfeysida SUB-oqim kodekini H.264 qiling.
+
+Tekshirish: `docker logs karier-mediamtx` da `is publishing to path 'karyer_…'`;
+`curl -L https://api.raqamli-karyer.uz/live/hls/<yo'l>/index.m3u8` → `#EXTM3U` va
+`CODECS="avc1…"` (agar `hvc1…` bo'lsa — kamera hali H.265da).
