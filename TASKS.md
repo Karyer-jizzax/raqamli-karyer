@@ -129,8 +129,16 @@ video esa **keyin alohida** keladi.
 hodisalar oqimi ta'sirlanmaydi.
 
 **Qolgani:** agent hodisasi yo'nalishni bilmagani uchun qatnov (Trip) zanjiriga
-ulanmaydi — kerak bo'lsa alohida qaror; departament ilovasida jonli ko'rish
-sahifasi (hozir faqat karyer ilovasida).
+ulanmaydi — kerak bo'lsa alohida qaror.
+
+### A2.7 Navigatsiya soddalashtirildi — 2026-08-06
+Jonli ko'rish ikkala ilovada ham bor: karyerda o'z karyeri, departamentda
+tanlanadigan karyer (`LivePanel` — `@karier/ui`, ikkalasi bitta ekranni ishlatadi).
+O'chirildi: departamentdagi **Huquqbuzarliklar** (chala qatnovlar va belgilangan
+hodisalar — ular Qatnovlar/Hodisalar jadvallarida filtr bilan ham ko'rinadi),
+karyerdagi **Kameralar** (faqat o'qish uchun ro'yxat edi — jonli ko'rish uni
+almashtiradi) va **Tekshirish kerak** (M-1 jadvalidagi holat filtri bilan bir xil).
+Eski yo'llar dashboardga qaytaradi, ishlatilmay qolgan i18n kalitlari o'chirildi.
 
 ---
 

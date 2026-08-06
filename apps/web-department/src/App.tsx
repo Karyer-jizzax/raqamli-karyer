@@ -4,7 +4,7 @@ import {
   ClipboardListIcon,
   LayoutDashboardIcon,
   MountainIcon,
-  ShieldAlertIcon,
+  RadioIcon,
   TruckIcon,
 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -13,10 +13,10 @@ import { Analytics } from './features/Analytics';
 import { Dashboard } from './features/Dashboard';
 import { DistrictDetail } from './features/DistrictDetail';
 import { Events } from './features/Events';
+import { Live } from './features/Live';
 import { Quarries } from './features/Quarries';
 import { QuarryDetail } from './features/QuarryDetail';
 import { Trips } from './features/Trips';
-import { Violations } from './features/Violations';
 
 /** Sidebar entry ↔ route. The shell stays router-free, so the map lives here. */
 const NAV: (NavEntry & { path: string })[] = [
@@ -25,7 +25,7 @@ const NAV: (NavEntry & { path: string })[] = [
   { key: 'quarries', path: '/quarries', labelKey: 'nav_quarries', icon: MountainIcon },
   { key: 'data', path: '/data', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'events', path: '/events', labelKey: 'ev_list', icon: ClipboardListIcon },
-  { key: 'violations', path: '/violations', labelKey: 'nav_violations', icon: ShieldAlertIcon },
+  { key: 'live', path: '/live', labelKey: 'nav_live', icon: RadioIcon },
 ];
 
 function Shell() {
@@ -59,8 +59,8 @@ function Shell() {
         <Route path="/trips" element={<Navigate to="/data" replace />} />
         {/* Hodisalar: raw M-1 event log across all quarries in the region */}
         <Route path="/events" element={<Events />} />
-        {/* Huquqbuzarliklar: unfinished trips + flagged events */}
-        <Route path="/violations" element={<Violations />} />
+        {/* Jonli ko'rish: viloyatdagi tanlangan karyer kameralari */}
+        <Route path="/live" element={<Live />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppShell>

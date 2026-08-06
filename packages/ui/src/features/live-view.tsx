@@ -19,11 +19,17 @@
  * Jonli ko'rish — qo'shimcha qavat: u ishlamasa ham hodisalar oqimi (vazn,
  * foto, video) to'liq ishlayveradi.
  */
-import { type AgentStatus, type AgentStream, fetchLiveSnapshot } from '@karier/api-client';
+import {
+  type AgentStatus,
+  type AgentStream,
+  fetchLiveSnapshot,
+  useQuarryAgent,
+} from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import { CameraOffIcon, Maximize2Icon, RadioIcon, VideoOffIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { EmptyState, TableSkeleton } from '../data-table';
 import { cn } from '../lib/utils';
 import { Chip, TONE_DOT } from '../status';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -381,6 +387,32 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
       {opened && (
         <CameraDialog stream={opened} mode={mode} onClose={() => setOpenCamera(null)} />
       )}
+    </>
+  );
+}
+
+/**
+ * Bitta karyerning jonli ko'rinishi: holat chizig'i + kameralar.
+ *
+ * Karyer ilovasi operatorning o'z karyerini beradi, departament esa
+ * ro'yxatdan tanlanganini — ekranning qolgan qismi ikkalasida bir xil.
+ */
+export function LivePanel({ quarryId }: { quarryId: string | undefined }) {
+  const { t } = useTranslation();
+  const { data: agent, isLoading } = useQuarryAgent(quarryId);
+
+  if (!quarryId) return <EmptyState title={t('live_pick_quarry')} />;
+  // `agent` saqlanib turadi (placeholderData) — karyer almashganda ekran
+  // bo'shab ketmasin, faqat birinchi yuklashda skeleton ko'rsatiladi.
+  if (isLoading && !agent) return <TableSkeleton rows={2} cols={2} />;
+  if (!agent || !agent.is_active) {
+    return <EmptyState title={t('agent_none')} hint={t('agent_none_hint')} />;
+  }
+
+  return (
+    <>
+      <AgentStatusStrip status={agent} />
+      <LiveGrid status={agent} />
     </>
   );
 }

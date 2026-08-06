@@ -66,7 +66,7 @@ export { ProtocolDocument, ProtocolViewer } from './protocol';
 export { exportM1ToExcel, type ExportM1Options } from './export-events';
 
 // Data screens shared by web-department and web-quarry
-export { AgentStatusStrip, LiveGrid } from './features/live-view';
+export { AgentStatusStrip, LiveGrid, LivePanel } from './features/live-view';
 export { M1Table } from './features/m1-table';
 export { QuarryOverview } from './features/quarry-overview';
 export { TripsTable } from './features/trips-table';
