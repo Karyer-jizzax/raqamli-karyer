@@ -23,7 +23,7 @@ import {
   TableSkeleton,
   Unit,
 } from '../data-table';
-import { FilterBar, FilterSelect, FilterText, useFilterPanel } from '../filters';
+import { FilterBar, FilterSelect, FilterText, QuickFilters, useFilterPanel } from '../filters';
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Chip, TONE_TEXT, TRIP_KIND_TONE, TRIP_STAGE_TONE } from '../status';
@@ -111,14 +111,19 @@ function TripDialog({ trip, onClose }: { trip: TripRecord; onClose: () => void }
 }
 
 /**
- * @param stages  Restricts the grid to these stages — how the violations queue
- *                reuses it for "chala" trips. The stage filter then only
- *                offers the allowed ones.
+ * Bir bosishli filtrlar: inspektorning ish navbati.
+ *
+ * `chala` — zavod tarozisiga kirgan, lekin chiqishi qayd etilmagan qatnov:
+ * netto hisoblanmay qolgan, ya'ni tekshiruv talab qiladi. `yuk_emas` — netto
+ * chegaradan past (xodim mashinasi o'tgan): huquqbuzarlik emas, lekin
+ * hisobotdan chiqarilgani uchun alohida ko'rish qulay.
  */
-export function TripsTable({
-  quarryId,
-  stages,
-}: { quarryId?: string; stages?: readonly string[] } = {}) {
+const QUICK: { key: string; labelKey: string; stages: readonly string[] }[] = [
+  { key: 'chala', labelKey: 'quick_incomplete', stages: ['chala'] },
+  { key: 'yuk_emas', labelKey: 'quick_no_cargo', stages: ['yuk_emas'] },
+];
+
+export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const showQuarry = !quarryId;
@@ -136,6 +141,7 @@ export function TripsTable({
   );
 
   const [f, setF] = useState<Filters>({});
+  const [quick, setQuick] = useState('');
   const [sel, setSel] = useState<TripRecord | null>(null);
   const [prev, setPrev] = useState<Preview | null>(null);
   const [page, setPage] = useState(1);
@@ -148,6 +154,7 @@ export function TripsTable({
   const clear = () => {
     setPage(1);
     setF({});
+    setQuick('');
   };
 
   const quarryById = useMemo(() => {
@@ -156,13 +163,24 @@ export function TripsTable({
     return m;
   }, [quarries]);
 
-  const rows = useMemo(() => {
-    const list = data ?? [];
-    return stages ? list.filter((r) => stages.includes(r.stage)) : list;
-  }, [data, stages]);
+  const rows = useMemo(() => data ?? [], [data]);
+
+  // Sonlar boshqa filtrlardan oldingi holatdan — "nechta ish bor" degan javob
+  // tanlangan karyer yoki turga qarab o'zgarmasin.
+  const quickItems = useMemo(
+    () =>
+      QUICK.map((q) => ({
+        key: q.key,
+        label: t(q.labelKey),
+        count: rows.filter((r) => q.stages.includes(r.stage)).length,
+      })),
+    [rows, t],
+  );
+  const quickStages = QUICK.find((q) => q.key === quick)?.stages;
 
   // Client-side filtering over the single fetch (mirrors the M-1 grid).
   const filtered = rows.filter((r) => {
+    if (quickStages && !quickStages.includes(r.stage)) return false;
     if (f.quarry && r.quarry_id !== f.quarry) return false;
     if (f.kind && r.kind !== f.kind) return false;
     if (f.stage && r.stage !== f.stage) return false;
@@ -202,11 +220,19 @@ export function TripsTable({
   const pageStart = (cur - 1) * pageSize;
   const pageRows = filtered.slice(pageStart, pageStart + pageSize);
 
-  const activeCount = Object.keys(f).length;
+  const activeCount = Object.keys(f).length + (quick ? 1 : 0);
   const cols = showQuarry ? 9 : 8;
 
   return (
     <div className="flex flex-col gap-3.5">
+      <QuickFilters
+        value={quick}
+        onChange={(v) => {
+          setPage(1);
+          setQuick(v);
+        }}
+        items={quickItems}
+      />
       <FilterBar
         activeCount={activeCount}
         onClear={clear}
@@ -231,7 +257,7 @@ export function TripsTable({
           label={t('filt_status')}
           value={f.stage}
           onChange={set('stage')}
-          options={(stages ?? STAGES).map((s) => [s, t(`stage_${s}`)])}
+          options={STAGES.map((s) => [s, t(`stage_${s}`)])}
         />
         <FilterText
           label={t('filt_plate')}

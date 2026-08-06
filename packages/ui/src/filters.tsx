@@ -92,6 +92,61 @@ export function FilterBar({
   );
 }
 
+/**
+ * Bir bosishli filtrlar — jadval ustidagi qator.
+ *
+ * Inspektorning kundalik savoli ikkita: "nimani tekshirish kerak?" va "nima
+ * chala qolgan?". Ular uchun alohida sahifa tutish shart emas (o'sha jadval,
+ * o'sha ustunlar) — lekin filtr panelini ochib, ro'yxatdan holat tanlash ham
+ * uzoq. Shu qator ikkalasining o'rtasi: bitta bosish, sonini ko'rsatib turadi.
+ *
+ * Sonlar jadvalning boshqa filtrlaridan oldingi holatdan hisoblanadi —
+ * "nechta ish bor" degan javob tanlangan tuman yoki sanaga qarab o'zgarmasin.
+ */
+export function QuickFilters({
+  value,
+  onChange,
+  items,
+}: {
+  /** '' — hammasi. */
+  value: string;
+  onChange: (v: string) => void;
+  items: { key: string; label: string; count: number }[];
+}) {
+  const { t } = useTranslation();
+  const all = [{ key: '', label: t('quick_all'), count: -1 }, ...items];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('quick_all')}>
+      {all.map((item) => {
+        const active = item.key === value;
+        return (
+          <Button
+            key={item.key || 'all'}
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-pressed={active}
+            onClick={() => onChange(active ? '' : item.key)}
+            className={cn(
+              'h-8 rounded-full text-data font-medium',
+              active
+                ? 'border-primary bg-primary-tint text-primary hover:bg-primary-tint'
+                : 'text-muted-foreground',
+            )}
+          >
+            {item.label}
+            {item.count >= 0 && (
+              <span className={cn('tabular-nums', !active && 'text-foreground')}>
+                {item.count}
+              </span>
+            )}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Open where the viewport can spare the ~170px, closed where it cannot. */
 export function useFilterPanel() {
   return useState(

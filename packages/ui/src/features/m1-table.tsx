@@ -33,7 +33,7 @@ import {
   Unit,
 } from '../data-table';
 import { exportM1ToExcel } from '../export-events';
-import { FilterBar, FilterSelect, FilterText, useFilterPanel } from '../filters';
+import { FilterBar, FilterSelect, FilterText, QuickFilters, useFilterPanel } from '../filters';
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Field, ModalForm } from '../primitives';
@@ -188,14 +188,19 @@ function VehicleHistory({
 }
 
 /**
- * @param statuses  Restricts the log to these statuses — how the work queues
- *                  ("Tekshirish kerak", "Huquqbuzarliklar") reuse this grid.
- *                  The status filter then only offers the allowed ones.
+ * Bir bosishli filtrlar: operator/inspektorning ish navbatlari.
+ *
+ * `attention` — raqamsiz (ANPR o'qiy olmagan) va o'lchovi shubhali hodisalar:
+ * ikkalasi ham qo'l bilan ko'rib chiqishni talab qiladi. Holat ro'yxatida
+ * ular alohida turadi, shuning uchun bittalab tanlash ikki marta filtrlashni
+ * talab qilardi.
  */
-export function M1Table({
-  quarryId,
-  statuses,
-}: { quarryId?: string; statuses?: readonly string[] } = {}) {
+const QUICK: { key: string; labelKey: string; statuses: readonly string[] }[] = [
+  { key: 'attention', labelKey: 'quick_attention', statuses: ['no_plate', 'inspect'] },
+  { key: 'flagged', labelKey: 'quick_flagged', statuses: ['flagged'] },
+];
+
+export function M1Table({ quarryId }: { quarryId?: string } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const showQuarry = !quarryId;
@@ -206,9 +211,13 @@ export function M1Table({
   );
 
   const [f, setF] = useState<Filters>({});
+  const [quick, setQuick] = useState('');
   const [filtersOpen, setFiltersOpen] = useFilterPanel();
   const set = (k: string) => (v: string) => setF((p) => setFilter(p, k, v));
-  const clear = () => setF({});
+  const clear = () => {
+    setF({});
+    setQuick('');
+  };
 
   const [media, setMedia] = useState<{ row: M1Row; mode: 'photo' | 'video' } | null>(null);
   const [history, setHistory] = useState<{ plate_region: string; plate_number: string } | null>(
@@ -228,11 +237,20 @@ export function M1Table({
     return m;
   }, [quarries]);
 
-  const allRows = data?.rows;
-  const rows = useMemo(() => {
-    const list = allRows ?? [];
-    return statuses ? list.filter((r) => statuses.includes(r.status)) : list;
-  }, [allRows, statuses]);
+  const rows = useMemo(() => data?.rows ?? [], [data]);
+
+  // Tez filtr sonlari — boshqa filtrlardan oldingi holatdan: "nechta ish bor"
+  // degan javob tanlangan tuman yoki kameraga qarab o'zgarmasin.
+  const quickItems = useMemo(
+    () =>
+      QUICK.map((q) => ({
+        key: q.key,
+        label: t(q.labelKey),
+        count: rows.filter((r) => q.statuses.includes(r.status)).length,
+      })),
+    [rows, t],
+  );
+  const quickStatuses = QUICK.find((q) => q.key === quick)?.statuses;
 
   // Filter dropdown options derived from the full (unfiltered) result set, so
   // selecting one filter never collapses the others' choices.
@@ -257,6 +275,7 @@ export function M1Table({
 
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {
+    if (quickStatuses && !quickStatuses.includes(r.status)) return false;
     if (f.quarry && r.quarry_id !== f.quarry) return false;
     if (f.source && (f.source === 'zavod') !== r.is_main) return false;
     if (f.post && r.post_code !== f.post) return false;
@@ -287,10 +306,11 @@ export function M1Table({
     return lang === 'ru' ? s.replace('.', ',') : s;
   };
 
-  const activeCount = Object.keys(f).length;
+  const activeCount = Object.keys(f).length + (quick ? 1 : 0);
 
   return (
     <div className="flex flex-col gap-3.5">
+      <QuickFilters value={quick} onChange={setQuick} items={quickItems} />
       <FilterBar
         activeCount={activeCount}
         onClear={clear}
@@ -342,7 +362,7 @@ export function M1Table({
           label={t('filt_status')}
           value={f.status}
           onChange={set('status')}
-          options={(statuses ?? STATUSES).map((s) => [s, t(`status_${s}`)])}
+          options={STATUSES.map((s) => [s, t(`status_${s}`)])}
         />
         <FilterSelect
           label={t('flt_material')}
