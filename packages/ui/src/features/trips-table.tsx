@@ -115,7 +115,7 @@ function TripDialog({ trip, onClose }: { trip: TripRecord; onClose: () => void }
  *
  * `chala` — zavod tarozisiga kirgan, lekin chiqishi qayd etilmagan qatnov:
  * netto hisoblanmay qolgan, ya'ni tekshiruv talab qiladi. `yuk_emas` — netto
- * chegaradan past (xodim mashinasi o'tgan): huquqbuzarlik emas, lekin
+ * chegaradan past (xodim mashinasi o'tgan): tekshiruv talab qilmaydi, lekin
  * hisobotdan chiqarilgani uchun alohida ko'rish qulay.
  */
 const QUICK: { key: string; labelKey: string; stages: readonly string[] }[] = [

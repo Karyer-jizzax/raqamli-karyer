@@ -96,7 +96,7 @@ export function FilterBar({
  * Bir bosishli filtrlar — jadval ustidagi qator.
  *
  * Inspektorning kundalik savoli ikkita: "nimani tekshirish kerak?" va "nima
- * chala qolgan?". Ular uchun alohida sahifa tutish shart emas (o'sha jadval,
+ * yakunlanmay qolgan?". Ular uchun alohida sahifa tutish shart emas (o'sha jadval,
  * o'sha ustunlar) — lekin filtr panelini ochib, ro'yxatdan holat tanlash ham
  * uzoq. Shu qator ikkalasining o'rtasi: bitta bosish, sonini ko'rsatib turadi.
  *

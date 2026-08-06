@@ -18,6 +18,9 @@ export type ReportId = 2 | 3 | 4 | 5;
 
 const TOP_N = 8;
 
+/** Which M5 statuses the status report plots; see the filter below. */
+const STATUS_SHOWN: readonly string[] = ['confirm', 'no_plate'];
+
 /**
  * One report dimension, as a card. Ranked bars for the open-ended dimensions
  * (material, district) and a part-to-whole bar for status, which is a fixed
@@ -68,7 +71,11 @@ export function ReportCard({
     return key;
   };
 
-  const rows: ReportRow[] = data?.rows ?? [];
+  // M5 da faqat tasdiqlangan va raqamsiz qatorlar qoladi — qolgan holatlar
+  // operatorning ish navbati, departament ko'rsatkichi emas.
+  const rows: ReportRow[] = (data?.rows ?? []).filter(
+    (r) => n !== 5 || STATUS_SHOWN.includes(r.key),
+  );
   const value = (r: ReportRow) => (metric === 'volume' ? r.volume : r.count);
   const sorted = [...rows].sort((a, b) => value(b) - value(a));
 

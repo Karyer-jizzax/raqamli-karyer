@@ -1,26 +1,20 @@
 import {
   type DistrictGeo,
-  useDynamics,
   useOverview,
   useRegionGeo,
   useRegions,
 } from '@karier/api-client';
-import { currentLang, formatNumber, monthName, useTranslation } from '@karier/i18n';
+import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
 import {
-  ChartCard,
-  ChartLegend,
-  ChartTable,
   cn,
   JizzaxMap,
   localizedName,
   PageHeader,
   type Period,
   PeriodPicker,
-  periodRange,
   previousPeriod,
   deltaPct,
   StatTile,
-  TrendColumns,
   UiButton as Button,
   useAuth,
 } from '@karier/ui';
@@ -34,8 +28,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import { ReportCard } from './ReportCard';
 
 function StatRow({
   label,
@@ -95,26 +87,10 @@ export function Dashboard() {
   const { data: overview } = useOverview(asOverviewParams(period));
   // The same numbers one period back — the stat tiles' deltas, nothing else.
   const { data: before } = useOverview(asOverviewParams(previousPeriod(period)));
-  const { data: dynamics, isFetching: dynFetching } = useDynamics({
-    year: Number(period.year),
-    ...(selected ? { district_id: selected } : {}),
-  });
 
   const selectedDistrict = geo?.districts.find((d: DistrictGeo) => d.id === selected);
   const regionTitle = region ? localizedName(region) : '';
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
-
-  const buckets = dynamics?.buckets ?? [];
-  const trend = buckets.map((b) => ({
-    month: String(b.month).padStart(2, '0'),
-    name: monthName(b.month, lang),
-    confirmed: b.confirmed,
-    unconfirmed: Math.max(0, b.total - b.confirmed),
-  }));
-  const trendSeries = [
-    { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
-    { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
-  ];
 
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 p-4 lg:p-6">
@@ -219,46 +195,6 @@ export function Dashboard() {
             </section>
           )}
         </div>
-      </div>
-
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-        <ChartCard
-          title={`${t('an_dynamics')} · ${period.year}`}
-          subtitle={t('an_dynamics_hint')}
-          stale={dynFetching}
-          legend={<ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />}
-          table={
-            <ChartTable
-              head={[t('an_month'), t('an_confirmed'), t('an_unconfirmed')]}
-              rows={trend.map((r) => ({
-                key: r.month,
-                label: r.month,
-                values: [fn(r.confirmed), fn(r.unconfirmed)],
-              }))}
-            />
-          }
-        >
-          {trend.length ? (
-            <TrendColumns
-              data={trend}
-              series={trendSeries}
-              xKey="month"
-              format={fn}
-              labelFor={(m) => trend.find((r) => r.month === m)?.name ?? m}
-            />
-          ) : (
-            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
-          )}
-        </ChartCard>
-
-        <ReportCard
-          n={4}
-          title={t('an_by_district')}
-          subtitle={`${t('dash_ore_volume')} · ${t('an_top_hint')}`}
-          metric="volume"
-          range={periodRange(period)}
-          districtId={selected ?? undefined}
-        />
       </div>
     </div>
   );

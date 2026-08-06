@@ -43,7 +43,7 @@ export const TONE_DOT: Record<Tone, string> = {
   neutral: 'bg-slate-300',
 };
 
-/** karyerda → yolda → zavodda → yakunlandi; chala = violation, yuk_emas = empty run. */
+/** karyerda → yolda → zavodda → yakunlandi; chala = unfinished, yuk_emas = empty run. */
 export const TRIP_STAGE_TONE = {
   karyerda: 'info',
   yolda: 'info',
