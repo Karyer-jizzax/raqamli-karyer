@@ -50,7 +50,6 @@ class Event(Base, UUIDMixin, TimestampMixin):
     # yuklanadi, shuning uchun UI "video yuklanmoqda…" holatini shundan biladi.
     source: Mapped[str] = mapped_column(String(16), default="local")
     vtype: Mapped[str] = mapped_column(String(16), default="truck")
-    payer_type: Mapped[str] = mapped_column(String(16), default="legal")
 
     # measurement inputs
     density: Mapped[float] = mapped_column(Numeric(6, 3), default=0)  # rho

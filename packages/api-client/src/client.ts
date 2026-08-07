@@ -252,7 +252,6 @@ export interface EventRecord {
   direction: string;
   is_main: boolean;
   occurred_at: string;
-  payer_type: string;
   material_id: string | null;
   density: number;
   weight_kg: number;
@@ -274,7 +273,6 @@ export interface EventInput {
   plate_number: string;
   model: string;
   direction: string;
-  payer_type: string;
   material_id: string;
   density: number;
   weight_kg: number;
@@ -513,7 +511,6 @@ export interface M1Row {
   volume_final: number;
   volume_confidence: number;
   material_confidence: number;
-  payer_type: string;
   stir: string;
   owner_name: string;
   status: 'confirm' | 'flagged' | 'inspect' | 'no_plate';
@@ -745,7 +742,11 @@ export interface AgentConfig {
 }
 
 export interface AgentStream {
+  // Texnik identifikator (MediaMTX yo'li / snapshot kaliti) — ekranda emas,
+  // faqat ichkarida ishlatiladi. Ko'rsatish uchun `camera_name`.
   camera_id: string;
+  // Adminkada (web-main) berilgan nom; kamera bazadan topilmasa — `camera_id`.
+  camera_name: string;
   hls_url: string | null;
   webrtc_url: string | null;
   // Snapshot rejimida sahifa shu manzilni har 2-3 soniyada yangilaydi.

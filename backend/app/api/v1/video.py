@@ -122,7 +122,6 @@ async def ingest(
         direction="exit",
         occurred_at=datetime.now(),
         vtype="truck",
-        payer_type="legal",
         density=density,
         weight_kg=weight_kg,
         volume_camera=None,

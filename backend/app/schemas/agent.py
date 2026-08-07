@@ -69,7 +69,11 @@ class AgentConfigOut(BaseModel):
 class LiveStreamOut(BaseModel):
     """Bitta kamera uchun jonli ko'rish havolalari."""
 
+    # Texnik identifikator: MediaMTX yo'li va snapshot kaliti shundan yasaladi.
     camera_id: str
+    # Adminkada berilgan nom — sahifada ko'rinadigani. Kamera bazadan
+    # topilmasa `camera_id` bilan bir xil bo'ladi.
+    camera_name: str = ""
     hls_url: str | None = None
     webrtc_url: str | None = None
     # Snapshot rejimida sayt shu manzilni har 2-3 soniyada yangilaydi.

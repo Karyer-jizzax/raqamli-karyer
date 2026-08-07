@@ -14,15 +14,20 @@ import {
   previousPeriod,
   StatTile,
   TrendColumns,
+  TrendLine,
   useAuth,
 } from '@karier/ui';
 import { ActivityIcon, BarChart3Icon } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ReportCard } from './ReportCard';
 
 /**
- * The reports the paper forms M2–M5 stand for, on one screen and one period.
+ * Four questions about one period, each in the form that answers it: how much
+ * work came in (columns over the year), how well it was confirmed (a rate, so a
+ * line on its own scale), what was hauled (a share, so a ring) and where from
+ * (a ranking, so bars).
+ *
  * Every card reads the same filter row; every chart can flip to its table.
  */
 export function Analytics() {
@@ -52,16 +57,43 @@ export function Analytics() {
   });
 
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
-  const trend = (dynamics?.buckets ?? []).map((b) => ({
-    month: String(b.month).padStart(2, '0'),
-    name: monthName(b.month, lang),
-    confirmed: b.confirmed,
-    unconfirmed: Math.max(0, b.total - b.confirmed),
-  }));
+  const pctFmt = (v: number) => `${formatNumber(Math.round(v), lang)}%`;
+
+  // The query covers the whole year, so a month missing from the buckets is a
+  // month with nothing in it — worth a gap in the row rather than a shorter
+  // axis that quietly hides which months were quiet.
+  const trend = useMemo(() => {
+    const byMonth = new Map((dynamics?.buckets ?? []).map((b) => [b.month, b]));
+    return Array.from({ length: 12 }, (_, i) => {
+      const b = byMonth.get(i + 1);
+      return {
+        month: String(i + 1).padStart(2, '0'),
+        name: monthName(i + 1, lang),
+        confirmed: b?.confirmed ?? 0,
+        unconfirmed: b ? Math.max(0, b.total - b.confirmed) : 0,
+      };
+    });
+  }, [dynamics, lang]);
   const trendSeries = [
     { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
     { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
   ];
+
+  // Zero events is no rate at all, not a rate of zero — `null` breaks the line
+  // instead of drawing a collapse that never happened.
+  const rateTrend = useMemo(() => {
+    const byMonth = new Map((dynamics?.buckets ?? []).map((b) => [b.month, b]));
+    return Array.from({ length: 12 }, (_, i) => {
+      const b = byMonth.get(i + 1);
+      return {
+        month: String(i + 1).padStart(2, '0'),
+        rate: b && b.total > 0 ? b.detection_pct : null,
+      };
+    });
+  }, [dynamics]);
+
+  const hasTrend = (dynamics?.buckets ?? []).length > 0;
+  const monthLabel = (m: string) => trend.find((r) => r.month === m)?.name ?? m;
 
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 p-4 lg:p-6">
@@ -106,7 +138,9 @@ export function Analytics() {
         title={`${t('an_dynamics')} · ${period.year}`}
         subtitle={t('an_dynamics_hint')}
         stale={dynFetching}
-        legend={<ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />}
+        legend={
+          <ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />
+        }
         table={
           <ChartTable
             head={[t('an_month'), t('an_confirmed'), t('an_unconfirmed')]}
@@ -118,45 +152,76 @@ export function Analytics() {
           />
         }
       >
-        {trend.length ? (
+        {hasTrend ? (
           <TrendColumns
             data={trend}
             series={trendSeries}
             xKey="month"
             format={fn}
             height={260}
-            labelFor={(m) => trend.find((r) => r.month === m)?.name ?? m}
+            labelFor={monthLabel}
           />
         ) : (
           <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
         )}
       </ChartCard>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      {/* A rate and a count never share a plot — the second y-scale would be an
+          arbitrary alignment — so the quality question gets its own card, beside
+          the material split. No items-start: the ring is the shorter of the two,
+          and it centers in a stretched card instead of leaving a ragged edge. */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ChartCard
+          className="lg:col-span-2"
+          title={`${t('an_rate')} · ${period.year}`}
+          subtitle={t('an_rate_hint')}
+          stale={dynFetching}
+          table={
+            <ChartTable
+              head={[t('an_month'), t('an_rate')]}
+              rows={rateTrend.map((r) => ({
+                key: r.month,
+                label: monthLabel(r.month),
+                values: [r.rate == null ? '—' : pctFmt(r.rate)],
+              }))}
+            />
+          }
+        >
+          {hasTrend ? (
+            <TrendLine
+              data={rateTrend}
+              xKey="month"
+              valueKey="rate"
+              label={t('an_confirmed')}
+              domain={[0, 100]}
+              format={pctFmt}
+              height={230}
+              labelFor={monthLabel}
+            />
+          ) : (
+            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
+          )}
+        </ChartCard>
+
         <ReportCard
           n={2}
           title={t('an_by_material')}
-          subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
+          subtitle={t('rep_vol')}
           metric="volume"
-          range={range}
-          districtId={district || undefined}
-        />
-        <ReportCard
-          n={4}
-          title={t('an_by_district')}
-          subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
-          metric="volume"
-          range={range}
-          districtId={district || undefined}
-        />
-        <ReportCard
-          n={3}
-          title={t('an_by_payer')}
-          subtitle={t('rep_count')}
+          view="ring"
           range={range}
           districtId={district || undefined}
         />
       </div>
+
+      <ReportCard
+        n={4}
+        title={t('an_by_district')}
+        subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
+        metric="volume"
+        range={range}
+        districtId={district || undefined}
+      />
     </div>
   );
 }

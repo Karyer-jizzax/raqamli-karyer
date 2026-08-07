@@ -18,13 +18,17 @@ import {
   MinusIcon,
   TableIcon,
 } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   LabelList,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -46,7 +50,37 @@ export interface Segment {
   color: string;
 }
 
-function TooltipBox({ rows, title }: { title: string; rows: { label: string; value: string; color?: string }[] }) {
+/**
+ * Categorical slots for a form where every mark can end up beside every other
+ * one — a ring, a map, a scatter — rather than only next to its neighbour in a
+ * stack.
+ *
+ * Four slots, and not `--chart-1..4` in order: `--chart-4` (violet) and
+ * `--chart-1` (blue) are ΔE 0.3 apart under deuteranopia. In a stack they are
+ * never adjacent so the full five-slot order holds; in a ring they face each
+ * other and that pair is simply gone. Blue → teal → amber → crimson clears the
+ * all-pairs check on the card surface for normal vision and all three CVD
+ * types.
+ *
+ * A fifth category is never a generated hue: it folds into CHART_CONTEXT.
+ */
+export const CHART_SLOTS = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-5)',
+] as const;
+
+/** "Boshqalar" / "aniqlanmagan" — context, never an identity color. */
+export const CHART_CONTEXT = 'var(--chart-context)';
+
+function TooltipBox({
+  rows,
+  title,
+}: {
+  title: string;
+  rows: { label: string; value: string; color?: string }[];
+}) {
   return (
     <div className="rounded-[10px] border bg-card px-3 py-2 shadow-card">
       <div className="mb-1 text-2xs font-semibold text-muted-foreground">{title}</div>
@@ -98,12 +132,17 @@ export function StatTile({
   const tone =
     dir === 0 || !good
       ? 'text-muted-foreground'
-      : (good === 'up') === (dir > 0)
+      : (good === 'up') === dir > 0
         ? 'text-success'
         : 'text-danger';
   const Arrow = dir > 0 ? ArrowUpRightIcon : dir < 0 ? ArrowDownRightIcon : MinusIcon;
   return (
-    <div className={cn('flex items-start gap-2.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card', className)}>
+    <div
+      className={cn(
+        'flex items-start gap-2.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card',
+        className,
+      )}
+    >
       {Icon && (
         <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary-tint text-primary">
           <Icon className="size-5" strokeWidth={1.7} />
@@ -114,7 +153,9 @@ export function StatTile({
         {/* Proportional figures: tabular digits read loose at this size. */}
         <div className="text-xl font-bold text-foreground">
           {value}
-          {unit && <span className="ml-1 text-2xs font-semibold text-muted-foreground">{unit}</span>}
+          {unit && (
+            <span className="ml-1 text-2xs font-semibold text-muted-foreground">{unit}</span>
+          )}
         </div>
         {delta != null && (
           <div className={cn('mt-0.5 flex items-center gap-1 text-2xs font-semibold', tone)}>
@@ -134,8 +175,15 @@ export function ChartLegend({ items }: { items: { label: string; color: string }
   return (
     <ul className="m-0 flex flex-wrap items-center gap-x-3.5 gap-y-1 p-0">
       {items.map((it) => (
-        <li key={it.label} className="flex list-none items-center gap-1.5 text-2xs text-muted-foreground">
-          <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: it.color }} aria-hidden />
+        <li
+          key={it.label}
+          className="flex list-none items-center gap-1.5 text-2xs text-muted-foreground"
+        >
+          <span
+            className="size-2.5 shrink-0 rounded-[3px]"
+            style={{ background: it.color }}
+            aria-hidden
+          />
           {it.label}
         </li>
       ))}
@@ -230,7 +278,10 @@ export function ChartTable({
             <tr key={r.key} className="border-b border-grid last:border-b-0">
               <td className="px-2.5 py-1.5 text-foreground">{r.label}</td>
               {r.values.map((v, i) => (
-                <td key={i} className="px-2.5 py-1.5 text-right font-semibold text-foreground tabular-nums">
+                <td
+                  key={i}
+                  className="px-2.5 py-1.5 text-right font-semibold text-foreground tabular-nums"
+                >
                   {v}
                 </td>
               ))}
@@ -352,7 +403,13 @@ export function RankBars({
             ) : null
           }
         />
-        <Bar dataKey="value" fill={color} maxBarSize={20} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+        <Bar
+          dataKey="value"
+          fill={color}
+          maxBarSize={20}
+          radius={[0, 4, 4, 0]}
+          isAnimationActive={false}
+        >
           {rows.map((r, i) => (
             <Cell key={`${r.label}-${i}`} fill={r.color ?? color} />
           ))}
@@ -365,6 +422,40 @@ export function RankBars({
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+  );
+}
+
+/**
+ * The identity channel for a part-to-whole figure: swatch, label, value, share.
+ * Both part-to-whole forms carry it, so no slice is readable only by hovering
+ * it and no label has to be squeezed inside a mark.
+ */
+function ShareList({
+  segments,
+  total,
+  format,
+}: {
+  segments: Segment[];
+  total: number;
+  format: (v: number) => string;
+}) {
+  return (
+    <ul className="m-0 grid gap-1.5 p-0">
+      {segments.map((s) => (
+        <li key={s.key} className="flex list-none items-center gap-2 text-data">
+          <span
+            className="size-2.5 shrink-0 rounded-[3px]"
+            style={{ background: s.color }}
+            aria-hidden
+          />
+          <span className="min-w-0 truncate text-muted-foreground">{s.label}</span>
+          <b className="ml-auto shrink-0 text-foreground tabular-nums">{format(s.value)}</b>
+          <span className="w-11 shrink-0 text-right text-2xs text-muted-foreground tabular-nums">
+            {total ? Math.round((s.value / total) * 100) : 0}%
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -394,19 +485,212 @@ export function SplitBar({
           />
         ))}
       </div>
-      <ul className="m-0 grid gap-1.5 p-0">
-        {segments.map((s) => (
-          <li key={s.key} className="flex list-none items-center gap-2 text-data">
-            <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: s.color }} aria-hidden />
-            <span className="min-w-0 truncate text-muted-foreground">{s.label}</span>
-            <b className="ml-auto shrink-0 text-foreground tabular-nums">{format(s.value)}</b>
-            <span className="w-11 shrink-0 text-right text-2xs text-muted-foreground tabular-nums">
-              {total ? Math.round((s.value / total) * 100) : 0}%
-            </span>
-          </li>
-        ))}
-      </ul>
+      <ShareList segments={segments} total={total} format={format} />
     </div>
+  );
+}
+
+/**
+ * Part-to-whole as a ring, with the total it adds up to in the middle.
+ *
+ * The ring is for a share read at a glance over a handful of named categories —
+ * six segments is the ceiling and close values belong in `RankBars` instead,
+ * because arcs are much harder to compare than bar lengths. What earns it its
+ * place here is the hole: the total sits in it, so one card answers both "how
+ * much altogether" and "split how" without a second figure beside it.
+ *
+ * Every slice's number and share live in the list next to the ring, so nothing
+ * is hover-only and no label has to fit inside an arc.
+ */
+export function DonutChart({
+  segments,
+  centerLabel,
+  format = (v: number) => String(v),
+  size = 176,
+}: {
+  segments: Segment[];
+  /** What the middle number counts — the ring itself can't say it. */
+  centerLabel?: string;
+  format?: (v: number) => string;
+  size?: number;
+}) {
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  const shown = segments.filter((s) => s.value > 0);
+  const pct = (v: number) => (total ? Math.round((v / total) * 100) : 0);
+  return (
+    // h-full + centering: the ring is short, so in a row next to a taller card
+    // it sits in the middle of its own instead of hugging the title.
+    <div className="flex h-full flex-col items-center justify-center gap-4 sm:flex-row">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        {/* Above the center figure: the plot is transparent where the hole is,
+            so the total still reads through — but the tooltip lives in here and
+            has to cover the total when it crosses it, not be covered by it. */}
+        <div className="relative z-10 size-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={shown}
+                dataKey="value"
+                nameKey="label"
+                innerRadius="66%"
+                outerRadius="100%"
+                // One slice has no neighbour to be separated from, and a padded
+                // 360° arc renders as a ring with a notch cut out of it.
+                paddingAngle={shown.length > 1 ? 2 : 0}
+                cornerRadius={4}
+                stroke={SURFACE}
+                strokeWidth={2}
+                isAnimationActive={false}
+              >
+                {shown.map((s) => (
+                  <Cell key={s.key} fill={s.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  const seg = payload?.[0]?.payload as Segment | undefined;
+                  return active && seg ? (
+                    <TooltipBox
+                      title={seg.label}
+                      rows={[
+                        { label: `${pct(seg.value)}%`, value: format(seg.value), color: seg.color },
+                      ]}
+                    />
+                  ) : null;
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Sits under the plot, so it must not eat the ring's hover either. */}
+        <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
+          {/* Proportional figures: tabular digits read loose at this size. */}
+          <div className="text-xl leading-none font-bold text-foreground">{format(total)}</div>
+          {centerLabel && <div className="mt-1 text-2xs text-muted-foreground">{centerLabel}</div>}
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 self-stretch sm:self-center">
+        <ShareList segments={segments} total={total} format={format} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One rate over time: a 2px line on a wash of its own hue.
+ *
+ * A rate is not a count, so it never shares a plot with one — a second y-scale
+ * would invent a correlation the data doesn't have. It gets its own card, and
+ * the shape of the line is the whole point, which is why this is a line and the
+ * volume beside it is columns.
+ *
+ * A month with no events has no rate — `null`, and the line breaks there rather
+ * than drawing a drop to zero that never happened. Only the last real point is
+ * labelled: a number on every point goes unread.
+ */
+export function TrendLine({
+  data,
+  xKey,
+  valueKey,
+  label,
+  color = 'var(--primary)',
+  height = 220,
+  format = (v: number) => String(v),
+  domain,
+  labelFor,
+}: {
+  data: Record<string, string | number | null>[];
+  xKey: string;
+  valueKey: string;
+  /** Series name for the tooltip row. One series needs no legend box — the
+      card title already says what is plotted. */
+  label: string;
+  color?: string;
+  height?: number;
+  format?: (v: number) => string;
+  /** Fix the scale when the metric has natural bounds (a percentage). */
+  domain?: [number, number];
+  labelFor?: (tick: string) => string;
+}) {
+  // Unique per instance: two of these on one screen would otherwise share (and
+  // fight over) a single <defs> gradient id.
+  const gradId = `trend-fill-${useId().replace(/:/g, '')}`;
+  const lastReal = data.reduce((acc, d, i) => (d[valueKey] == null ? acc : i), -1);
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      {/* Less of a negative left inset than the column charts get: a percentage
+          tick ("100%") is wider than the counts they carry, and -18 clipped its
+          first digit. */}
+      <AreaChart data={data} margin={{ top: 16, right: 30, bottom: 0, left: -8 }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.16} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} stroke={GRID} />
+        <XAxis dataKey={xKey} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: GRID }} />
+        <YAxis
+          tick={AXIS_TICK}
+          tickLine={false}
+          axisLine={false}
+          width={52}
+          domain={domain}
+          tickFormatter={(v) => format(Number(v))}
+        />
+        <Tooltip
+          cursor={{ stroke: GRID }}
+          content={({ active, payload, label: tick }) => {
+            const v = payload?.[0]?.value;
+            return active && v != null ? (
+              <TooltipBox
+                title={labelFor ? labelFor(String(tick)) : String(tick)}
+                rows={[{ label, value: format(Number(v)), color }]}
+              />
+            ) : null;
+          }}
+        />
+        <Area
+          type="monotone"
+          dataKey={valueKey}
+          stroke={color}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill={`url(#${gradId})`}
+          // The line is continuous; a dot per month would out-weigh it. The
+          // hover dot carries the 2px surface ring so it stays legible on the
+          // line it sits on.
+          dot={false}
+          activeDot={{ r: 4, fill: color, stroke: SURFACE, strokeWidth: 2 }}
+          connectNulls={false}
+          isAnimationActive={false}
+        >
+          <LabelList
+            dataKey={valueKey}
+            content={(props) => {
+              const { index, x, y, value } = props as {
+                index?: number;
+                x?: number;
+                y?: number;
+                value?: number | null;
+              };
+              if (index !== lastReal || value == null || x == null || y == null) return null;
+              return (
+                <text
+                  x={x}
+                  y={y - 10}
+                  textAnchor="middle"
+                  className="fill-foreground text-2xs font-semibold"
+                >
+                  {format(Number(value))}
+                </text>
+              );
+            }}
+          />
+        </Area>
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -435,7 +719,13 @@ export function BucketColumns({
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -8 }}>
         <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey={xKey} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: GRID }} interval={1} />
+        <XAxis
+          dataKey={xKey}
+          tick={AXIS_TICK}
+          tickLine={false}
+          axisLine={{ stroke: GRID }}
+          interval={1}
+        />
         <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={46} />
         <Tooltip
           cursor={{ fill: 'var(--surface-hover)' }}

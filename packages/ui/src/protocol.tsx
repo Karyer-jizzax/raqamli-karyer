@@ -107,14 +107,14 @@ export function ProtocolDocument({ doc }: { doc: Doc }) {
             <tr>
               <th>Yo'nalish</th>
               <td>{e.direction === 'enter' ? 'Kirish' : 'Chiqish'}</td>
-              <th>To'lovchi</th>
-              <td>{e.payer_type}</td>
-            </tr>
-            <tr>
               <th>Egasi</th>
               <td>{e.owner_name || '—'}</td>
+            </tr>
+            <tr>
               <th>STIR</th>
-              <td style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>{e.stir || '—'}</td>
+              <td colSpan={3} style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>
+                {e.stir || '—'}
+              </td>
             </tr>
           </tbody>
         </table>

@@ -94,7 +94,6 @@ class M1Row(BaseModel):
     volume_final: float
     volume_confidence: float
     material_confidence: float
-    payer_type: str
     stir: str
     owner_name: str
     status: str

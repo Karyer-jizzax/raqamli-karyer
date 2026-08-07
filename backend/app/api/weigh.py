@@ -33,7 +33,7 @@ from app.models.media import Media
 from app.models.quarry import Quarry
 from app.services.detection import get_detector
 from app.services.ingest import resolve_camera, resolve_material
-from app.services.plates import payer_type, split_plate
+from app.services.plates import split_plate
 from app.services.storage import save_bytes
 from app.services.trips import link_event
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
@@ -251,7 +251,6 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
         direction=direction,
         occurred_at=_parse_event_time(payload.event_time),
         vtype=_norm_vtype(payload.vtype),
-        payer_type=payer_type(plate_number),
         density=density,
         weight_kg=weight_kg,
         volume_camera=None,

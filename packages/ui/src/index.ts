@@ -56,14 +56,18 @@ export {
 export { AppShell, type NavEntry } from './app-shell';
 export {
   BucketColumns,
+  CHART_CONTEXT,
+  CHART_SLOTS,
   ChartCard,
   ChartLegend,
   ChartTable,
+  DonutChart,
   RankBars,
   type Segment,
   SplitBar,
   StatTile,
   TrendColumns,
+  TrendLine,
 } from './charts';
 export { Breadcrumb, type Crumb, PageHeader, Tabs, UpdatedStamp } from './shell';
 export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './plate';

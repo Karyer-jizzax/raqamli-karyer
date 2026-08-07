@@ -60,7 +60,7 @@ async def test_m1_totals_not_cross_joined(client: httpx.AsyncClient, seeded: Non
 @pytest.mark.asyncio
 async def test_reports(client: httpx.AsyncClient, seeded: None) -> None:
     token = await login(client, "department", "dept123")
-    dims = {2: "material", 3: "payer_type", 4: "district", 5: "status"}
+    dims = {2: "material", 4: "district", 5: "status"}
     for n, dim in dims.items():
         resp = await client.get(f"/api/v1/stats/reports/{n}", headers=auth_header(token))
         assert resp.status_code == 200

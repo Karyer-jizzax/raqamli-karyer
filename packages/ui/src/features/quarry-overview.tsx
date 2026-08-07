@@ -13,16 +13,15 @@ import {
   useRegions,
 } from '@karier/api-client';
 import { formatDateTime, formatNumber, currentLang, useTranslation } from '@karier/i18n';
-import type { StatusKey } from '@karier/types';
 import { ActivityIcon, BarChart3Icon, CameraIcon, MountainIcon, TruckIcon } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 
-import { BucketColumns, ChartCard, ChartTable, SplitBar, StatTile } from '../charts';
+import { BucketColumns, ChartCard, ChartTable, StatTile } from '../charts';
 import { cn } from '../lib/utils';
 import { type Period, PeriodPicker, periodRange } from '../period';
 import { localizedName } from '../primitives';
 import { PageHeader, Tabs, UpdatedStamp } from '../shell';
-import { Chip, M1_STATUS_TONE, TONE_DOT, TONE_FILL } from '../status';
+import { Chip, TONE_DOT } from '../status';
 import { AgentStatusStrip } from './live-view';
 import { M1Table } from './m1-table';
 import { TripsTable } from './trips-table';
@@ -71,20 +70,15 @@ function StatBox({ label, value, danger }: { label: string; value: string; dange
  *                  drill-down wants them (it is the end of the trail); the
  *                  quarry app does not — there the two grids are their own
  *                  sidebar screens.
- * @param showStatusSplit  The status breakdown chart. Oversight reads it to
- *                  compare quarries; the operator already sees each status on
- *                  the rows they work, so their dashboard leaves it out.
  */
 export function QuarryOverview({
   quarryId,
   breadcrumb,
   showData = true,
-  showStatusSplit = true,
 }: {
   quarryId?: string;
   breadcrumb?: ReactNode;
   showData?: boolean;
-  showStatusSplit?: boolean;
 }) {
   const { t } = useTranslation();
   const lang = currentLang();
@@ -126,21 +120,6 @@ export function QuarryOverview({
     }
     return bins;
   }, [logRows]);
-
-  // Faqat ikki holat ko'rsatiladi: tasdiqlangan va raqamsiz. `flagged`/`inspect`
-  // — operatorning ish navbati, u M-1 jadvalining o'z filtrlarida ko'rinadi;
-  // bu yerdagi savol boshqacha: nechtasi raqamsiz qolgan.
-  const statusSplit = useMemo(() => {
-    const order: StatusKey[] = ['confirm', 'no_plate'];
-    const counts = new Map<string, number>();
-    for (const r of logRows) counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
-    return order.map((k) => ({
-      key: k,
-      label: t(`status_${k}`),
-      value: counts.get(k) ?? 0,
-      color: TONE_FILL[M1_STATUS_TONE[k]],
-    }));
-  }, [logRows, t]);
 
   const updatedAt = stat?.last_event_at ? formatDateTime(stat.last_event_at) : '—';
   const quarryName = quarry?.name ?? (quarryId ? t('loading') : '—');
@@ -240,59 +219,31 @@ export function QuarryOverview({
         </section>
       </div>
 
-      <div
-        className={cn('grid items-start gap-4', showStatusSplit && 'lg:grid-cols-[1fr_330px]')}
+      <ChartCard
+        title={t('an_hourly')}
+        subtitle={t('an_hourly_hint').replace('{{n}}', String(logRows.length))}
+        stale={logFetching}
+        table={
+          <ChartTable
+            head={[t('an_hourly'), t('rep_count')]}
+            rows={hourly
+              .filter((h) => h.count > 0)
+              .map((h) => ({ key: h.hour, label: h.hour, values: [fn(h.count)] }))}
+          />
+        }
       >
-        <ChartCard
-          title={t('an_hourly')}
-          subtitle={t('an_hourly_hint').replace('{{n}}', String(logRows.length))}
-          stale={logFetching}
-          table={
-            <ChartTable
-              head={[t('an_hourly'), t('rep_count')]}
-              rows={hourly
-                .filter((h) => h.count > 0)
-                .map((h) => ({ key: h.hour, label: h.hour, values: [fn(h.count)] }))}
-            />
-          }
-        >
-          {logRows.length ? (
-            <BucketColumns
-              data={hourly}
-              xKey="hour"
-              valueKey="count"
-              format={fn}
-              tooltipLabel={t('an_events_unit')}
-            />
-          ) : (
-            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
-          )}
-        </ChartCard>
-
-        {showStatusSplit && (
-          <ChartCard
-            title={t('an_by_status')}
-            subtitle={t('rep_count')}
-            stale={logFetching}
-            table={
-              <ChartTable
-                head={[t('an_dim'), t('rep_count')]}
-                rows={statusSplit.map((s) => ({
-                  key: s.key,
-                  label: s.label,
-                  values: [fn(s.value)],
-                }))}
-              />
-            }
-          >
-            {logRows.length ? (
-              <SplitBar segments={statusSplit} format={fn} />
-            ) : (
-              <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
-            )}
-          </ChartCard>
+        {logRows.length ? (
+          <BucketColumns
+            data={hourly}
+            xKey="hour"
+            valueKey="count"
+            format={fn}
+            tooltipLabel={t('an_events_unit')}
+          />
+        ) : (
+          <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
         )}
-      </div>
+      </ChartCard>
 
       {showData && <DataTabs quarryId={quarryId} />}
     </div>

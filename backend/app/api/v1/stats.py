@@ -126,10 +126,10 @@ async def dynamics(
     return DynamicsResponse(**data)
 
 
-# M2-M5: aggregate event breakdowns by a chosen dimension.
+# M2/M4/M5: aggregate event breakdowns by a chosen dimension. M3 was the
+# payer-type split; that distinction is not one this system makes.
 _REPORT_DIMS: dict[int, tuple[str, object]] = {
     2: ("material", Event.material_id),
-    3: ("payer_type", Event.payer_type),
     5: ("status", Event.status),
 }
 
@@ -144,7 +144,7 @@ async def report(
     date_from: Annotated[date | None, Query()] = None,
     date_to: Annotated[date | None, Query()] = None,
 ) -> ReportResponse:
-    if n not in (2, 3, 4, 5):
+    if n not in (2, 4, 5):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Report topilmadi")
     eff_region = _effective_region(user, region_id)
     # The dashboard scopes every card to one period, so a report that ignored
@@ -204,7 +204,6 @@ async def m1(
     quarry_id: Annotated[UUID | None, Query()] = None,
     status: Annotated[str | None, Query()] = None,
     direction: Annotated[str | None, Query()] = None,
-    payer_type: Annotated[str | None, Query()] = None,
     material_id: Annotated[str | None, Query()] = None,
     vtype: Annotated[str | None, Query()] = None,
     plate: Annotated[str | None, Query()] = None,
@@ -230,8 +229,6 @@ async def m1(
         base = base.where(Event.status == status)
     if direction:
         base = base.where(Event.direction == direction)
-    if payer_type:
-        base = base.where(Event.payer_type == payer_type)
     if material_id:
         base = base.where(Event.material_id == material_id)
     if vtype:
@@ -266,7 +263,9 @@ async def m1(
                 id=e.id,
                 quarry_id=e.quarry_id,
                 post_code=post_code,
-                camera_label=cam_code or cam_name,
+                # Adminkada berilgan nom oldinda: kod ("DAHUASBJN") mashina
+                # uchun, jurnalni odam o'qiydi.
+                camera_label=cam_name or cam_code,
                 plate_region=e.plate_region,
                 plate_number=e.plate_number,
                 model=e.model,
@@ -280,7 +279,6 @@ async def m1(
                 volume_final=float(e.volume_final),
                 volume_confidence=float(e.volume_confidence),
                 material_confidence=float(e.material_confidence),
-                payer_type=e.payer_type,
                 stir=e.stir,
                 owner_name=e.owner_name,
                 status=e.status,

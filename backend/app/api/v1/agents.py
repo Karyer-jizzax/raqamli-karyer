@@ -61,44 +61,59 @@ def _live_mode(agent: QuarryAgent | None) -> str:
     return "hls" if agent.live_streaming else "off"
 
 
-async def _camera_ids(db: AsyncSession, agent: QuarryAgent | None, quarry_id: UUID) -> list[str]:
-    """Kamera identifikatorlari: avval agent heartbeat'da aytganlari (jonli
-    haqiqat), bo'lmasa bazadagi kamera kodlari."""
+async def _cameras(
+    db: AsyncSession, agent: QuarryAgent | None, quarry_id: UUID
+) -> list[tuple[str, str]]:
+    """`(identifikator, ko'rinadigan nom)` juftliklari.
+
+    Identifikator — avval agent heartbeat'da aytganlari (jonli haqiqat),
+    bo'lmasa bazadagi kamera kodlari. U MediaMTX yo'li va snapshot kaliti,
+    shuning uchun agent yuborgani bilan aynan bir xil qolishi shart.
+
+    Nom esa adminkada berilgani: sahifada "DAHUASBJN" emas, "Kirish kamerasi"
+    turishi kerak. Agent kamerani nomi yoki kodi bilan atashi mumkin
+    (`services.ingest.resolve_camera` bilan bir xil qoida), shuning uchun
+    ikkalasi ham kalit sifatida qidiriladi. Topilmasa — identifikatorning
+    o'zi: ro'yxatdan tushib qolgan kamera nomsiz emas, hech bo'lmasa
+    kodi bilan ko'rinsin.
+    """
+    rows = (
+        await db.execute(
+            select(Camera.code, Camera.name, Camera.is_active)
+            .join(Post, Post.id == Camera.post_id)
+            .where(Post.quarry_id == quarry_id)
+            .order_by(Camera.created_at)
+        )
+    ).all()
+    names: dict[str, str] = {}
+    for code, name, _active in rows:
+        names[code] = name
+        names[name] = name
+
     reported = [
         str(c["id"])
         for c in (agent.cameras or [])
         if isinstance(c, dict) and c.get("id")
     ] if agent is not None else []
     if reported:
-        return reported
-    codes = (
-        (
-            await db.execute(
-                select(Camera.code)
-                .join(Post, Post.id == Camera.post_id)
-                .where(Post.quarry_id == quarry_id, Camera.is_active.is_(True))
-                .order_by(Camera.created_at)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    return list(codes)
+        return [(cam, names.get(cam, cam)) for cam in reported]
+    return [(code, name) for code, name, active in rows if active]
 
 
 async def _status_out(
     db: AsyncSession, quarry: Quarry, agent: QuarryAgent | None, *, with_token: bool
 ) -> AgentStatusOut:
     mode = _live_mode(agent)
-    cameras = await _camera_ids(db, agent, quarry.id)
+    cameras = await _cameras(db, agent, quarry.id)
     streams = [
         LiveStreamOut(
             camera_id=cam,
+            camera_name=name,
             hls_url=hls_url(quarry.code, cam) if mode == "hls" else None,
             webrtc_url=webrtc_url(quarry.code, cam) if mode == "hls" else None,
             snapshot_url=f"/api/v1/live-snapshot/{quarry.id}/{cam}",
         )
-        for cam in cameras
+        for cam, name in cameras
     ]
     if agent is None:
         return AgentStatusOut(quarry_id=str(quarry.id), live_mode="off", streams=streams)

@@ -14,7 +14,6 @@ async def _first_event_id(client: httpx.AsyncClient, token: str) -> str:
         "plate_number": "R 100 AA",
         "model": "HOWO",
         "direction": "exit",
-        "payer_type": "indiv",
         "material_id": "qumshagal",
         "density": 1.55,
         "weight_kg": 87400,

@@ -37,7 +37,7 @@ import { FilterBar, FilterSelect, FilterText, QuickFilters, useFilterPanel } fro
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Field, ModalForm } from '../primitives';
-import { Chip, directionTone, SOURCE_TONE, TONE_TEXT } from '../status';
+import { Chip, directionTone, M1_STATUS_TONE, SOURCE_TONE, TONE_TEXT } from '../status';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { MediaDialog } from './media';
@@ -200,7 +200,16 @@ const QUICK: { key: string; labelKey: string; statuses: readonly string[] }[] = 
   { key: 'flagged', labelKey: 'quick_flagged', statuses: ['flagged'] },
 ];
 
-export function M1Table({ quarryId }: { quarryId?: string } = {}) {
+/**
+ * @param canFixPlate  Raqamsiz hodisaga raqamni qo'lda kiritish huquqi. Bu
+ *                     karyer operatorining ishi — u fotoni ko'rib, mashinani
+ *                     joyida taniydi. Idora (department) jurnalni faqat
+ *                     kuzatadi, shuning uchun standart holat — o'chirilgan.
+ */
+export function M1Table({
+  quarryId,
+  canFixPlate = false,
+}: { quarryId?: string; canFixPlate?: boolean } = {}) {
   const { t } = useTranslation();
   const lang = currentLang();
   const showQuarry = !quarryId;
@@ -474,18 +483,22 @@ export function M1Table({ quarryId }: { quarryId?: string } = {}) {
                         </td>
                         <td className={GRID_CTR}>
                           {r.status === 'no_plate' ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={cn(
-                                'h-auto rounded-full border-danger/30 bg-danger-tint px-2.5 py-1 text-2xs font-semibold text-danger',
-                                'hover:bg-danger/15 hover:text-danger active:scale-[0.97]',
-                              )}
-                              title={t('np_fix_title')}
-                              onClick={() => setFix(r)}
-                            >
-                              {t('status_no_plate')}
-                            </Button>
+                            canFixPlate ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  'h-auto rounded-full border-danger/30 bg-danger-tint px-2.5 py-1 text-2xs font-semibold text-danger',
+                                  'hover:bg-danger/15 hover:text-danger active:scale-[0.97]',
+                                )}
+                                title={t('np_fix_title')}
+                                onClick={() => setFix(r)}
+                              >
+                                {t('status_no_plate')}
+                              </Button>
+                            ) : (
+                              <Chip tone={M1_STATUS_TONE.no_plate}>{t('status_no_plate')}</Chip>
+                            )
                           ) : (
                             <Button
                               variant="ghost"

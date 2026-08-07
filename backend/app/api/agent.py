@@ -48,7 +48,7 @@ from app.services.live import (
     stream_path,
     stream_path_template,
 )
-from app.services.plates import payer_type, split_plate
+from app.services.plates import split_plate
 from app.services.storage import save_bytes
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
 
@@ -168,7 +168,6 @@ async def receive_event(
         # Yo'nalish o'lchanmaydi (modul izohiga qarang).
         direction="unknown",
         occurred_at=_aware(payload.occurred_at),
-        payer_type=payer_type(plate_number),
         density=density,
         weight_kg=int(payload.weight_kg),
         volume_camera=None,

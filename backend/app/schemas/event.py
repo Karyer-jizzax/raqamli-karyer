@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 Direction = Literal["exit", "enter"]
-PayerType = Literal["legal", "indiv", "yatt"]
 StatusKey = Literal["confirm", "flagged", "inspect"]
 
 
@@ -31,7 +30,6 @@ class EventCreate(BaseModel):
     direction: Direction = "exit"
     is_loaded: bool = True
     vtype: str = "truck"
-    payer_type: PayerType = "legal"
     # measurement — weight comes from the weighbridge (tarozi), not the camera
     material_id: str
     density: float
@@ -71,7 +69,6 @@ class EventOut(BaseModel):
     occurred_at: datetime
     is_loaded: bool
     vtype: str
-    payer_type: str
     material_id: str | None
     density: float
     weight_kg: int

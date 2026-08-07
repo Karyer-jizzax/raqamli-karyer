@@ -88,8 +88,12 @@ departamentda ikkita slot bir xil rangga tushardi) va CVD/kontrast bo'yicha teks
 - Qolgani: kamera uptime tarixi (backendda hodisa tarixi yo'q — alohida endpoint kerak)
 
 ### A2.4 Analitika sahifasi ✅
-`/analytics` — M2 material, M3 to'lovchi, M4 tuman, M5 holat; tuman + davr filtri, har bir karta
-jadvalga o'tadi. Excel eksporti hali yo'q (M-1 eksporti bor) — kichik qolgan ish.
+`/analytics` — oylik dinamika (ustunlar), tasdiqlash darajasi (chiziq), M2 material (halqa),
+M4 tuman (reyting); tuman + davr filtri, har bir karta jadvalga o'tadi. Excel eksporti hali
+yo'q (M-1 eksporti bor) — kichik qolgan ish.
+
+M3 (to'lovchi turi) olib tashlandi: yuridik/jismoniy/YaTT bo'linishi bu tizimda yo'q, va
+ustun raqam seriyasidan taxmin qilinardi. Baza ustunlari ham tushirildi — migratsiya 0016.
 
 ### A2.5 Backend (A2 uchun qo'shildi)
 - `/stats/reports/{n}` endi `date_from`/`date_to`/`district_id` oladi — avval hisobotlar

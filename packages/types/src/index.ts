@@ -10,9 +10,6 @@ export type Direction = (typeof DIRECTIONS)[number];
 export const STATUSES = ['confirm', 'flagged', 'inspect', 'no_plate'] as const;
 export type StatusKey = (typeof STATUSES)[number];
 
-export const PAYER_TYPES = ['legal', 'indiv', 'yatt'] as const;
-export type PayerType = (typeof PAYER_TYPES)[number];
-
 export const LANGS = ['uz-latn', 'uz-cyrl', 'ru'] as const;
 export type Lang = (typeof LANGS)[number];
 

@@ -27,7 +27,6 @@ async def test_operator_create_and_scoped_list(client: httpx.AsyncClient, seeded
         "plate_number": "R 548 SA",
         "model": "HOWO",
         "direction": "exit",
-        "payer_type": "indiv",
         "material_id": "qumshagal",
         "density": 1.55,
         "weight_kg": 87400,

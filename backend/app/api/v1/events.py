@@ -21,7 +21,6 @@ from app.schemas.event import (
     VolumeInputDto,
     VolumeResultDto,
 )
-from app.services.plates import payer_type
 from app.services.trips import link_event
 from app.services.volume import MaterialSpec, VolumeInput, compute_volume
 
@@ -89,7 +88,6 @@ async def create_event(
         occurred_at=body.occurred_at or datetime.now(),
         is_loaded=body.is_loaded,
         vtype=body.vtype,
-        payer_type=body.payer_type,
         density=body.density,
         weight_kg=body.weight_kg,
         length_m=body.length_m,
@@ -148,8 +146,6 @@ async def set_event_plate(
     had_plate = bool(event.plate_number)
     event.plate_region = region
     event.plate_number = number
-    # Raqam seriyasi egasining turini aytadi — qo'lda tuzatilganda ham yangilaymiz.
-    event.payer_type = payer_type(number)
     if event.status == "no_plate":
         event.status = "confirm"
     # Faqat hali qatnovga ulanmagan (raqamsiz kelgan) hodisani juftlaymiz —

@@ -200,6 +200,14 @@ function Player({
 }
 
 // ── jadvaldagi katak ────────────────────────────────────────────────────────
+/** Ekranda ko'rinadigan kamera nomi — adminkada berilgani.
+ *
+ * `camera_id` — texnik identifikator (MediaMTX yo'li shundan yasaladi) va u
+ * ko'pincha "DAHUASBJN" ko'rinishidagi kod bo'ladi: operatorga hech narsa
+ * demaydi. Nom topilmagan holat uchun kod zaxira bo'lib qoladi — kamera
+ * kartasi nomsiz turgandan ko'ra kodi bilan tursin. */
+const cameraLabel = (stream: AgentStream) => stream.camera_name || stream.camera_id;
+
 /** Bitta kamera kartasi. Kadr bosilsa — modalda kattalashadi.
  *
  * `paused` — shu kamera modalda ochilgan: kadr modal ostida ko'rinmaydi,
@@ -220,13 +228,13 @@ function CameraTile({
   return (
     <article className="group overflow-hidden rounded-2xl border bg-card shadow-card">
       <header className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
-        <b className="truncate text-data text-foreground">{stream.camera_id}</b>
+        <b className="truncate text-data text-foreground">{cameraLabel(stream)}</b>
         <Chip tone="neutral">{t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}</Chip>
       </header>
       <button
         type="button"
         onClick={onOpen}
-        aria-label={t('live_open', { camera: stream.camera_id })}
+        aria-label={t('live_open', { camera: cameraLabel(stream) })}
         className={cn(
           'relative block aspect-video w-full cursor-pointer bg-black',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -269,7 +277,7 @@ function CameraDialog({
         className="gap-0 overflow-hidden p-0 sm:max-w-[900px]"
       >
         <DialogHeader className="flex-row items-center justify-between gap-2 border-b px-4 py-3 pr-12">
-          <DialogTitle className="text-sm font-semibold">{stream.camera_id}</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">{cameraLabel(stream)}</DialogTitle>
           <Chip tone="neutral">{t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}</Chip>
         </DialogHeader>
         <div className="relative aspect-video w-full bg-black">
