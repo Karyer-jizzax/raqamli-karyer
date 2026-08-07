@@ -26,15 +26,28 @@ import {
   useQuarryAgent,
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
-import { CameraOffIcon, Maximize2Icon, RadioIcon, VideoOffIcon } from 'lucide-react';
+import {
+  CameraOffIcon,
+  ChevronDownIcon,
+  Maximize2Icon,
+  RadioIcon,
+  VideoOffIcon,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { EmptyState, TableSkeleton } from '../data-table';
 import { FilterSelect, FilterText } from '../filters';
 import { cn } from '../lib/utils';
 import { Chip, TONE_DOT } from '../status';
-import { Button } from '../ui/button';
+import { Button, buttonVariants } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 
 /** Kadr yangilash oralig'i — doc §4.1: snapshot profilida har 2-3 soniya. */
 const SNAPSHOT_INTERVAL_MS = 3000;
@@ -374,6 +387,161 @@ function Meta({ label, value }: { label: string; value: string }) {
  * ko'z bilan izlashga to'g'ri keladi. */
 const FILTER_FROM = 4;
 
+/**
+ * Ustunlar soni — sinflar to'liq yozilgan, chunki Tailwind manbani matn
+ * sifatida o'qiydi va `grid-cols-${n}` degan qatorni hech qachon topmaydi.
+ *
+ * Kichik ekranda hamma variant bitta ustun: 16:9 kadrni telefonda ikkiga
+ * bo'lish uni ko'rib bo'lmaydigan qilib qo'yadi.
+ */
+const GRID_COLS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 md:grid-cols-2',
+  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4',
+};
+const COL_CHOICES = [1, 2, 3, 4];
+const COLS_KEY = 'kk_live_cols';
+
+/** Ustunlar soni — ko'rish odati, sessiyaniki emas: bir marta tanlangan
+ *  ko'rinish keyingi kirishda ham o'shaligicha ochilsin. */
+function useGridCols() {
+  const [cols, setCols] = useState(() => {
+    try {
+      const v = Number(localStorage.getItem(COLS_KEY));
+      return COL_CHOICES.includes(v) ? v : 3;
+    } catch {
+      return 3;
+    }
+  });
+  return [
+    cols,
+    (v: number) => {
+      setCols(v);
+      try {
+        localStorage.setItem(COLS_KEY, String(v));
+      } catch {
+        /* ignore */
+      }
+    },
+  ] as const;
+}
+
+/** Devordagi ustunlar sonini tanlash. */
+function ColumnPicker({ cols, onChange }: { cols: number; onChange: (v: number) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-[5px]">
+      <span className="text-xs text-muted-foreground">{t('live_cols')}</span>
+      <div
+        // h-10: qatordagi Select va Input ham shuncha — aks holda tagi
+        // tekislanib, yorlig'i boshqalardan pastda turardi.
+        className="flex h-10 items-center gap-0.5 rounded-md border bg-background p-0.5"
+        role="group"
+        aria-label={t('live_cols')}
+      >
+        {COL_CHOICES.map((n) => (
+          <Button
+            key={n}
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={n === cols}
+            aria-label={t('live_cols_n', { n })}
+            title={t('live_cols_n', { n })}
+            onClick={() => onChange(n)}
+            className={cn(
+              'h-9 w-9 rounded-[5px] text-data font-semibold tabular-nums',
+              n === cols
+                ? 'bg-primary-tint text-primary hover:bg-primary-tint hover:text-primary'
+                : 'text-muted-foreground',
+            )}
+          >
+            {n}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Qaysi kameralar devorda turishini belgilash.
+ *
+ * Yashiringanlar saqlanadi, tanlanganlar emas: agent yangi kamera qo'shsa u
+ * o'z-o'zidan ko'rinadi. Teskarisi bo'lganda yangi kamera hech kim uni
+ * ro'yxatdan qidirib topmaguncha yo'q bo'lib turardi.
+ */
+function CameraPicker({
+  streams,
+  hidden,
+  onToggle,
+  onAll,
+}: {
+  streams: AgentStream[];
+  hidden: Set<string>;
+  onToggle: (id: string) => void;
+  onAll: () => void;
+}) {
+  const { t } = useTranslation();
+  const visible = streams.filter((s) => !hidden.has(s.camera_id)).length;
+  return (
+    <div className="flex flex-col gap-[5px]">
+      <span className="text-xs text-muted-foreground">{t('agent_cameras')}</span>
+      <DropdownMenu>
+        {/* Oddiy <button>, `Button` komponenti emas: `asChild` refni pastga
+            uzatadi, `Button` esa uni qabul qilmaydi (forwardRef yo'q) va
+            menyu umuman ochilmasdi. ProfileMenu ham shu sababdan shunday. */}
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              buttonVariants({ variant: 'outline' }),
+              'h-10 w-[190px] justify-between px-3 text-data font-normal',
+            )}
+          >
+            <span className="tabular-nums">
+              {visible === streams.length
+                ? t('flt_all')
+                : t('live_cams_picked', { n: visible, total: streams.length })}
+            </span>
+            <ChevronDownIcon className="size-3.5 opacity-60" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="max-h-[320px] w-[240px]">
+          <DropdownMenuCheckboxItem
+            checked={visible === streams.length}
+            // Radix menyusi tanlovdan keyin yopiladi — bu yerda esa ketma-ket
+            // bir nechta kamera belgilanadi, shuning uchun yopilishni to'xtatamiz.
+            onSelect={(e) => e.preventDefault()}
+            onCheckedChange={onAll}
+            className="text-data"
+          >
+            {t('flt_all')}
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuSeparator />
+          {streams.map((s) => (
+            <DropdownMenuCheckboxItem
+              key={s.camera_id}
+              checked={!hidden.has(s.camera_id)}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => onToggle(s.camera_id)}
+              className="text-data"
+            >
+              <span className="min-w-0 truncate">
+                {cameraLabel(s)}
+                {s.post_name && (
+                  <span className="ml-1.5 text-2xs text-muted-foreground">{s.post_name}</span>
+                )}
+              </span>
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 /** Karyerning barcha kameralari — agent aytgan rejimda.
  *
  * Kartalar post bo'yicha guruhlanadi: kamera nomi ("Kirish 1") faqat o'z
@@ -387,6 +555,8 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
   const [openCamera, setOpenCamera] = useState<string | null>(null);
   const [post, setPost] = useState('');
   const [query, setQuery] = useState('');
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  const [cols, setCols] = useGridCols();
 
   const streams = status.streams;
   const postOptions = useMemo(
@@ -397,9 +567,29 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return streams.filter(
-      (s) => (!post || s.post_name === post) && (!q || cameraLabel(s).toLowerCase().includes(q)),
+      (s) =>
+        !hidden.has(s.camera_id) &&
+        (!post || s.post_name === post) &&
+        (!q || cameraLabel(s).toLowerCase().includes(q)),
     );
-  }, [streams, post, query]);
+  }, [streams, hidden, post, query]);
+
+  const toggleCamera = (id: string) =>
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  // "Barchasi" ikki tomonlama: hammasi yoqilgan bo'lsa hammasini o'chiradi,
+  // aks holda hammasini qaytaradi.
+  const toggleAll = () =>
+    setHidden((prev) => (prev.size === 0 ? new Set(streams.map((s) => s.camera_id)) : new Set()));
+
+  const clearFilters = () => {
+    setPost('');
+    setQuery('');
+    setHidden(new Set());
+  };
 
   // Guruhlar ham tartibni serverdan oladi: Map kalitlarni kiritilgan tartibda
   // saqlaydi, ya'ni birinchi uchragan post birinchi bo'lim bo'ladi.
@@ -443,7 +633,10 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
 
   return (
     <>
-      {streams.length > FILTER_FROM && (
+      {/* Bitta kamerali karyerda tanlaydigan narsa yo'q — na qaysi biri, na
+          nechta ustunda. Qolgan hamma holatda qator turadi va har bir
+          boshqaruv o'zi kerak bo'lgandagina qo'shiladi. */}
+      {streams.length > 1 && (
         <div className="flex flex-wrap items-end gap-3 rounded-2xl border bg-card px-4 py-3 shadow-card">
           {postOptions.length > 1 && (
             <div className="w-[190px]">
@@ -455,15 +648,24 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
               />
             </div>
           )}
-          <div className="w-[190px]">
-            <FilterText
-              label={t('th_camera')}
-              value={query}
-              onChange={setQuery}
-              placeholder={t('live_search_ph')}
-            />
-          </div>
-          <span className="ml-auto pb-1.5 text-2xs text-muted-foreground tabular-nums">
+          <CameraPicker
+            streams={streams}
+            hidden={hidden}
+            onToggle={toggleCamera}
+            onAll={toggleAll}
+          />
+          {streams.length > FILTER_FROM && (
+            <div className="w-[190px]">
+              <FilterText
+                label={t('th_camera')}
+                value={query}
+                onChange={setQuery}
+                placeholder={t('live_search_ph')}
+              />
+            </div>
+          )}
+          <ColumnPicker cols={cols} onChange={setCols} />
+          <span className="ml-auto pb-2.5 text-2xs text-muted-foreground tabular-nums">
             {shown.length} / {streams.length} · {t('agent_cameras')}
           </span>
         </div>
@@ -474,14 +676,7 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
           title={t('empty_no_match')}
           hint={t('empty_no_match_hint')}
           action={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPost('');
-                setQuery('');
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={clearFilters}>
               {t('flt_clear')}
             </Button>
           }
@@ -495,10 +690,7 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
                 <span className="tabular-nums">({cams.length})</span>
               </h3>
             )}
-            {/* Uchinchi ustun keng ekranda: kadr 16:9 bo'lgani uchun ikkita
-                karta bir ekranni to'ldirib qo'yadi va o'ntadan ortiq kamerani
-                ko'rish uzoq aylantirishga aylanadi. */}
-            <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-3">
+            <div className={cn('grid gap-3.5', GRID_COLS[cols])}>
               {cams.map((s) => (
                 <CameraTile
                   key={s.camera_id}

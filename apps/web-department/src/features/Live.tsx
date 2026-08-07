@@ -1,4 +1,4 @@
-import { useDistricts, useQuarries } from '@karier/api-client';
+import { useDistricts, useQuarries, useRegions } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import { FilterSelect, LivePanel, localizedName, PageHeader, useAuth } from '@karier/ui';
 import { useMemo, useState } from 'react';
@@ -12,19 +12,37 @@ import { useMemo, useState } from 'react';
  * bo'sh ko'rinardi.
  *
  * Bir viloyatda o'nlab karyer bo'ladi va har birida bir nechta kamera, ya'ni
- * bitta ro'yxatga sig'maydigan miqdorda. Shuning uchun tanlov ikki bosqichli:
- * avval tuman, keyin o'sha tumandagi karyer. Ekranda esa hamisha bitta
+ * bitta ro'yxatga sig'maydigan miqdorda. Shuning uchun tanlov bosqichma-bosqich
+ * toraytiriladi: viloyat → tuman → karyer. Ekranda esa hamisha bitta
  * karyerning kameralari turadi — ular jonli oqim, va o'ttiztasini birdan
- * ochish kanalni ham, brauzerni ham bo'g'adi.
+ * ochish kanalni ham, brauzerni ham bo'g'adi. Qaysi kameralar ko'rinishi va
+ * devor necha ustun bo'lishi shu yerdan emas, `LivePanel` ichidan tanlanadi —
+ * u ikkala ilovada bir xil.
+ *
+ * Viloyat tanlagichi faqat superadminda: departament foydalanuvchisi o'z
+ * viloyatiga bog'langan va unga bitta variantli ro'yxat ko'rsatish — bosishga
+ * hech nima bermaydigan boshqaruv.
  */
 export function Live() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: quarries } = useQuarries();
-  const { data: districts } = useDistricts(user?.region_id ?? undefined);
+  const { data: regions } = useRegions();
 
+  const locked = user?.region_id ?? '';
+  const [region, setRegion] = useState('');
   const [district, setDistrict] = useState('');
   const [picked, setPicked] = useState('');
+
+  const { data: districts } = useDistricts(locked || region || undefined);
+
+  const regionOptions = useMemo(
+    () =>
+      [...(regions ?? [])]
+        .sort((a, b) => localizedName(a).localeCompare(localizedName(b)))
+        .map((r): [string, string] => [r.id, localizedName(r)]),
+    [regions],
+  );
 
   const districtOptions = useMemo(
     () =>
@@ -37,9 +55,9 @@ export function Live() {
   // Tumanlar ro'yxati allaqachon viloyat bo'yicha kelgani uchun karyerlarni
   // ham shu ro'yxat bilan filtrlaymiz — /quarries hammasini qaytaradi.
   const options = useMemo(() => {
-    const mine = new Set((districts ?? []).map((d) => d.id));
+    const inScope = new Set((districts ?? []).map((d) => d.id));
     return [...(quarries ?? [])]
-      .filter((q) => (district ? q.district_id === district : mine.has(q.district_id)))
+      .filter((q) => (district ? q.district_id === district : inScope.has(q.district_id)))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [quarries, districts, district]);
 
@@ -55,6 +73,20 @@ export function Live() {
         subtitle={t('live_subtitle_dept')}
         actions={
           <div className="flex flex-wrap items-end gap-2">
+            {!locked && (
+              <div className="w-[180px]">
+                <FilterSelect
+                  label={t('dash_region')}
+                  value={region}
+                  onChange={(v) => {
+                    setRegion(v);
+                    // Boshqa viloyatning tumani tanlanib qolmasin.
+                    setDistrict('');
+                  }}
+                  options={regionOptions}
+                />
+              </div>
+            )}
             <div className="w-[180px]">
               <FilterSelect
                 label={t('dash_district')}
