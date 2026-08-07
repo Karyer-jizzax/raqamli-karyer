@@ -747,6 +747,8 @@ export interface AgentStream {
   camera_id: string;
   // Adminkada (web-main) berilgan nom; kamera bazadan topilmasa — `camera_id`.
   camera_name: string;
+  // Kamera qaysi postda; sahifa kameralarni shu bo'yicha guruhlaydi.
+  post_name: string;
   hls_url: string | null;
   webrtc_url: string | null;
   // Snapshot rejimida sahifa shu manzilni har 2-3 soniyada yangilaydi.

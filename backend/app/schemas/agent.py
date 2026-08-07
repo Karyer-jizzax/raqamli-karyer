@@ -74,6 +74,9 @@ class LiveStreamOut(BaseModel):
     # Adminkada berilgan nom — sahifada ko'rinadigani. Kamera bazadan
     # topilmasa `camera_id` bilan bir xil bo'ladi.
     camera_name: str = ""
+    # Kamera qaysi postda — sahifa kameralarni shu bo'yicha guruhlaydi va
+    # filtrlaydi. Bazada topilmagan kameraga bo'sh.
+    post_name: str = ""
     hls_url: str | None = None
     webrtc_url: str | None = None
     # Snapshot rejimida sayt shu manzilni har 2-3 soniyada yangilaydi.

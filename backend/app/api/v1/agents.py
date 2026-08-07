@@ -63,8 +63,8 @@ def _live_mode(agent: QuarryAgent | None) -> str:
 
 async def _cameras(
     db: AsyncSession, agent: QuarryAgent | None, quarry_id: UUID
-) -> list[tuple[str, str]]:
-    """`(identifikator, ko'rinadigan nom)` juftliklari.
+) -> list[tuple[str, str, str]]:
+    """`(identifikator, ko'rinadigan nom, post nomi)` uchliklari.
 
     Identifikator — avval agent heartbeat'da aytganlari (jonli haqiqat),
     bo'lmasa bazadagi kamera kodlari. U MediaMTX yo'li va snapshot kaliti,
@@ -75,20 +75,25 @@ async def _cameras(
     (`services.ingest.resolve_camera` bilan bir xil qoida), shuning uchun
     ikkalasi ham kalit sifatida qidiriladi. Topilmasa — identifikatorning
     o'zi: ro'yxatdan tushib qolgan kamera nomsiz emas, hech bo'lmasa
-    kodi bilan ko'rinsin.
+    kodi bilan ko'rinsin (posti esa noma'lum, ya'ni bo'sh).
+
+    Post nomi — kameralar devorini guruhlash va filtrlash uchun: karyerda
+    nechta post bo'lsa, jonli ko'rinish ham shuncha bo'limga bo'linadi.
+    Shu sababli tartib ham postdan boshlanadi.
     """
     rows = (
         await db.execute(
-            select(Camera.code, Camera.name, Camera.is_active)
+            select(Camera.code, Camera.name, Camera.is_active, Post.name)
             .join(Post, Post.id == Camera.post_id)
             .where(Post.quarry_id == quarry_id)
-            .order_by(Camera.created_at)
+            .order_by(Post.code, Camera.created_at)
         )
     ).all()
-    names: dict[str, str] = {}
-    for code, name, _active in rows:
-        names[code] = name
-        names[name] = name
+    known: dict[str, tuple[str, str]] = {}
+    order: dict[str, int] = {}
+    for i, (code, name, _active, post) in enumerate(rows):
+        known[code] = known[name] = (name, post)
+        order[code] = order[name] = i
 
     reported = [
         str(c["id"])
@@ -96,8 +101,13 @@ async def _cameras(
         if isinstance(c, dict) and c.get("id")
     ] if agent is not None else []
     if reported:
-        return [(cam, names.get(cam, cam)) for cam in reported]
-    return [(code, name) for code, name, active in rows if active]
+        # Agent aytgan tartib emas, bazadagi post tartibi: heartbeat ro'yxati
+        # ixtiyoriy kelishi mumkin va ekrandagi kartalar joyini almashtirib
+        # tursa, operator ko'zi bilan topgan kamerasini qaytadan qidiradi.
+        # Bazada yo'q kamera oxirida, o'zaro nomi bo'yicha.
+        reported.sort(key=lambda cam: (order.get(cam, len(rows)), cam))
+        return [(cam, *known.get(cam, (cam, ""))) for cam in reported]
+    return [(code, name, post) for code, name, active, post in rows if active]
 
 
 async def _status_out(
@@ -109,11 +119,12 @@ async def _status_out(
         LiveStreamOut(
             camera_id=cam,
             camera_name=name,
+            post_name=post,
             hls_url=hls_url(quarry.code, cam) if mode == "hls" else None,
             webrtc_url=webrtc_url(quarry.code, cam) if mode == "hls" else None,
             snapshot_url=f"/api/v1/live-snapshot/{quarry.id}/{cam}",
         )
-        for cam, name in cameras
+        for cam, name, post in cameras
     ]
     if agent is None:
         return AgentStatusOut(quarry_id=str(quarry.id), live_mode="off", streams=streams)

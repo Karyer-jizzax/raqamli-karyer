@@ -27,11 +27,13 @@ import {
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import { CameraOffIcon, Maximize2Icon, RadioIcon, VideoOffIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { EmptyState, TableSkeleton } from '../data-table';
+import { FilterSelect, FilterText } from '../filters';
 import { cn } from '../lib/utils';
 import { Chip, TONE_DOT } from '../status';
+import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
 /** Kadr yangilash oralig'i — doc §4.1: snapshot profilida har 2-3 soniya. */
@@ -229,7 +231,9 @@ function CameraTile({
     <article className="group overflow-hidden rounded-2xl border bg-card shadow-card">
       <header className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
         <b className="truncate text-data text-foreground">{cameraLabel(stream)}</b>
-        <Chip tone="neutral">{t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}</Chip>
+        <Chip tone="neutral">
+          {t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}
+        </Chip>
       </header>
       <button
         type="button"
@@ -278,7 +282,9 @@ function CameraDialog({
       >
         <DialogHeader className="flex-row items-center justify-between gap-2 border-b px-4 py-3 pr-12">
           <DialogTitle className="text-sm font-semibold">{cameraLabel(stream)}</DialogTitle>
-          <Chip tone="neutral">{t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}</Chip>
+          <Chip tone="neutral">
+            {t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}
+          </Chip>
         </DialogHeader>
         <div className="relative aspect-video w-full bg-black">
           <Player stream={stream} mode={mode} controls />
@@ -288,13 +294,7 @@ function CameraDialog({
   );
 }
 
-function Placeholder({
-  icon: Icon,
-  text,
-}: {
-  icon: typeof CameraOffIcon;
-  text: string;
-}) {
+function Placeholder({ icon: Icon, text }: { icon: typeof CameraOffIcon; text: string }) {
   return (
     <div className="absolute inset-0 grid place-items-center gap-2 text-center">
       <div className="grid gap-1.5 justify-items-center">
@@ -303,6 +303,18 @@ function Placeholder({
       </div>
     </div>
   );
+}
+
+/** Agent o'zi tanlagan profil nomi — "low" emas, "Past".
+ *
+ * `current_quality` agentdan kelgan erkin satr, shuning uchun faqat biladigan
+ * qiymatlarimizni tarjima qilamiz: notanishi o'z holicha ko'rinsin, i18next
+ * kalitning o'zini qaytarib "agent_qs_xyz" deb yozib qo'ymasin. */
+const QUALITY_KEYS = ['auto', 'snapshot', 'low', 'medium', 'high'];
+
+function qualityLabel(quality: string, t: (k: string) => string): string {
+  const q = quality.trim().toLowerCase();
+  return QUALITY_KEYS.includes(q) ? t(`agent_qs_${q}`) : quality;
 }
 
 /** Agent holati: online, tarozi, kameralar, navbat, kanal (doc §3.3).
@@ -331,20 +343,17 @@ export function AgentStatusStrip({ status, flat }: { status: AgentStatus; flat?:
         </b>
       </span>
       <Meta label={t('agent_scale')} value={t(status.scale_ok ? 'agent_ok' : 'agent_fail')} />
-      <Meta
-        label={t('agent_cameras')}
-        value={`${cameraOk}/${status.cameras.length || 0}`}
-      />
+      <Meta label={t('agent_cameras')} value={`${cameraOk}/${status.cameras.length || 0}`} />
       <Meta label={t('agent_queue')} value={String(status.queue_size)} />
       {status.upload_kbps_avg > 0 && (
         <Meta label={t('agent_upload')} value={`${status.upload_kbps_avg} kbps`} />
       )}
       {status.current_quality && (
-        <Meta label={t('agent_quality')} value={status.current_quality} />
+        <Meta label={t('agent_quality')} value={qualityLabel(status.current_quality, t)} />
       )}
-      {status.agent_version && (
-        <Meta label={t('agent_version')} value={status.agent_version} />
-      )}
+      {/* Agent versiyasi bu yerda emas: bu chiziq "hozir ishlayaptimi" degan
+          savolga javob beradi, versiya esa adminkaning agent kartasida —
+          uni operator ham, inspektor ham hech qachon ishlatmaydi. */}
     </div>
   );
 }
@@ -357,44 +366,153 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Karyerning barcha kameralari — agent aytgan rejimda. */
+/** Kameralar soni shundan oshsa filtr qatori chiqadi.
+ *
+ * Ikki kamerali karyerda post tanlagich va qidiruv maydoni ish bermaydi — ular
+ * ekranda joy egallaydi va tanlaydigan narsasi yo'q. Devor kattalashganda esa
+ * (bir karyerda o'nlab kamera bo'lishi mumkin) qidiruvsiz kerakli kamerani
+ * ko'z bilan izlashga to'g'ri keladi. */
+const FILTER_FROM = 4;
+
+/** Karyerning barcha kameralari — agent aytgan rejimda.
+ *
+ * Kartalar post bo'yicha guruhlanadi: kamera nomi ("Kirish 1") faqat o'z
+ * posti bilan birga ma'noli, va o'nlab karta bir tekis to'r bo'lib yotsa
+ * qaysi biri qayerdaligi bilinmaydi. Tartib serverdan keladi (post kodi →
+ * kamera yoshi), shuning uchun kartalar joyini o'zgartirmaydi. */
 export function LiveGrid({ status }: { status: AgentStatus }) {
   const { t } = useTranslation();
   // Kattalashtirilgan kamera. Kamera identifikatorini saqlaymiz, obyektni
   // emas: holat 30 soniyada yangilanadi va eski obyekt "muzlab" qolardi.
   const [openCamera, setOpenCamera] = useState<string | null>(null);
-  const opened = status.streams.find((s) => s.camera_id === openCamera) ?? null;
+  const [post, setPost] = useState('');
+  const [query, setQuery] = useState('');
 
-  if (status.live_mode === 'off' || status.streams.length === 0) {
+  const streams = status.streams;
+  const postOptions = useMemo(
+    () => [...new Set(streams.map((s) => s.post_name).filter(Boolean))],
+    [streams],
+  );
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return streams.filter(
+      (s) => (!post || s.post_name === post) && (!q || cameraLabel(s).toLowerCase().includes(q)),
+    );
+  }, [streams, post, query]);
+
+  // Guruhlar ham tartibni serverdan oladi: Map kalitlarni kiritilgan tartibda
+  // saqlaydi, ya'ni birinchi uchragan post birinchi bo'lim bo'ladi.
+  const groups = useMemo(() => {
+    const byPost = new Map<string, AgentStream[]>();
+    for (const s of shown) {
+      const key = s.post_name || '';
+      const group = byPost.get(key);
+      if (group) group.push(s);
+      else byPost.set(key, [s]);
+    }
+    return [...byPost.entries()];
+  }, [shown]);
+
+  // Modal `streams` bo'yicha qidiriladi, `shown` bo'yicha emas: kamerani ochib
+  // turib filtr yozgan odam uni yopishni so'ramagan.
+  const opened = streams.find((s) => s.camera_id === openCamera) ?? null;
+
+  if (status.live_mode === 'off' || streams.length === 0) {
     return (
       <div className="grid place-items-center gap-1.5 rounded-2xl border border-dashed bg-card px-4 py-14 text-center">
         <RadioIcon className="size-6 text-muted-foreground" strokeWidth={1.6} />
         <b className="text-data text-foreground">{t('live_off')}</b>
         <span className="text-2xs text-muted-foreground">
-          {t(!status.is_active ? 'live_off_no_agent' : !status.online ? 'live_off_offline' : 'live_off_disabled')}
+          {t(
+            !status.is_active
+              ? 'live_off_no_agent'
+              : !status.online
+                ? 'live_off_offline'
+                : 'live_off_disabled',
+          )}
         </span>
       </div>
     );
   }
 
   const mode = status.live_mode === 'snapshot' ? 'snapshot' : 'hls';
+  // Bitta post bo'lsa sarlavha hech nimani ajratmaydi — u shunchaki har bir
+  // karyerda takrorlanadigan qator bo'lib qolardi.
+  const showHeadings = groups.length > 1;
 
   return (
     <>
-      <div className="grid gap-3.5 md:grid-cols-2">
-        {status.streams.map((s) => (
-          <CameraTile
-            key={s.camera_id}
-            stream={s}
-            mode={mode}
-            paused={s.camera_id === openCamera}
-            onOpen={() => setOpenCamera(s.camera_id)}
-          />
-        ))}
-      </div>
-      {opened && (
-        <CameraDialog stream={opened} mode={mode} onClose={() => setOpenCamera(null)} />
+      {streams.length > FILTER_FROM && (
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border bg-card px-4 py-3 shadow-card">
+          {postOptions.length > 1 && (
+            <div className="w-[190px]">
+              <FilterSelect
+                label={t('th_post')}
+                value={post}
+                onChange={setPost}
+                options={postOptions.map((p) => [p, p])}
+              />
+            </div>
+          )}
+          <div className="w-[190px]">
+            <FilterText
+              label={t('th_camera')}
+              value={query}
+              onChange={setQuery}
+              placeholder={t('live_search_ph')}
+            />
+          </div>
+          <span className="ml-auto pb-1.5 text-2xs text-muted-foreground tabular-nums">
+            {shown.length} / {streams.length} · {t('agent_cameras')}
+          </span>
+        </div>
       )}
+
+      {shown.length === 0 ? (
+        <EmptyState
+          title={t('empty_no_match')}
+          hint={t('empty_no_match_hint')}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPost('');
+                setQuery('');
+              }}
+            >
+              {t('flt_clear')}
+            </Button>
+          }
+        />
+      ) : (
+        groups.map(([postName, cams]) => (
+          <section key={postName || '__none__'} className="flex flex-col gap-2.5">
+            {showHeadings && (
+              <h3 className="m-0 flex items-center gap-2 text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                {postName || t('live_post_unknown')}
+                <span className="tabular-nums">({cams.length})</span>
+              </h3>
+            )}
+            {/* Uchinchi ustun keng ekranda: kadr 16:9 bo'lgani uchun ikkita
+                karta bir ekranni to'ldirib qo'yadi va o'ntadan ortiq kamerani
+                ko'rish uzoq aylantirishga aylanadi. */}
+            <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-3">
+              {cams.map((s) => (
+                <CameraTile
+                  key={s.camera_id}
+                  stream={s}
+                  mode={mode}
+                  paused={s.camera_id === openCamera}
+                  onOpen={() => setOpenCamera(s.camera_id)}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+      {opened && <CameraDialog stream={opened} mode={mode} onClose={() => setOpenCamera(null)} />}
     </>
   );
 }
