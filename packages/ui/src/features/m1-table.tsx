@@ -33,7 +33,7 @@ import {
   Unit,
 } from '../data-table';
 import { exportM1ToExcel } from '../export-events';
-import { FilterBar, FilterSelect, FilterText, QuickFilters, useFilterPanel } from '../filters';
+import { FilterBar, FilterSelect, FilterText, useFilterPanel } from '../filters';
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Field, ModalForm } from '../primitives';
@@ -188,17 +188,17 @@ function VehicleHistory({
 }
 
 /**
- * Bir bosishli filtrlar: operator/inspektorning ish navbatlari.
+ * Holat filtridagi guruhlar — bitta tanlov bir nechta holatni qamraydi.
  *
  * `attention` — raqamsiz (ANPR o'qiy olmagan) va o'lchovi shubhali hodisalar:
- * ikkalasi ham qo'l bilan ko'rib chiqishni talab qiladi. Holat ro'yxatida
- * ular alohida turadi, shuning uchun bittalab tanlash ikki marta filtrlashni
- * talab qilardi.
+ * ikkalasi ham qo'l bilan ko'rib chiqishni talab qiladi, lekin ro'yxatda
+ * alohida turadi, ya'ni ularni bittalab tanlash ikki marta filtrlashni
+ * talab qilardi. Guruh ro'yxatning boshida: operatorning kundalik savoli
+ * "nimani tekshirish kerak?" — alohida holatlar undan keyin keladi.
  */
-const QUICK: { key: string; labelKey: string; statuses: readonly string[] }[] = [
-  { key: 'attention', labelKey: 'quick_attention', statuses: ['no_plate', 'inspect'] },
-  { key: 'flagged', labelKey: 'quick_flagged', statuses: ['flagged'] },
-];
+const STATUS_GROUPS: Record<string, readonly string[]> = {
+  attention: ['no_plate', 'inspect'],
+};
 
 /**
  * @param canFixPlate  Raqamsiz hodisaga raqamni qo'lda kiritish huquqi. Bu
@@ -220,13 +220,9 @@ export function M1Table({
   );
 
   const [f, setF] = useState<Filters>({});
-  const [quick, setQuick] = useState('');
   const [filtersOpen, setFiltersOpen] = useFilterPanel();
   const set = (k: string) => (v: string) => setF((p) => setFilter(p, k, v));
-  const clear = () => {
-    setF({});
-    setQuick('');
-  };
+  const clear = () => setF({});
 
   const [media, setMedia] = useState<{ row: M1Row; mode: 'photo' | 'video' } | null>(null);
   const [history, setHistory] = useState<{ plate_region: string; plate_number: string } | null>(
@@ -247,19 +243,6 @@ export function M1Table({
   }, [quarries]);
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
-
-  // Tez filtr sonlari — boshqa filtrlardan oldingi holatdan: "nechta ish bor"
-  // degan javob tanlangan tuman yoki kameraga qarab o'zgarmasin.
-  const quickItems = useMemo(
-    () =>
-      QUICK.map((q) => ({
-        key: q.key,
-        label: t(q.labelKey),
-        count: rows.filter((r) => q.statuses.includes(r.status)).length,
-      })),
-    [rows, t],
-  );
-  const quickStatuses = QUICK.find((q) => q.key === quick)?.statuses;
 
   // Filter dropdown options derived from the full (unfiltered) result set, so
   // selecting one filter never collapses the others' choices.
@@ -284,14 +267,15 @@ export function M1Table({
 
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {
-    if (quickStatuses && !quickStatuses.includes(r.status)) return false;
     if (f.quarry && r.quarry_id !== f.quarry) return false;
     if (f.source && (f.source === 'zavod') !== r.is_main) return false;
     if (f.post && r.post_code !== f.post) return false;
     if (f.camera && r.camera_label !== f.camera) return false;
     if (f.direction && r.direction !== f.direction) return false;
     if (f.vtype && r.vtype !== f.vtype) return false;
-    if (f.status && r.status !== f.status) return false;
+    // Tanlangani guruh bo'lishi ham mumkin ("Tekshirish kerak" = raqamsiz +
+    // tekshiruvga), shuning uchun tenglik emas, ro'yxatga tegishlilik.
+    if (f.status && !(STATUS_GROUPS[f.status] ?? [f.status]).includes(r.status)) return false;
     if (f.material_id && r.material_id !== f.material_id) return false;
     if (f.plate && !plateMatches(f.plate, r.plate_region, r.plate_number)) return false;
     return true;
@@ -315,11 +299,10 @@ export function M1Table({
     return lang === 'ru' ? s.replace('.', ',') : s;
   };
 
-  const activeCount = Object.keys(f).length + (quick ? 1 : 0);
+  const activeCount = Object.keys(f).length;
 
   return (
     <div className="flex flex-col gap-3.5">
-      <QuickFilters value={quick} onChange={setQuick} items={quickItems} />
       <FilterBar
         activeCount={activeCount}
         onClear={clear}
@@ -371,7 +354,10 @@ export function M1Table({
           label={t('filt_status')}
           value={f.status}
           onChange={set('status')}
-          options={STATUSES.map((s) => [s, t(`status_${s}`)])}
+          options={[
+            ['attention', t('quick_attention')],
+            ...STATUSES.map((s): [string, string] => [s, t(`status_${s}`)]),
+          ]}
         />
         <FilterSelect
           label={t('flt_material')}

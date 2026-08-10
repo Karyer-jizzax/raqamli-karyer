@@ -42,7 +42,6 @@ export {
   FilterDate,
   FilterSelect,
   FilterText,
-  QuickFilters,
   useFilterPanel,
 } from './filters';
 export {
