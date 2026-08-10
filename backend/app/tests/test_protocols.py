@@ -52,7 +52,11 @@ async def test_create_protocol_idempotent(client: httpx.AsyncClient, seeded: Non
 @pytest.mark.asyncio
 async def test_reports(client: httpx.AsyncClient, seeded: None) -> None:
     token = await login(client, "department", "dept123")
-    for n in (2, 3, 4, 5):
+    # M3 was the payer-type split and is gone: the system never knew the payer.
+    for n in (2, 4, 5):
         resp = await client.get(f"/api/v1/stats/reports/{n}", headers=auth_header(token))
         assert resp.status_code == 200
         assert resp.json()["report"] == f"M{n}"
+    assert (
+        await client.get("/api/v1/stats/reports/3", headers=auth_header(token))
+    ).status_code == 404

@@ -93,7 +93,7 @@ async def test_reports_period_filter(client: httpx.AsyncClient, seeded: None) ->
     # The analytics screen scopes every card to one period — a report that
     # ignored date_from/date_to would show all-time numbers beside filtered ones.
     token = await login(client, "department", "dept123")
-    for n in (2, 3, 4, 5):
+    for n in (2, 4, 5):
         base = (
             await client.get(f"/api/v1/stats/reports/{n}", headers=auth_header(token))
         ).json()
