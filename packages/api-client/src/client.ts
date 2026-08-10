@@ -452,6 +452,10 @@ export interface CargoPost {
   trucks: number;
   cameras: number;
   cameras_active: number;
+  quarry_id: string;
+  quarry_name: string;
+  org_id: string | null;
+  org_name: string | null;
 }
 
 export interface CargoQuarryRow {

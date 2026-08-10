@@ -180,7 +180,9 @@ async def district_cargo(
     )
     _events, trucks, _volume, unidentified, last_at = (await db.execute(totals_stmt)).one()
 
-    # Per-post traffic (posts with no events still listed via outer join).
+    # Per-post traffic (posts with no events still listed via outer join). The
+    # quarry/organization the post sits under travels with it: the department
+    # dashboard groups the strip by firm, not by bare post code.
     posts_stmt = (
         select(
             Post.id,
@@ -188,12 +190,25 @@ async def district_cargo(
             Post.name,
             func.count(Event.id),
             func.count(func.distinct(_PLATE)).filter(Event.plate_number != ""),
+            Quarry.id,
+            Quarry.name,
+            Organization.id,
+            Organization.name,
         )
         .join(Quarry, Quarry.id == Post.quarry_id)
+        .outerjoin(Organization, Organization.id == Quarry.organization_id)
         .outerjoin(Event, and_(Event.post_id == Post.id, *period))
         .where(Quarry.district_id == district_id)
-        .group_by(Post.id, Post.code, Post.name)
-        .order_by(Post.code)
+        .group_by(
+            Post.id,
+            Post.code,
+            Post.name,
+            Quarry.id,
+            Quarry.name,
+            Organization.id,
+            Organization.name,
+        )
+        .order_by(Organization.name.nulls_last(), Quarry.name, Post.code)
     )
     post_rows = (await db.execute(posts_stmt)).all()
 
@@ -235,8 +250,12 @@ async def district_cargo(
                 "trucks": int(tr),
                 "cameras": cams_by_post.get(pid, (0, 0))[0],
                 "cameras_active": cams_by_post.get(pid, (0, 0))[1],
+                "quarry_id": qid,
+                "quarry_name": qname,
+                "org_id": org_id,
+                "org_name": org_name,
             }
-            for pid, code, pname, ev, tr in post_rows
+            for pid, code, pname, ev, tr, qid, qname, org_id, org_name in post_rows
         ],
         "quarries": [
             {"id": qid, "name": qname, "count": int(cnt), "volume": round(float(vol), 2)}

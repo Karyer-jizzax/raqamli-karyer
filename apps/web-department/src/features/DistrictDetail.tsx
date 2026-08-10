@@ -59,22 +59,53 @@ const DEFAULT_RANGE = {
 /** How many peer districts the ranking plots; this district is always among them. */
 const TOP_N = 8;
 
-/** One eco-post: its code, throughput and camera health. */
-function EcoPostCard({ post, lang, t }: { post: CargoPost; lang: ReturnType<typeof currentLang>; t: (k: string) => string }) {
+/** A firm and everything it runs in this district, keyed by org (quarries without
+ *  an owner fall back to their own bucket so no post disappears). */
+type Firm = {
+  id: string;
+  name: string | null;
+  trucks: number;
+  events: number;
+  sites: { id: string; name: string; posts: CargoPost[] }[];
+};
+
+function groupByFirm(posts: CargoPost[]): Firm[] {
+  const firms = new Map<string, Firm>();
+  for (const p of posts) {
+    const key = p.org_id ?? `quarry:${p.quarry_id}`;
+    let firm = firms.get(key);
+    if (!firm) {
+      firm = { id: key, name: p.org_name, trucks: 0, events: 0, sites: [] };
+      firms.set(key, firm);
+    }
+    firm.trucks += p.trucks;
+    firm.events += p.events;
+    let site = firm.sites.find((s) => s.id === p.quarry_id);
+    if (!site) {
+      site = { id: p.quarry_id, name: p.quarry_name, posts: [] };
+      firm.sites.push(site);
+    }
+    site.posts.push(p);
+  }
+  return [...firms.values()].sort((a, b) => b.trucks - a.trucks);
+}
+
+/** One eco-post row inside a firm card: code, throughput and camera health. */
+function PostRow({ post, lang, t }: { post: CargoPost; lang: ReturnType<typeof currentLang>; t: (k: string) => string }) {
   return (
-    <article className="min-w-[136px] shrink-0 rounded-xl border bg-card px-3 py-2.5 shadow-card">
-      <Chip tone="neutral" className="mb-2 bg-primary-tint text-primary tabular-nums">
+    <div className="flex items-center gap-2">
+      <Chip tone="neutral" className="bg-primary-tint text-primary tabular-nums">
         {post.code}
       </Chip>
-      <div className="mb-[3px] flex items-center gap-[5px] text-data text-foreground">
+      <span className="flex items-center gap-[5px] text-data text-foreground">
         <ActivityIcon className="size-3.5 text-primary" strokeWidth={1.8} />
         <b className="tabular-nums">{formatNumber(post.events, lang)}</b>
-      </div>
-      <div className="mb-2 flex items-center gap-[5px] text-data text-foreground">
+      </span>
+      <span className="flex items-center gap-[5px] text-data text-foreground">
         <TruckIcon className="size-3.5 text-primary" strokeWidth={1.8} />
         <b className="tabular-nums">{formatNumber(post.trucks, lang)}</b>
-      </div>
-      <div className="flex gap-1" title={t('dash_cameras')}>
+      </span>
+      <span className="ml-auto flex gap-1" title={t('dash_cameras')}>
         {Array.from({ length: post.cameras }, (_, i) => (
           <span
             key={i}
@@ -83,6 +114,37 @@ function EcoPostCard({ post, lang, t }: { post: CargoPost; lang: ReturnType<type
               TONE_DOT[i < post.cameras_active ? 'success' : 'danger'],
             )}
           />
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/** One firm: every quarry/plant it owns here, each with its own posts. */
+function FirmCard({ firm, lang, t }: { firm: Firm; lang: ReturnType<typeof currentLang>; t: (k: string) => string }) {
+  return (
+    <article className="rounded-xl border bg-card px-3.5 py-3 shadow-card">
+      <header className="mb-2.5 flex items-start justify-between gap-2 border-b pb-2">
+        <h3 className="text-data font-semibold text-foreground">
+          {firm.name ?? t('q_no_org')}
+        </h3>
+        <span className="flex shrink-0 items-center gap-1.5" title={t('dash_trucks_plural')}>
+          <b className="text-data text-primary tabular-nums">{formatNumber(firm.trucks, lang)}</b>
+          <TruckIcon className="size-3.5 text-primary" strokeWidth={1.8} />
+        </span>
+      </header>
+      <div className="grid gap-2.5">
+        {firm.sites.map((s) => (
+          <div key={s.id}>
+            <p className="m-0 mb-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              {s.name}
+            </p>
+            <div className="grid gap-1.5">
+              {s.posts.map((p) => (
+                <PostRow key={p.id} post={p} lang={lang} t={t} />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </article>
@@ -173,6 +235,7 @@ export function DistrictDetail() {
   const district = districts?.find((d) => d.id === districtId);
   const region = regions?.find((r) => r.id === district?.region_id);
   const posts = cargo?.posts ?? [];
+  const firms = useMemo(() => groupByFirm(cargo?.posts ?? []), [cargo?.posts]);
   const quarryRows = useMemo(
     () =>
       (cargo?.quarries ?? []).map((q) => ({
@@ -302,11 +365,11 @@ export function DistrictDetail() {
             />
           </div>
 
-          {/* Eco-post cards strip */}
-          {posts.length > 0 ? (
-            <div className="flex gap-2.5 overflow-x-auto pb-1">
-              {posts.map((p) => (
-                <EcoPostCard key={p.id} post={p} lang={lang} t={t} />
+          {/* One card per firm; its posts sit inside, grouped by quarry/plant. */}
+          {firms.length > 0 ? (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] items-start gap-3">
+              {firms.map((f) => (
+                <FirmCard key={f.id} firm={f} lang={lang} t={t} />
               ))}
             </div>
           ) : (
@@ -323,11 +386,13 @@ export function DistrictDetail() {
                 </span>
               </header>
               <div className="grid gap-2.5">
-                {posts.map((p) => (
-                  <div key={p.code} className="flex items-center justify-between gap-2">
-                    <span className="text-data font-semibold text-foreground">{p.code}</span>
-                    <div className="flex items-center gap-1.5">
-                      <b className="text-data text-primary tabular-nums">{fn(p.trucks)}</b>
+                {firms.map((f) => (
+                  <div key={f.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate text-data font-semibold text-foreground">
+                      {f.name ?? t('q_no_org')}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <b className="text-data text-primary tabular-nums">{fn(f.trucks)}</b>
                       <TruckIcon className="size-3.5 text-primary" strokeWidth={1.8} />
                     </div>
                   </div>

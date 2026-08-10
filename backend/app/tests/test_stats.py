@@ -189,6 +189,9 @@ async def test_district_cargo(client: httpx.AsyncClient, seeded: None) -> None:
     assert data["trucks_total"] >= 0 and data["unidentified"] >= 0
     for post in data["posts"]:
         assert post["cameras"] >= post["cameras_active"] >= 0
+        # The strip groups by firm, so every post names its quarry and owner.
+        assert post["quarry_id"] and post["quarry_name"]
+        assert "org_id" in post and "org_name" in post
     for quarry in data["quarries"]:
         assert quarry["count"] >= 0 and quarry["volume"] >= 0
 

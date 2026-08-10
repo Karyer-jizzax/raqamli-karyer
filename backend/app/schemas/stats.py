@@ -38,6 +38,11 @@ class CargoPost(BaseModel):
     trucks: int
     cameras: int
     cameras_active: int
+    # Owning quarry and firm — the strip is grouped by firm, not by post.
+    quarry_id: UUID
+    quarry_name: str
+    org_id: UUID | None = None
+    org_name: str | None = None
 
 
 class CargoQuarryRow(BaseModel):
