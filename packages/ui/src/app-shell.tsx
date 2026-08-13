@@ -68,7 +68,8 @@ function NavList({
 
 /**
  * @param appKey  i18n key of the app title ("Karyer Kontrol — Karyer"); the
- *                part after the dash becomes the sidebar subtitle.
+ *                part after the dash becomes the sidebar subtitle, and a title
+ *                with no dash leaves the subtitle off entirely.
  * @param title   Topbar heading; defaults to the active nav entry's label.
  */
 export function AppShell({
@@ -123,9 +124,11 @@ export function AppShell({
           </div>
           <div className="flex min-w-0 flex-col leading-[1.15]">
             <span className="truncate text-data font-bold tracking-[0.02em]">KARYER KONTROL</span>
-            <span className="truncate text-2xs tracking-[0.02em] text-muted-foreground">
-              {suffix}
-            </span>
+            {suffix && (
+              <span className="truncate text-2xs tracking-[0.02em] text-muted-foreground">
+                {suffix}
+              </span>
+            )}
           </div>
           <button
             type="button"

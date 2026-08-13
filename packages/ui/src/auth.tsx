@@ -150,7 +150,10 @@ function LoginScreen({
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  // A title with no dash suffix is the bare brand, which the logo above already
+  // says — the badge only earns its place when it names the app.
   const appTitle = appKey ? t(appKey) : '';
+  const badge = appTitle.includes(' — ') ? appTitle : '';
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -199,12 +202,12 @@ function LoginScreen({
           </div>
         </div>
 
-        {appTitle && (
+        {badge && (
           <span
             className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold"
             style={{ background: tint, color: accent }}
           >
-            {appTitle}
+            {badge}
           </span>
         )}
         <h2 className="mb-6 text-[22px] font-semibold tracking-tight text-foreground">

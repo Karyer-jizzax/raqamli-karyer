@@ -7,7 +7,7 @@ export type Dict = Record<string, string>;
 
 const uzLatn: Dict = {
   app_main: 'Karyer Kontrol — Boshqaruv',
-  app_department: 'Karyer Kontrol — Departament',
+  app_department: 'Karyer Kontrol',
   app_quarry: 'Karyer Kontrol — Karyer',
 
   login_title: 'Tizimga kirish',
@@ -510,7 +510,7 @@ const uzLatn: Dict = {
 
 const uzCyrl: Dict = {
   app_main: 'Карьер Контрол — Бошқарув',
-  app_department: 'Карьер Контрол — Департамент',
+  app_department: 'Карьер Контрол',
   app_quarry: 'Карьер Контрол — Карьер',
 
   login_title: 'Тизимга кириш',
@@ -1012,7 +1012,7 @@ const uzCyrl: Dict = {
 
 const ru: Dict = {
   app_main: 'Карьер Контрол — Управление',
-  app_department: 'Карьер Контрол — Департамент',
+  app_department: 'Карьер Контрол',
   app_quarry: 'Карьер Контрол — Карьер',
 
   login_title: 'Вход в систему',
