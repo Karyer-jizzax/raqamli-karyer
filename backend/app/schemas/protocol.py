@@ -30,7 +30,7 @@ class ProtocolDocument(BaseModel):
     district_name_uz_latn: str
     region_name_uz_latn: str
     material_name_uz_latn: str | None
-    organization: str = "Karier Kontrol"
+    organization: str = "Karyer Kontrol"
 
 
 class ProtocolSignatures(BaseModel):

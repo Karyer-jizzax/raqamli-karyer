@@ -193,7 +193,7 @@ function LoginScreen({
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-bold tracking-wide text-foreground">
-              KARIER KONTROL
+              KARYER KONTROL
             </span>
             <span className="text-[11.5px] text-slate-400">{t('login_subtitle')}</span>
           </div>
@@ -243,7 +243,7 @@ function LoginScreen({
           <LangSwitcher />
         </div>
       </form>
-      <p className="mb-auto text-xs text-slate-300">© 2026 Karier Kontrol</p>
+      <p className="mb-auto text-xs text-slate-300">© 2026 Karyer Kontrol</p>
     </div>
   );
 }

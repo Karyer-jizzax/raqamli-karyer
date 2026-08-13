@@ -64,7 +64,7 @@ function Sidebar({
             K
           </div>
           <div className="flex flex-col leading-[1.15]">
-            <span className="text-[13.5px] font-bold tracking-[0.02em]">KARIER KONTROL</span>
+            <span className="text-[13.5px] font-bold tracking-[0.02em]">KARYER KONTROL</span>
             <span className="text-[10.5px] tracking-[0.02em] text-slate-400">
               {t('nav_section')}
             </span>

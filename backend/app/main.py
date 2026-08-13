@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.services.storage import MEDIA_DIR
 
 app = FastAPI(
-    title="Karier Kontrol API",
+    title="Karyer Kontrol API",
     version="0.0.0",
     description="Karyerlar nazorati avtomatlashtirilgan tizimi",
     openapi_url=f"{settings.api_v1_prefix}/openapi.json",

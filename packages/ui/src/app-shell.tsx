@@ -67,7 +67,7 @@ function NavList({
 }
 
 /**
- * @param appKey  i18n key of the app title ("Karier Kontrol — Karyer"); the
+ * @param appKey  i18n key of the app title ("Karyer Kontrol — Karyer"); the
  *                part after the dash becomes the sidebar subtitle.
  * @param title   Topbar heading; defaults to the active nav entry's label.
  */
@@ -122,7 +122,7 @@ export function AppShell({
             K
           </div>
           <div className="flex min-w-0 flex-col leading-[1.15]">
-            <span className="truncate text-data font-bold tracking-[0.02em]">KARIER KONTROL</span>
+            <span className="truncate text-data font-bold tracking-[0.02em]">KARYER KONTROL</span>
             <span className="truncate text-2xs tracking-[0.02em] text-muted-foreground">
               {suffix}
             </span>

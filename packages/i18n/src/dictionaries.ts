@@ -6,9 +6,9 @@ import type { Lang } from '@karier/types';
 export type Dict = Record<string, string>;
 
 const uzLatn: Dict = {
-  app_main: 'Karier Kontrol — Boshqaruv',
-  app_department: 'Karier Kontrol — Departament',
-  app_quarry: 'Karier Kontrol — Karyer',
+  app_main: 'Karyer Kontrol — Boshqaruv',
+  app_department: 'Karyer Kontrol — Departament',
+  app_quarry: 'Karyer Kontrol — Karyer',
 
   login_title: 'Tizimga kirish',
   login_subtitle: 'Karyerlar nazorati avtomatlashtirilgan tizimi',
@@ -509,9 +509,9 @@ const uzLatn: Dict = {
 };
 
 const uzCyrl: Dict = {
-  app_main: 'Кариер Контрол — Бошқарув',
-  app_department: 'Кариер Контрол — Департамент',
-  app_quarry: 'Кариер Контрол — Карьер',
+  app_main: 'Карьер Контрол — Бошқарув',
+  app_department: 'Карьер Контрол — Департамент',
+  app_quarry: 'Карьер Контрол — Карьер',
 
   login_title: 'Тизимга кириш',
   login_subtitle: 'Карьерлар назорати автоматлаштирилган тизими',
@@ -1011,9 +1011,9 @@ const uzCyrl: Dict = {
 };
 
 const ru: Dict = {
-  app_main: 'Кариер Контрол — Управление',
-  app_department: 'Кариер Контрол — Департамент',
-  app_quarry: 'Кариер Контрол — Карьер',
+  app_main: 'Карьер Контрол — Управление',
+  app_department: 'Карьер Контрол — Департамент',
+  app_quarry: 'Карьер Контрол — Карьер',
 
   login_title: 'Вход в систему',
   login_subtitle: 'Автоматизированная система контроля карьеров',
