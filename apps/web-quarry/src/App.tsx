@@ -6,6 +6,7 @@ import { Dashboard } from './features/Dashboard';
 import { Events } from './features/Events';
 import { Live } from './features/Live';
 import { Trips } from './features/Trips';
+import { Waybill } from './features/Waybill';
 
 /** Sidebar entry ↔ route. The shell stays router-free, so the map lives here. */
 const NAV: (NavEntry & { path: string })[] = [
@@ -45,8 +46,18 @@ function Shell() {
 
 export function App() {
   return (
-    <RequireAuth allowedRoles={['operator', 'superadmin']} appKey="app_quarry">
-      <Shell />
-    </RequireAuth>
+    <Routes>
+      {/* Yuk xatidagi QR shu yerga olib keladi — parolsiz, faqat ma'lumot.
+          Login talab qilinmasligi uchun RequireAuth'dan tashqarida turadi. */}
+      <Route path="/yuk-xati/:tripId" element={<Waybill />} />
+      <Route
+        path="*"
+        element={
+          <RequireAuth allowedRoles={['operator', 'superadmin']} appKey="app_quarry">
+            <Shell />
+          </RequireAuth>
+        }
+      />
+    </Routes>
   );
 }

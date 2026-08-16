@@ -40,6 +40,8 @@ import {
   getMaterials,
   getTrips,
   type TripParams,
+  getPublicWaybill,
+  getTripWaybill,
   getOverview,
   getQuarryStats,
   getPostCameras,
@@ -471,6 +473,26 @@ export function useM1(params: Record<string, string> = {}) {
 
 export function useTrips(params: TripParams = {}) {
   return useQuery({ queryKey: ['trips', params], queryFn: () => getTrips(params) });
+}
+
+/** Yuk xati for a trip (authed). Idle until a trip is actually picked. */
+export function useTripWaybill(tripId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['waybill', tripId],
+    queryFn: () => getTripWaybill(tripId as string),
+    enabled: Boolean(tripId),
+  });
+}
+
+/** The same document read without a token — the page a QR scan lands on. */
+export function usePublicWaybill(tripId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['waybill-public', tripId],
+    queryFn: () => getPublicWaybill(tripId as string),
+    enabled: Boolean(tripId),
+    // A mistyped/expired link is a 404, not a hiccup — do not hammer it.
+    retry: false,
+  });
 }
 
 export function useTripRules() {

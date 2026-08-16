@@ -349,6 +349,55 @@ export const getTrips = (params: TripParams = {}) => {
   return api.get<TripRecord[]>(`/trips${q ? `?${q}` : ''}`);
 };
 
+// ── yuk xati (waybill) — the printable cargo document for one trip. Derived
+// server-side from the trip, so there is nothing to create: the same trip
+// always yields the same number. The QR on it opens the parolsiz page below.
+export interface WaybillWeighing {
+  at: string | null;
+  weight_kg: number | null;
+}
+
+export interface WaybillDocument {
+  number: string;
+  verification_code: string;
+  issued_at: string;
+  // the parolsiz page this document's QR points at
+  public_url: string;
+  // inline <svg>, injected as-is (backend-generated, never user input)
+  qr_svg: string;
+
+  trip_id: string;
+  organization_name: string;
+  quarry_name: string;
+  district_name_uz_latn: string;
+  region_name_uz_latn: string;
+
+  plate_region: string;
+  plate_number: string;
+  kind: TripRecord['kind'];
+  status: TripRecord['status'];
+  stage: TripRecord['stage'];
+
+  enter: WaybillWeighing;
+  exit: WaybillWeighing;
+  netto_kg: number | null;
+  volume_m3: number | null;
+}
+
+// The two web apps live on different domains, so the one printing the waybill
+// is the only one that knows where its QR should send a scanner. The backend
+// only honours an origin it already trusts through CORS.
+const publicBase = () => (typeof window === 'undefined' ? '' : window.location.origin);
+
+const waybillQuery = () => `?public_base=${encodeURIComponent(publicBase())}`;
+
+export const getTripWaybill = (tripId: string) =>
+  api.get<WaybillDocument>(`/trips/${tripId}/waybill${waybillQuery()}`);
+
+/** Parolsiz — what a scanned QR resolves to; no token required. */
+export const getPublicWaybill = (tripId: string) =>
+  api.get<WaybillDocument>(`/public/waybill/${tripId}${waybillQuery()}`);
+
 // ── runtime settings (superadmin, web-main) ─────────────────────────────────
 // Trip rules: netto floor (kg) below which a trip is "no_cargo", the
 // open-timeout (hours) after which a stuck scale trip becomes a violation,

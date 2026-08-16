@@ -22,6 +22,11 @@ class Settings(BaseSettings):
 
     api_v1_prefix: str = "/api/v1"
 
+    # Yuk xatidagi QR kod shu manzilga yo'naltiradi (parolsiz ochiladigan
+    # sahifa). Bo'sh bo'lsa, xatni chop etayotgan sayt o'z origin'ini yuboradi
+    # va u CORS ro'yxatidan tekshiriladi — bu esa uni majburiy qiladi.
+    public_web_base: str = ""
+
     # Quarry local-server ingest (API.md /api/weigh) — comma-separated list of
     # valid X-API-Key values (one per quarry local server). Change in prod.
     weigh_api_keys: str = "KARYER-01-SECRET"

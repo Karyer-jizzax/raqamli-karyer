@@ -6,6 +6,7 @@
  */
 import { type TripRecord, type TripStage, useQuarries, useTrips } from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
+import { FileTextIcon } from 'lucide-react';
 import { type MouseEvent, useMemo, useState } from 'react';
 
 import {
@@ -29,6 +30,7 @@ import { PlateBadge } from '../plate';
 import { Chip, TONE_TEXT, TRIP_KIND_TONE, TRIP_STAGE_TONE } from '../status';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { WaybillViewer } from '../waybill';
 import { HoverPreview, MediaChips, type Preview, StageSection } from './media';
 import { type Filters, plateMatches, setFilter, splitDateTime } from './util';
 
@@ -129,6 +131,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
 
   const [f, setF] = useState<Filters>({});
   const [sel, setSel] = useState<TripRecord | null>(null);
+  const [waybillOf, setWaybillOf] = useState<string | null>(null);
   const [prev, setPrev] = useState<Preview | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
@@ -192,7 +195,8 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const pageRows = filtered.slice(pageStart, pageStart + pageSize);
 
   const activeCount = Object.keys(f).length;
-  const cols = showQuarry ? 9 : 8;
+  // +1 for the yuk xati action column
+  const cols = showQuarry ? 10 : 9;
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -264,6 +268,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                       {t('grp_ai')}
                     </th>
                     <th rowSpan={2} className={GRID_TH} scope="col">{t('th_status')}</th>
+                    <th rowSpan={2} className={GRID_TH} scope="col">{t('wb_open')}</th>
                   </tr>
                   <tr>
                     <th className={GRID_TH_SUB} scope="col">{t('dir_enter')}</th>
@@ -315,6 +320,21 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                         <td className={GRID_CTR}>
                           <Chip tone={TRIP_STAGE_TONE[r.stage]}>{t(`stage_${r.stage}`)}</Chip>
                         </td>
+                        <td className={GRID_CTR}>
+                          {/* Stop the click here: the row itself opens the media dialog. */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            title={t('wb_open')}
+                            aria-label={t('wb_open')}
+                            onClick={(e: MouseEvent) => {
+                              e.stopPropagation();
+                              setWaybillOf(r.id);
+                            }}
+                          >
+                            <FileTextIcon className="size-4" />
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -329,7 +349,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                         </td>
                         <td className={cn(GRID_NUM, top)}>{cubes(x.m3)}</td>
                         <td className={cn(GRID_NUM, top)}>{tons(x.netto)}</td>
-                        <td className={cn(GRID_CELL, top)} />
+                        <td className={cn(GRID_CELL, top)} colSpan={2} />
                       </tr>
                     );
                   })}
@@ -375,6 +395,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
       {/* Hover media preview (photo / silent looping clip). */}
       {prev && <HoverPreview prev={prev} />}
       {sel && <TripDialog trip={sel} onClose={() => setSel(null)} />}
+      {waybillOf && <WaybillViewer tripId={waybillOf} onClose={() => setWaybillOf(null)} />}
     </div>
   );
 }

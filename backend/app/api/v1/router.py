@@ -9,6 +9,7 @@ from app.api.v1 import (
     materials,
     organizations,
     protocols,
+    public,
     quarries,
     regions,
     scale,
@@ -34,3 +35,5 @@ api_router.include_router(scale.router)
 api_router.include_router(stats.router)
 api_router.include_router(users.router)
 api_router.include_router(settings.router)
+# Parolsiz — QR kod shu yerga olib keladi. Auth dependency'siz (public.py).
+api_router.include_router(public.router)

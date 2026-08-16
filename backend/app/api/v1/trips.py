@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +14,9 @@ from app.models.quarry import Quarry
 from app.models.region import District
 from app.models.trip import Trip
 from app.schemas.trip import TripOut
+from app.schemas.waybill import WaybillDocument
 from app.services.app_settings import TRIP_OPEN_TIMEOUT_HOURS, get_int_setting
+from app.services.waybill import build_waybill, public_origin
 
 router = APIRouter(tags=["trips"])
 
@@ -107,3 +109,39 @@ async def list_trips(
         _apply_open_timeout(trip, TripOut.model_validate(trip), cutoff)
         for trip in result.scalars().all()
     ]
+
+
+async def _in_scope(db: AsyncSession, user: object, trip: Trip) -> bool:
+    """Same tenant rule the list applies, for a single trip fetched by id."""
+    role = user.role  # type: ignore[attr-defined]
+    if role == "operator":
+        return trip.quarry_id == user.quarry_id  # type: ignore[attr-defined]
+    if role == "department":
+        region_id = (
+            await db.execute(
+                select(District.region_id)
+                .join(Quarry, Quarry.district_id == District.id)
+                .where(Quarry.id == trip.quarry_id)
+            )
+        ).scalar_one_or_none()
+        return region_id == user.region_id  # type: ignore[attr-defined]
+    return True
+
+
+@router.get("/trips/{trip_id}/waybill", response_model=WaybillDocument)
+async def trip_waybill(
+    trip_id: UUID,
+    db: DbDep,
+    request: Request,
+    user: Annotated[object, Depends(get_current_user)],
+    # The printing app's own origin — the QR has to point back at it. Only
+    # honoured if already trusted (see services.waybill.public_origin).
+    public_base: Annotated[str | None, Query()] = None,
+) -> WaybillDocument:
+    """Yuk xati — the cargo document for one trip, with a QR to its public page."""
+    trip = await db.get(Trip, trip_id)
+    # A trip outside the caller's region must not be distinguishable from one
+    # that does not exist, so both answer 404.
+    if trip is None or not await _in_scope(db, user, trip):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Qatnov topilmadi")
+    return await build_waybill(db, trip, public_origin(public_base, str(request.base_url)))

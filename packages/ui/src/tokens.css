@@ -35,13 +35,51 @@
   background: #eceff4;
   font-weight: 700;
 }
+/* The generated QR carries its own mm dimensions — make it obey its slot. */
+.kk-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Yuk xati — a kassa-cheki slip, not a form: 80mm of monospace on white,
+   so it reads the same on screen and out of a receipt printer. */
+.kk-receipt {
+  width: 80mm;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 8mm 6mm;
+  background: #fff;
+  color: #15273c;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  box-shadow: 0 10px 34px rgba(16, 32, 48, 0.14);
+}
+.kk-receipt hr {
+  border: 0;
+  border-top: 1px dashed #94a3b8;
+  margin: 9px 0;
+}
+/* label on the left, value hard against the right edge — the receipt grid */
+.kk-receipt .kk-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.kk-receipt .kk-line > span:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
 
 @media print {
   body * {
     visibility: hidden;
   }
   .kk-protocol,
-  .kk-protocol * {
+  .kk-protocol *,
+  .kk-receipt,
+  .kk-receipt * {
     visibility: visible;
   }
   .kk-protocol {
@@ -51,8 +89,24 @@
     box-shadow: none;
     width: 100%;
   }
+  .kk-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: none;
+    padding: 0;
+  }
   .no-print {
     display: none !important;
+  }
+  /* A sheet shown inside a scrolling overlay would otherwise be clipped to the
+     overlay's box on paper — flatten the host so the sheet lands on the page. */
+  .kk-print-host {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: none !important;
   }
 }
 

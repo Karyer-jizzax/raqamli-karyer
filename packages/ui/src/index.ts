@@ -73,6 +73,7 @@ export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './
 export { AuthProvider, RequireAuth, useAuth, ProfileMenu } from './auth';
 export { JizzaxMap } from './map';
 export { ProtocolDocument, ProtocolViewer } from './protocol';
+export { PublicWaybill, WaybillSheet, WaybillViewer } from './waybill';
 export { exportM1ToExcel, type ExportM1Options } from './export-events';
 
 // Data screens shared by web-department and web-quarry
