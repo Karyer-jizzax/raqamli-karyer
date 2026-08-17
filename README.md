@@ -61,6 +61,19 @@ uvicorn app.main:app --reload --port 8000
 Tekshirish: http://localhost:8000/health → `{"status":"ok"}`,
 http://localhost:8000/api/v1/materials → 6 ta material, http://localhost:8000/docs → Swagger.
 
+**Tumanlar xaritasi.** Dashboard xaritasi `districts.svg_path` dan chiziladi.
+Seed faqat Jizzax tumanlarini to'ldiradi; qolgan viloyatlar uchun tayyor
+chizma `backend/scripts/uz_map.json` da turadi (14 viloyat, 196 tuman):
+
+```bash
+python -m scripts.import_map --dry-run          # nima o'zgarishini ko'rsatadi
+python -m scripts.import_map                    # chizmasi yo'q tumanlarga yozadi
+python -m scripts.import_map --create-missing   # bazada yo'q tumanni ochadi ham
+```
+
+Chizma faylini qaytadan yasash kerak bo'lsa (manba: geoBoundaries + OSM
+nomlari, ikkalasi ham tarmoqdan): `python scripts/build_uz_map.py`.
+
 **Demo loginlar** (seed yaratadi):
 
 | Login | Parol | Rol | App |

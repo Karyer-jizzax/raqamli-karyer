@@ -97,6 +97,9 @@ export function RegionMap({
             key={d.id}
             d={d.svg_path}
             fill={fillFor(d.quarry_count, max, selected)}
+            // Bir tuman ichida ikkinchisi bo'lishi mumkin (anklav): teshik
+            // to'ldirilib ketmasin.
+            fillRule="evenodd"
             stroke="#fff"
             strokeWidth={1.4 * k}
             style={{ cursor: onSelect ? 'pointer' : 'default', transition: 'fill .15s' }}
