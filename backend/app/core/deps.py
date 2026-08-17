@@ -45,6 +45,23 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_optional_user(
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User | None:
+    """Kim so'rayotganini bilsa — scope qo'llanadi, bilmasa ham javob beradi.
+
+    Ma'lumotnoma ro'yxatlari (viloyat/tuman) login ekranidan ham, yuk xatining
+    ochiq sahifasidan ham o'qiladi, ya'ni ularni yopib bo'lmaydi. Lekin token
+    kelgan bo'lsa, javob o'sha foydalanuvchining doirasiga toraytiriladi."""
+    if creds is None:
+        return None
+    try:
+        return await get_current_user(creds, db)
+    except HTTPException:
+        return None
+
+
 def require_role(*roles: str) -> Callable[..., Coroutine[Any, Any, User]]:
     async def checker(user: CurrentUser) -> User:
         if user.role not in roles:
@@ -68,16 +85,16 @@ async def list_users_in_scope(db: AsyncSession, user: User) -> list[User]:
 # read from the DB row, never from a request parameter.
 
 
-def scoped_region_id(user: User) -> UUID | None:
+def scoped_region_id(user: User | None) -> UUID | None:
     """The region a department user is locked to; None for everyone else."""
-    if user.role == "department":
+    if user is not None and user.role == "department":
         return user.region_id
     return None
 
 
-def scoped_district_id(user: User) -> UUID | None:
+def scoped_district_id(user: User | None) -> UUID | None:
     """The tuman a department user is locked to, if the account names one."""
-    if user.role == "department":
+    if user is not None and user.role == "department":
         return user.district_id
     return None
 

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import (
     ensure_region_scope,
     get_current_user,
+    get_optional_user,
     require_role,
     scoped_district_id,
     scoped_region_id,
@@ -51,7 +52,7 @@ async def _get_district(db: AsyncSession, district_id: UUID) -> District:
 # ── regions ──────────────────────────────────────────────────────────────────
 @router.get("/regions", response_model=list[RegionOut])
 async def list_regions(
-    db: DbDep, user: Annotated[object, Depends(get_current_user)]
+    db: DbDep, user: Annotated[object, Depends(get_optional_user)]
 ) -> list[Region]:
     stmt = select(Region).order_by(Region.name_uz_latn)
     # A department account has exactly one region; sending it the other
@@ -108,7 +109,7 @@ async def delete_region(region_id: UUID, db: DbDep, _a: AdminDep) -> None:
 @router.get("/districts", response_model=list[DistrictOut])
 async def list_districts(
     db: DbDep,
-    user: Annotated[object, Depends(get_current_user)],
+    user: Annotated[object, Depends(get_optional_user)],
     region_id: Annotated[UUID | None, Query()] = None,
 ) -> list[District]:
     stmt = select(District).order_by(District.name_uz_latn)
