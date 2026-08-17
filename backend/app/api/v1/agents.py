@@ -12,11 +12,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import CurrentUser, require_role
+from app.core.deps import CurrentUser, ensure_quarry_scope, require_role
 from app.db.session import get_db
 from app.models.agent import QuarryAgent
 from app.models.quarry import Camera, Post, Quarry
-from app.models.region import District
 from app.models.user import User
 from app.schemas.agent import AgentConfigOut, AgentConfigUpdate, AgentStatusOut, LiveStreamOut
 from app.services.agents import get_agent, issue_token, revoke_token
@@ -30,19 +29,12 @@ AdminDep = Annotated[object, Depends(require_role("superadmin"))]
 
 async def _quarry_in_scope(db: AsyncSession, user: User, quarry_id: UUID) -> Quarry:
     """Karyerni ko'rish huquqi — ro'yxatlardagi bilan bir xil qoida: operator
-    faqat o'z karyerini, departament o'z viloyatini ko'radi."""
+    faqat o'z karyerini, departament o'z viloyatini (tumanga bog'langan bo'lsa
+    — o'z tumanini) ko'radi."""
     quarry = await db.get(Quarry, quarry_id)
     if quarry is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Karyer topilmadi")
-    role = user.role
-    if role == "operator" and quarry.id != user.quarry_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Boshqa karyer")
-    if role == "department":
-        region_id = (
-            await db.execute(select(District.region_id).where(District.id == quarry.district_id))
-        ).scalar_one_or_none()
-        if region_id != user.region_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Boshqa viloyat")
+    await ensure_quarry_scope(db, user, quarry)
     return quarry
 
 

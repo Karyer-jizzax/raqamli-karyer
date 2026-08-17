@@ -35,12 +35,16 @@ export function Analytics() {
   const lang = currentLang();
   const { user } = useAuth();
   const { data: districts } = useDistricts(user?.region_id ?? undefined);
+  // Tumanga bog'langan hisob uchun tuman tanlagichi tanlashga hech nima
+  // bermaydi — server ham, ro'yxat ham allaqachon bitta tumandan iborat.
+  const lockedDistrict = user?.district_id ?? null;
 
   const [period, setPeriod] = useState<Period>({
     year: String(new Date().getFullYear()),
     month: '',
   });
-  const [district, setDistrict] = useState('');
+  const [pickedDistrict, setPickedDistrict] = useState('');
+  const district = lockedDistrict ?? pickedDistrict;
   const range = periodRange(period);
 
   const overviewParams = (p: Period) => ({
@@ -103,14 +107,16 @@ export function Analytics() {
         subtitle={t('an_subtitle')}
         actions={
           <div className="flex flex-wrap items-end gap-2">
-            <div className="w-[170px]">
-              <FilterSelect
-                label={t('dash_district')}
-                value={district}
-                onChange={setDistrict}
-                options={(districts ?? []).map((d) => [d.id, localizedName(d)])}
-              />
-            </div>
+            {!lockedDistrict && (
+              <div className="w-[170px]">
+                <FilterSelect
+                  label={t('dash_district')}
+                  value={district}
+                  onChange={setPickedDistrict}
+                  options={(districts ?? []).map((d) => [d.id, localizedName(d)])}
+                />
+              </div>
+            )}
             <PeriodPicker value={period} onChange={setPeriod} />
           </div>
         }
@@ -214,14 +220,18 @@ export function Analytics() {
         />
       </div>
 
-      <ReportCard
-        n={4}
-        title={t('an_by_district')}
-        subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
-        metric="volume"
-        range={range}
-        districtId={district || undefined}
-      />
+      {/* A ranking of districts is a comparison, and a tuman account has
+          nothing to compare against — its own bar alone says nothing. */}
+      {!lockedDistrict && (
+        <ReportCard
+          n={4}
+          title={t('an_by_district')}
+          subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
+          metric="volume"
+          range={range}
+          districtId={district || undefined}
+        />
+      )}
     </div>
   );
 }

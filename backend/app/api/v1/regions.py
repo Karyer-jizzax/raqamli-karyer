@@ -8,7 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_role
+from app.core.deps import (
+    ensure_region_scope,
+    get_current_user,
+    require_role,
+    scoped_district_id,
+    scoped_region_id,
+)
 from app.db.session import get_db
 from app.models.region import District, Region
 from app.schemas.region import (
@@ -44,8 +50,16 @@ async def _get_district(db: AsyncSession, district_id: UUID) -> District:
 
 # ── regions ──────────────────────────────────────────────────────────────────
 @router.get("/regions", response_model=list[RegionOut])
-async def list_regions(db: DbDep) -> list[Region]:
-    result = await db.execute(select(Region).order_by(Region.name_uz_latn))
+async def list_regions(
+    db: DbDep, user: Annotated[object, Depends(get_current_user)]
+) -> list[Region]:
+    stmt = select(Region).order_by(Region.name_uz_latn)
+    # A department account has exactly one region; sending it the other
+    # thirteen only invites a screen to pick the wrong one as a fallback.
+    locked = scoped_region_id(user)  # type: ignore[arg-type]
+    if locked is not None:
+        stmt = stmt.where(Region.id == locked)
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -94,11 +108,20 @@ async def delete_region(region_id: UUID, db: DbDep, _a: AdminDep) -> None:
 @router.get("/districts", response_model=list[DistrictOut])
 async def list_districts(
     db: DbDep,
+    user: Annotated[object, Depends(get_current_user)],
     region_id: Annotated[UUID | None, Query()] = None,
 ) -> list[District]:
     stmt = select(District).order_by(District.name_uz_latn)
     if region_id is not None:
         stmt = stmt.where(District.region_id == region_id)
+    # Tenant scope wins over the query string: a tuman account gets its tuman,
+    # a viloyat account its region's districts.
+    locked_district = scoped_district_id(user)  # type: ignore[arg-type]
+    locked_region = scoped_region_id(user)  # type: ignore[arg-type]
+    if locked_district is not None:
+        stmt = stmt.where(District.id == locked_district)
+    elif locked_region is not None:
+        stmt = stmt.where(District.region_id == locked_region)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -156,7 +179,8 @@ async def delete_district(district_id: UUID, db: DbDep, _a: AdminDep) -> None:
 async def get_region_geo(
     region_id: UUID,
     db: DbDep,
-    _user: Annotated[object, Depends(get_current_user)],
+    user: Annotated[object, Depends(get_current_user)],
 ) -> RegionGeo:
-    data = await region_geo(db, region_id)
+    ensure_region_scope(user, region_id)  # type: ignore[arg-type]
+    data = await region_geo(db, region_id, scoped_district_id(user))  # type: ignore[arg-type]
     return RegionGeo(**data)

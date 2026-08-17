@@ -17,6 +17,7 @@ import {
   localizedName,
   PageHeader,
   TableSkeleton,
+  useAuth,
   useFilterPanel,
 } from '@karier/ui';
 import { useMemo, useState } from 'react';
@@ -29,8 +30,12 @@ import { useNavigate } from 'react-router-dom';
 export function Quarries() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: quarries, isLoading, isError, refetch } = useQuarries();
   const { data: districts } = useDistricts();
+  // A tuman account's registry is one district by definition — a filter with a
+  // single option is a control that can only repeat what the list already says.
+  const lockedDistrict = user?.district_id ?? null;
 
   const [q, setQ] = useState('');
   const [district, setDistrict] = useState('');
@@ -87,12 +92,14 @@ export function Quarries() {
         onOpenChange={setFiltersOpen}
       >
         <FilterText label={t('q_name')} value={q} onChange={setQ} placeholder={t('ql_search')} />
-        <FilterSelect
-          label={t('q_district')}
-          value={district}
-          onChange={setDistrict}
-          options={districtOpts}
-        />
+        {!lockedDistrict && (
+          <FilterSelect
+            label={t('q_district')}
+            value={district}
+            onChange={setDistrict}
+            options={districtOpts}
+          />
+        )}
       </FilterBar>
 
       <section className="rounded-2xl border bg-card p-3.5 shadow-card">

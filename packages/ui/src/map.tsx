@@ -15,13 +15,54 @@ function fillFor(count: number, max: number, selected: boolean): string {
   return `hsl(174 42% ${light}%)`;
 }
 
-export function JizzaxMap({
+type Box = { x: number; y: number; w: number; h: number };
+
+/**
+ * Bounding box of the drawn shapes. The stored paths are polylines
+ * (`M x,y L x,y … Z`), so every number in them is a coordinate: reading the
+ * pairs off in order is enough, and a stray control point would only widen the
+ * box, never crop the map.
+ */
+function boundsOf(districts: DistrictGeo[]): Box | null {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const d of districts) {
+    if (!d.svg_path) continue;
+    const nums = d.svg_path.match(/-?\d+(?:\.\d+)?/g);
+    if (!nums) continue;
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      const x = Number(nums[i]);
+      const y = Number(nums[i + 1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (minX === Infinity || maxX <= minX || maxY <= minY) return null;
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+/**
+ * The region map: one path per district, shaded by how many quarries it holds.
+ *
+ * `fit` crops the viewBox to the shapes actually drawn. A tuman-scoped account
+ * receives its district alone, and a lone district inside the whole region's
+ * viewBox would be a speck in a field of white — cropping makes it the map.
+ * Badge sizes then scale with the crop, so a zoomed-in district keeps labels
+ * the size the eye expects rather than the size the coordinate space implies.
+ */
+export function RegionMap({
   districts,
   viewHeight,
   selectedId,
   onSelect,
   onActivate,
   maxHeight,
+  fit,
 }: {
   districts: DistrictGeo[];
   viewHeight: number;
@@ -29,12 +70,23 @@ export function JizzaxMap({
   onSelect?: (id: string) => void;
   onActivate?: (id: string) => void;
   maxHeight?: number;
+  /** Crop the viewBox to the drawn districts instead of the whole region. */
+  fit?: boolean;
 }) {
   const max = districts.reduce((m, d) => Math.max(m, d.quarry_count), 0);
 
+  const bounds = fit ? boundsOf(districts) : null;
+  // A tenth of the shape as breathing room, so the outline never touches the
+  // card's edge and the name badge below the centroid stays inside the frame.
+  const pad = bounds ? Math.max(bounds.w, bounds.h) * 0.1 : 0;
+  const box: Box = bounds
+    ? { x: bounds.x - pad, y: bounds.y - pad, w: bounds.w + pad * 2, h: bounds.h + pad * 2 }
+    : { x: 0, y: 0, w: MAP_WIDTH, h: viewHeight };
+  const k = box.w / MAP_WIDTH;
+
   return (
     <svg
-      viewBox={`0 0 ${MAP_WIDTH} ${viewHeight}`}
+      viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
       style={{ width: '100%', height: 'auto', display: 'block', maxHeight: maxHeight ?? undefined }}
     >
       {districts.map((d) => {
@@ -46,7 +98,7 @@ export function JizzaxMap({
             d={d.svg_path}
             fill={fillFor(d.quarry_count, max, selected)}
             stroke="#fff"
-            strokeWidth={1.4}
+            strokeWidth={1.4 * k}
             style={{ cursor: onSelect ? 'pointer' : 'default', transition: 'fill .15s' }}
             onClick={() => onSelect?.(d.id)}
             onDoubleClick={() => onActivate?.(d.id)}
@@ -66,17 +118,17 @@ export function JizzaxMap({
             <circle
               cx={d.center_x}
               cy={d.center_y}
-              r={17}
+              r={17 * k}
               fill="#fff"
               stroke="#0d9488"
-              strokeWidth={1.4}
+              strokeWidth={1.4 * k}
               opacity={0.95}
             />
             <text
               x={d.center_x}
-              y={d.center_y + 5}
+              y={d.center_y + 5 * k}
               textAnchor="middle"
-              fontSize={15}
+              fontSize={15 * k}
               fontWeight={800}
               fill="#0f766e"
             >
@@ -84,13 +136,13 @@ export function JizzaxMap({
             </text>
             <text
               x={d.center_x}
-              y={d.center_y + 30}
+              y={d.center_y + 30 * k}
               textAnchor="middle"
-              fontSize={11}
+              fontSize={11 * k}
               fontWeight={800}
               fill={labelFill}
               stroke={selected ? '#0f766e' : 'none'}
-              strokeWidth={selected ? 2.5 : 0}
+              strokeWidth={selected ? 2.5 * k : 0}
               paintOrder="stroke"
               opacity={0.95}
             >

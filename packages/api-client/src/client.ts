@@ -153,6 +153,9 @@ export interface AuthUserDto {
   role: Role;
   quarry_id: string | null;
   region_id: string | null;
+  // Departament hisobi bitta tumanga bog'langan bo'lsa — o'sha tuman; bo'sh
+  // bo'lsa hisob butun viloyatni ko'radi.
+  district_id: string | null;
   // Returned by /users (management endpoints); absent on /auth/me.
   is_active?: boolean;
 }
@@ -871,6 +874,7 @@ export interface UserCreateInput {
   role?: Role;
   quarry_id?: string | null;
   region_id?: string | null;
+  district_id?: string | null;
 }
 export const createUser = (body: UserCreateInput) => api.post<AuthUserDto>('/users', body);
 export const getUsers = (params: { quarry_id?: string } = {}) => {
@@ -885,6 +889,7 @@ export interface UserUpdateInput {
   is_active?: boolean;
   region_id?: string | null;
   quarry_id?: string | null;
+  district_id?: string | null;
 }
 export const updateUser = (id: string, body: UserUpdateInput) =>
   api.patch<AuthUserDto>(`/users/${id}`, body);

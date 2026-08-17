@@ -39,6 +39,7 @@ import {
   TONE_DOT,
   TrendColumns,
   UpdatedStamp,
+  useAuth,
 } from '@karier/ui';
 import {
   ActivityIcon,
@@ -215,6 +216,10 @@ export function DistrictDetail() {
 
   const { data: districts } = useDistricts();
   const { data: regions } = useRegions();
+  const { user } = useAuth();
+  // Qo'shni tumanlar bilan taqqoslash — viloyat hisobining ishi; tuman hisobi
+  // boshqa tumanlarning raqamini ko'rmaydi, ya'ni jadval ham bo'sh chiqardi.
+  const showRanking = !user?.district_id;
 
   const [range, setRange] = useState(DEFAULT_RANGE);
   const { data: cargo, isLoading, isError, refetch } = useDistrictCargo(districtId, {
@@ -427,7 +432,8 @@ export function DistrictDetail() {
             </section>
           </div>
 
-          <div className="grid items-start gap-4 lg:grid-cols-2">
+          <div className={cn('grid items-start gap-4', showRanking && 'lg:grid-cols-2')}>
+            {showRanking && (
             <ChartCard
               title={t('an_cross_district')}
               subtitle={
@@ -461,6 +467,7 @@ export function DistrictDetail() {
                 <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
               )}
             </ChartCard>
+            )}
 
             <ChartCard
               title={`${t('an_dynamics')} · ${range.from?.slice(0, 4) ?? ''}`}

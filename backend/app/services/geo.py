@@ -13,15 +13,16 @@ from app.models.region import District
 VIEW_HEIGHT = 586.0
 
 
-async def region_geo(db: AsyncSession, region_id: UUID) -> dict:
+async def region_geo(
+    db: AsyncSession, region_id: UUID, district_id: UUID | None = None
+) -> dict:
+    """The region's districts, or — for an account bound to one tuman — that
+    tuman alone, so the map it draws is its own district and nothing else."""
+    stmt = select(District).where(District.region_id == region_id)
+    if district_id is not None:
+        stmt = stmt.where(District.id == district_id)
     districts = list(
-        (
-            await db.execute(
-                select(District)
-                .where(District.region_id == region_id)
-                .order_by(District.name_uz_latn)
-            )
-        ).scalars().all()
+        (await db.execute(stmt.order_by(District.name_uz_latn))).scalars().all()
     )
 
     # quarry counts per district

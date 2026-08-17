@@ -34,6 +34,7 @@ def _access_claims(user: User) -> dict[str, object]:
         "role": user.role,
         "quarry_id": str(user.quarry_id) if user.quarry_id else None,
         "region_id": str(user.region_id) if user.region_id else None,
+        "district_id": str(user.district_id) if user.district_id else None,
     }
 
 

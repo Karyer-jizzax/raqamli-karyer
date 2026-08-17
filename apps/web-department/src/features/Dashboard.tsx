@@ -7,12 +7,12 @@ import {
 import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
 import {
   cn,
-  JizzaxMap,
   localizedName,
   PageHeader,
   type Period,
   PeriodPicker,
   previousPeriod,
+  RegionMap,
   deltaPct,
   StatTile,
   UiButton as Button,
@@ -67,6 +67,9 @@ export function Dashboard() {
   const { data: regions } = useRegions();
   const regionId = user?.region_id ?? regions?.[0]?.id;
   const region = regions?.find((r) => r.id === regionId);
+  // A tuman account never leaves its district: the map, the tiles and the
+  // totals all read the same one, and nothing on the page can widen it.
+  const lockedDistrict = user?.district_id ?? null;
 
   const [selected, setSelected] = useState<string | null>(null);
   const { data: geo } = useRegionGeo(regionId ?? undefined);
@@ -77,8 +80,9 @@ export function Dashboard() {
     month: '',
   });
 
-  const scope: { region_id?: string; district_id?: string } = selected
-    ? { district_id: selected }
+  const activeDistrict = lockedDistrict ?? selected;
+  const scope: { region_id?: string; district_id?: string } = activeDistrict
+    ? { district_id: activeDistrict }
     : regionId
       ? { region_id: regionId }
       : {};
@@ -88,15 +92,23 @@ export function Dashboard() {
   // The same numbers one period back — the stat tiles' deltas, nothing else.
   const { data: before } = useOverview(asOverviewParams(previousPeriod(period)));
 
-  const selectedDistrict = geo?.districts.find((d: DistrictGeo) => d.id === selected);
+  const selectedDistrict = geo?.districts.find((d: DistrictGeo) => d.id === activeDistrict);
+  const lockedDistrictGeo = geo?.districts.find((d: DistrictGeo) => d.id === lockedDistrict);
   const regionTitle = region ? localizedName(region) : '';
+  // The page is named after what it actually shows: the tuman for a district
+  // account, the viloyat for a regional one.
+  const scopeTitle = lockedDistrict
+    ? lockedDistrictGeo
+      ? localizedName(lockedDistrictGeo)
+      : ''
+    : regionTitle;
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
 
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 p-4 lg:p-6">
       <PageHeader
-        eyebrow={t('sec_oversight')}
-        title={regionTitle || t('nav_dashboard')}
+        eyebrow={lockedDistrict && regionTitle ? regionTitle : t('sec_oversight')}
+        title={scopeTitle || t('nav_dashboard')}
         actions={<PeriodPicker value={period} onChange={setPeriod} />}
       />
 
@@ -125,11 +137,11 @@ export function Dashboard() {
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[296px_1fr]">
-        {/* Region totals */}
+        {/* Totals for whatever this account covers — region or tuman */}
         <section className="rounded-2xl border bg-card px-5 py-[18px] shadow-card">
-          {regionTitle && (
+          {scopeTitle && (
             <div className="mb-1.5 border-b-2 border-b-primary pb-2.5 text-sm font-semibold">
-              {regionTitle}
+              {scopeTitle}
             </div>
           )}
           <StatRow icon={MountainIcon} label={t('dash_quarries')} value={fn(overview?.quarries)} />
@@ -146,31 +158,44 @@ export function Dashboard() {
         {/* Map + selected district */}
         <div className="grid gap-4">
           <section className="relative rounded-2xl border bg-card p-3.5 shadow-card">
-            <Button
-              variant="outline"
-              size="icon"
-              title={t('dash_all_quarries')}
-              aria-label={t('dash_all_quarries')}
-              aria-pressed={selected === null}
-              onClick={() => setSelected(null)}
-              className={cn(
-                'absolute top-3.5 right-3.5 z-[1] size-[34px] active:scale-[0.97]',
-                selected
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
-                  : 'text-primary hover:bg-primary-tint hover:text-primary',
-              )}
-            >
-              <HomeIcon className="size-[17px]" strokeWidth={1.8} />
-            </Button>
+            {/* "Back to the whole region" only means something when the account
+                can see more than one district. */}
+            {!lockedDistrict && (
+              <Button
+                variant="outline"
+                size="icon"
+                title={t('dash_all_quarries')}
+                aria-label={t('dash_all_quarries')}
+                aria-pressed={selected === null}
+                onClick={() => setSelected(null)}
+                className={cn(
+                  'absolute top-3.5 right-3.5 z-[1] size-[34px] active:scale-[0.97]',
+                  selected
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                    : 'text-primary hover:bg-primary-tint hover:text-primary',
+                )}
+              >
+                <HomeIcon className="size-[17px]" strokeWidth={1.8} />
+              </Button>
+            )}
             {geo ? (
-              <JizzaxMap
-                districts={geo.districts}
-                viewHeight={geo.view_height}
-                selectedId={selected}
-                onSelect={(id) => setSelected((s) => (s === id ? null : id))}
-                onActivate={(id) => navigate(`/dashboard/districts/${id}`)}
-                maxHeight={500}
-              />
+              geo.districts.some((d: DistrictGeo) => d.svg_path) ? (
+                <RegionMap
+                  districts={geo.districts}
+                  viewHeight={geo.view_height}
+                  selectedId={activeDistrict}
+                  onSelect={lockedDistrict ? undefined : (id) => setSelected((s) => (s === id ? null : id))}
+                  onActivate={(id) => navigate(`/dashboard/districts/${id}`)}
+                  maxHeight={500}
+                  // One district on its own would be a speck in the region's
+                  // frame, so a tuman account gets the frame cropped to it.
+                  fit={Boolean(lockedDistrict)}
+                />
+              ) : (
+                // A district added through Geo has no outline until one is
+                // imported; saying so beats an empty white box.
+                <p className="py-16 text-center text-sm text-muted-foreground">{t('dash_no_map')}</p>
+              )
             ) : (
               <div className="h-[420px] animate-pulse rounded-xl bg-secondary" />
             )}

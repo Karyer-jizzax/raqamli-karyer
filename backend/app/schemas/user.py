@@ -16,6 +16,9 @@ class UserCreate(BaseModel):
     role: Role = "operator"
     quarry_id: UUID | None = None
     region_id: UUID | None = None
+    # Departament hisobi bitta tumanga bog'langan bo'lsa — shu yerda. Bo'sh
+    # bo'lsa, hisob butun viloyatni ko'radi.
+    district_id: UUID | None = None
 
 
 class UserUpdate(BaseModel):
@@ -26,6 +29,7 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
     quarry_id: UUID | None = None
     region_id: UUID | None = None
+    district_id: UUID | None = None
 
 
 class UserOut(BaseModel):
@@ -39,3 +43,4 @@ class UserOut(BaseModel):
     is_active: bool
     quarry_id: UUID | None
     region_id: UUID | None
+    district_id: UUID | None

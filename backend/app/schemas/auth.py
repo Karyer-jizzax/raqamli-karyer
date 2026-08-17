@@ -29,6 +29,7 @@ class UserOut(BaseModel):
     role: str
     quarry_id: UUID | None
     region_id: UUID | None
+    district_id: UUID | None
 
 
 class TokenResponse(BaseModel):

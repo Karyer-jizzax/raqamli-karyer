@@ -2,6 +2,7 @@ import {
   ApiError,
   type AuthUserDto,
   useCreateUser,
+  useDistricts,
   useRegions,
   useUpdateUser,
   useUsers,
@@ -37,44 +38,87 @@ import {
   TH,
 } from '../shared';
 
-/** Region <select> reused by the create/edit modals. */
-function RegionSelect({
-  value,
-  onChange,
-  regions,
+/** Radix rejects an empty <SelectItem> value, so "no district" needs a name. */
+const WHOLE_REGION = '__region__';
+
+/**
+ * Where the account may look: a viloyat, and inside it either every tuman or
+ * exactly one. The district is the narrower answer, so picking one is what
+ * turns a regional login into a tuman login — no separate switch to forget.
+ */
+function ScopeSelect({
+  regionId,
+  districtId,
+  onRegion,
+  onDistrict,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  regions: { id: string; name_uz_latn: string; name_uz_cyrl: string; name_ru: string }[];
+  regionId: string;
+  districtId: string;
+  onRegion: (v: string) => void;
+  onDistrict: (v: string) => void;
 }) {
   const { t } = useTranslation();
+  const { data: regions } = useRegions();
+  const { data: districts } = useDistricts(regionId || undefined);
+
   return (
-    <div className="grid gap-1.5">
-      <span className="text-[13px] font-medium text-slate-700">{t('dep_region')}</span>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-[42px]">
-          <SelectValue placeholder={t('dep_region_ph')} />
-        </SelectTrigger>
-        <SelectContent>
-          {regions.map((r) => (
-            <SelectItem key={r.id} value={r.id}>
-              {districtName(r)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <>
+      <div className="grid gap-1.5">
+        <span className="text-[13px] font-medium text-slate-700">{t('dep_region')}</span>
+        <Select
+          value={regionId}
+          onValueChange={(v) => {
+            onRegion(v);
+            // A tuman from the region we just left would silently outrank it.
+            onDistrict('');
+          }}
+        >
+          <SelectTrigger className="h-[42px]">
+            <SelectValue placeholder={t('dep_region_ph')} />
+          </SelectTrigger>
+          <SelectContent>
+            {(regions ?? []).map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                {districtName(r)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-1.5">
+        <span className="text-[13px] font-medium text-slate-700">{t('dep_district')}</span>
+        <Select
+          value={districtId || WHOLE_REGION}
+          onValueChange={(v) => onDistrict(v === WHOLE_REGION ? '' : v)}
+          disabled={!regionId}
+        >
+          <SelectTrigger className="h-[42px]">
+            <SelectValue placeholder={t('dep_district_ph')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={WHOLE_REGION}>{t('dep_whole_region')}</SelectItem>
+            {(districts ?? []).map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {districtName(d)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-[11.5px] text-slate-400">{t('dep_district_hint')}</span>
+      </div>
+    </>
   );
 }
 
 function CreateModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const create = useCreateUser();
-  const { data: regions } = useRegions();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [regionId, setRegionId] = useState('');
+  const [districtId, setDistrictId] = useState('');
   const [err, setErr] = useState('');
 
   async function onSubmit(e: FormEvent) {
@@ -87,6 +131,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         full_name: fullName.trim(),
         role: 'department',
         region_id: regionId || null,
+        district_id: districtId || null,
       });
       onClose();
     } catch (e2) {
@@ -112,7 +157,12 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         type="password"
         autoComplete="new-password"
       />
-      <RegionSelect value={regionId} onChange={setRegionId} regions={regions ?? []} />
+      <ScopeSelect
+        regionId={regionId}
+        districtId={districtId}
+        onRegion={setRegionId}
+        onDistrict={setDistrictId}
+      />
     </ModalForm>
   );
 }
@@ -120,11 +170,11 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }) {
   const { t } = useTranslation();
   const update = useUpdateUser();
-  const { data: regions } = useRegions();
   const [login, setLogin] = useState(user.username);
   const [fullName, setFullName] = useState(user.full_name);
   const [password, setPassword] = useState('');
   const [regionId, setRegionId] = useState(user.region_id ?? '');
+  const [districtId, setDistrictId] = useState(user.district_id ?? '');
   const [active, setActive] = useState(user.is_active ?? true);
   const [err, setErr] = useState('');
 
@@ -139,6 +189,7 @@ function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }
           full_name: fullName.trim(),
           is_active: active,
           region_id: regionId || null,
+          district_id: districtId || null,
           ...(password.trim() ? { password: password.trim() } : {}),
         },
       });
@@ -167,7 +218,12 @@ function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }
         autoComplete="new-password"
         required={false}
       />
-      <RegionSelect value={regionId} onChange={setRegionId} regions={regions ?? []} />
+      <ScopeSelect
+        regionId={regionId}
+        districtId={districtId}
+        onRegion={setRegionId}
+        onDistrict={setDistrictId}
+      />
       <div className="grid gap-1.5">
         <span className="text-[13px] font-medium text-slate-700">{t('q_st_active')}</span>
         <Select value={active ? 'active' : 'suspended'} onValueChange={(v) => setActive(v === 'active')}>
@@ -188,6 +244,7 @@ export function Departments() {
   const { t } = useTranslation();
   const { data: users, isLoading } = useUsers();
   const { data: regions } = useRegions();
+  const { data: districts } = useDistricts();
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AuthUserDto | null>(null);
@@ -195,6 +252,13 @@ export function Departments() {
   const regionLabel = (id: string | null) => {
     const r = regions?.find((x) => x.id === id);
     return r ? districtName(r) : t('dep_no_region');
+  };
+
+  // No district means the account covers the region entire — worth saying so,
+  // since that is the difference between the two kinds of login.
+  const districtLabel = (id: string | null | undefined) => {
+    const d = districts?.find((x) => x.id === id);
+    return d ? districtName(d) : t('dep_whole_region');
   };
 
   const departments = (users ?? []).filter((u) => u.role === 'department');
@@ -244,6 +308,7 @@ export function Departments() {
                 <TableHead className={TH}>{t('dep_full_name')}</TableHead>
                 <TableHead className={TH}>{t('q_login')}</TableHead>
                 <TableHead className={TH}>{t('dep_region')}</TableHead>
+                <TableHead className={TH}>{t('dep_district')}</TableHead>
                 <TableHead className={TH}>{t('q_name')}</TableHead>
                 <TableHead className={cn(TH, 'text-right')}>{t('q_actions')}</TableHead>
               </TableRow>
@@ -262,6 +327,9 @@ export function Departments() {
                   </TableCell>
                   <TableCell className="px-[18px] py-[13px] text-[13.5px] text-[#475569]">
                     {regionLabel(u.region_id)}
+                  </TableCell>
+                  <TableCell className="px-[18px] py-[13px] text-[13.5px] text-[#475569]">
+                    {districtLabel(u.district_id)}
                   </TableCell>
                   <TableCell className="px-[18px] py-[13px]">
                     <StatusDot active={u.is_active ?? true} />

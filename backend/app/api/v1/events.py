@@ -173,11 +173,15 @@ async def list_events(
     if role == "operator":
         stmt = stmt.where(Event.quarry_id == user.quarry_id)  # type: ignore[attr-defined]
     elif role == "department":
-        stmt = (
-            stmt.join(Quarry, Quarry.id == Event.quarry_id)
-            .join(District, District.id == Quarry.district_id)
-            .where(District.region_id == user.region_id)  # type: ignore[attr-defined]
-        )
+        stmt = stmt.join(Quarry, Quarry.id == Event.quarry_id)
+        # Tumanga bog'langan hisob uchun tuman — viloyatga bog'langani uchun
+        # viloyat: torrog'i yutadi.
+        if user.district_id is not None:  # type: ignore[attr-defined]
+            stmt = stmt.where(Quarry.district_id == user.district_id)  # type: ignore[attr-defined]
+        else:
+            stmt = stmt.join(District, District.id == Quarry.district_id).where(
+                District.region_id == user.region_id  # type: ignore[attr-defined]
+            )
 
     if quarry_id is not None:
         stmt = stmt.where(Event.quarry_id == quarry_id)

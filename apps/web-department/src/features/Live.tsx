@@ -30,8 +30,12 @@ export function Live() {
   const { data: regions } = useRegions();
 
   const locked = user?.region_id ?? '';
+  // Tumanga bog'langan hisobda tuman tanlagichi ham ortiqcha: server bitta
+  // tumanning karyerlarini qaytaradi, tanlashga variant qolmaydi.
+  const lockedDistrict = user?.district_id ?? '';
   const [region, setRegion] = useState('');
-  const [district, setDistrict] = useState('');
+  const [pickedDistrict, setPickedDistrict] = useState('');
+  const district = lockedDistrict || pickedDistrict;
   const [picked, setPicked] = useState('');
 
   const { data: districts } = useDistricts(locked || region || undefined);
@@ -81,20 +85,22 @@ export function Live() {
                   onChange={(v) => {
                     setRegion(v);
                     // Boshqa viloyatning tumani tanlanib qolmasin.
-                    setDistrict('');
+                    setPickedDistrict('');
                   }}
                   options={regionOptions}
                 />
               </div>
             )}
-            <div className="w-[180px]">
-              <FilterSelect
-                label={t('dash_district')}
-                value={district}
-                onChange={setDistrict}
-                options={districtOptions}
-              />
-            </div>
+            {!lockedDistrict && (
+              <div className="w-[180px]">
+                <FilterSelect
+                  label={t('dash_district')}
+                  value={district}
+                  onChange={setPickedDistrict}
+                  options={districtOptions}
+                />
+              </div>
+            )}
             <div className="w-[220px]">
               <FilterSelect
                 label={t('q_name')}

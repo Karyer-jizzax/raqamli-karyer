@@ -80,11 +80,14 @@ async def list_trips(
     if role == "operator":
         stmt = stmt.where(Trip.quarry_id == user.quarry_id)  # type: ignore[attr-defined]
     elif role == "department":
-        stmt = (
-            stmt.join(Quarry, Quarry.id == Trip.quarry_id)
-            .join(District, District.id == Quarry.district_id)
-            .where(District.region_id == user.region_id)  # type: ignore[attr-defined]
-        )
+        stmt = stmt.join(Quarry, Quarry.id == Trip.quarry_id)
+        # Tuman hisobiga tuman, viloyat hisobiga viloyat (mirrors /events).
+        if user.district_id is not None:  # type: ignore[attr-defined]
+            stmt = stmt.where(Quarry.district_id == user.district_id)  # type: ignore[attr-defined]
+        else:
+            stmt = stmt.join(District, District.id == Quarry.district_id).where(
+                District.region_id == user.region_id  # type: ignore[attr-defined]
+            )
 
     if quarry_id is not None:
         stmt = stmt.where(Trip.quarry_id == quarry_id)
@@ -117,13 +120,18 @@ async def _in_scope(db: AsyncSession, user: object, trip: Trip) -> bool:
     if role == "operator":
         return trip.quarry_id == user.quarry_id  # type: ignore[attr-defined]
     if role == "department":
-        region_id = (
+        row = (
             await db.execute(
-                select(District.region_id)
+                select(District.region_id, District.id)
                 .join(Quarry, Quarry.district_id == District.id)
                 .where(Quarry.id == trip.quarry_id)
             )
-        ).scalar_one_or_none()
+        ).first()
+        if row is None:
+            return False
+        region_id, district_id = row
+        if user.district_id is not None:  # type: ignore[attr-defined]
+            return district_id == user.district_id  # type: ignore[attr-defined]
         return region_id == user.region_id  # type: ignore[attr-defined]
     return True
 

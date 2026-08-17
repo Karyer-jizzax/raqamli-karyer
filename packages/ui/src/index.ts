@@ -71,7 +71,7 @@ export {
 export { Breadcrumb, type Crumb, PageHeader, Tabs, UpdatedStamp } from './shell';
 export { PlateBadge, classifyPlate, formatPlateNumber, type PlateKind } from './plate';
 export { AuthProvider, RequireAuth, useAuth, ProfileMenu } from './auth';
-export { JizzaxMap } from './map';
+export { RegionMap } from './map';
 export { ProtocolDocument, ProtocolViewer } from './protocol';
 export { PublicWaybill, WaybillSheet, WaybillViewer } from './waybill';
 export { exportM1ToExcel, type ExportM1Options } from './export-events';

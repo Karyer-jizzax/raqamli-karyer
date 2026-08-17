@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import ensure_district_scope, get_current_user, scoped_district_id
 from app.db.session import get_db
 from app.models.event import Event
 from app.models.quarry import Camera, Post, Quarry
@@ -38,6 +38,13 @@ def _effective_region(user: object, region_id: UUID | None) -> UUID | None:
     return region_id
 
 
+def _effective_district(user: object, district_id: UUID | None) -> UUID | None:
+    """A department account bound to one tuman reads that tuman and no other,
+    whatever district the query string asked for."""
+    locked = scoped_district_id(user)  # type: ignore[arg-type]
+    return locked if locked is not None else district_id
+
+
 @router.get("/overview", response_model=Overview)
 async def overview(
     db: DbDep,
@@ -50,17 +57,11 @@ async def overview(
     data = await stats_svc.overview(
         db,
         region_id=_effective_region(user, region_id),
-        district_id=district_id,
+        district_id=_effective_district(user, district_id),
         year=year,
         month=month,
     )
     return Overview(**data)
-
-
-def _check_region_access(user: object, region_id: UUID) -> None:
-    """Department users may only read stats inside their own region."""
-    if user.role == "department" and user.region_id != region_id:  # type: ignore[attr-defined]
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Boshqa viloyat ma'lumotiga ruxsat yo'q")
 
 
 @router.get("/quarries/{quarry_id}", response_model=QuarryStats)
@@ -73,14 +74,14 @@ async def quarry_stats(
 ) -> QuarryStats:
     row = (
         await db.execute(
-            select(District.region_id)
+            select(District.region_id, District.id)
             .join(Quarry, Quarry.district_id == District.id)
             .where(Quarry.id == quarry_id)
         )
-    ).scalar_one_or_none()
+    ).first()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Karyer topilmadi")
-    _check_region_access(user, row)
+    ensure_district_scope(user, row[0], row[1])  # type: ignore[arg-type]
 
     data = await stats_svc.quarry_stats(
         db, quarry_id=quarry_id, date_from=date_from, date_to=date_to
@@ -101,7 +102,7 @@ async def district_cargo(
     ).scalar_one_or_none()
     if region_id is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tuman topilmadi")
-    _check_region_access(user, region_id)
+    ensure_district_scope(user, region_id, district_id)  # type: ignore[arg-type]
 
     data = await stats_svc.district_cargo(
         db, district_id=district_id, date_from=date_from, date_to=date_to
@@ -121,7 +122,7 @@ async def dynamics(
         db,
         year=year or datetime.now().year,
         region_id=_effective_region(user, region_id),
-        district_id=district_id,
+        district_id=_effective_district(user, district_id),
     )
     return DynamicsResponse(**data)
 
@@ -147,11 +148,12 @@ async def report(
     if n not in (2, 4, 5):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Report topilmadi")
     eff_region = _effective_region(user, region_id)
+    eff_district = _effective_district(user, district_id)
     # The dashboard scopes every card to one period, so a report that ignored
     # the picker would silently show all-time numbers next to filtered ones.
     period = stats_svc.period_conds(date_from, date_to)
     # A district filter (and the region scope) needs the quarry -> district join.
-    needs_join = eff_region is not None or district_id is not None
+    needs_join = eff_region is not None or eff_district is not None
 
     if n == 4:
         # By district (events -> quarry -> district)
@@ -163,8 +165,8 @@ async def report(
         )
         if eff_region is not None:
             stmt = stmt.where(District.region_id == eff_region)
-        if district_id is not None:
-            stmt = stmt.where(District.id == district_id)
+        if eff_district is not None:
+            stmt = stmt.where(District.id == eff_district)
         stmt = stmt.where(*period).group_by(col).order_by(func.count(Event.id).desc())
         dimension = "district"
     else:
@@ -176,8 +178,8 @@ async def report(
             )
             if eff_region is not None:
                 stmt = stmt.where(District.region_id == eff_region)
-            if district_id is not None:
-                stmt = stmt.where(District.id == district_id)
+            if eff_district is not None:
+                stmt = stmt.where(District.id == eff_district)
         stmt = stmt.where(*period).group_by(col).order_by(func.count(Event.id).desc())
 
     rows = (await db.execute(stmt)).all()
@@ -213,12 +215,13 @@ async def m1(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> M1Response:
     eff_region = _effective_region(user, region_id)
+    eff_district = _effective_district(user, district_id)
 
     base = select(Event).where(*stats_svc.period_conds(date_from, date_to))
-    if district_id is not None or eff_region is not None:
+    if eff_district is not None or eff_region is not None:
         base = base.join(Quarry, Quarry.id == Event.quarry_id)
-        if district_id is not None:
-            base = base.where(Quarry.district_id == district_id)
+        if eff_district is not None:
+            base = base.where(Quarry.district_id == eff_district)
         else:
             base = base.join(District, District.id == Quarry.district_id).where(
                 District.region_id == eff_region

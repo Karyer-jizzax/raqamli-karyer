@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import require_role
 from app.core.security import hash_password
 from app.db.session import get_db
+from app.models.region import District
 from app.models.user import User
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 
@@ -31,10 +32,25 @@ async def list_users(
     return list(result.scalars().all())
 
 
+async def _resolve_scope(db: AsyncSession, data: dict) -> None:
+    """A tuman already knows its viloyat, so the district decides the region —
+    the two can never drift apart, whatever the form sent."""
+    district_id = data.get("district_id")
+    if district_id is None:
+        return
+    region_id = (
+        await db.execute(select(District.region_id).where(District.id == district_id))
+    ).scalar_one_or_none()
+    if region_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tuman topilmadi")
+    data["region_id"] = region_id
+
+
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def create_user(body: UserCreate, db: DbDep, _a: AdminDep) -> User:
     data = body.model_dump()
     password = data.pop("password")
+    await _resolve_scope(db, data)
     user = User(**data, password_hash=hash_password(password))
     db.add(user)
     try:
@@ -53,6 +69,7 @@ async def update_user(user_id: UUID, body: UserUpdate, db: DbDep, _a: AdminDep) 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Foydalanuvchi topilmadi")
     data = body.model_dump(exclude_unset=True)
     password = data.pop("password", None)
+    await _resolve_scope(db, data)
     if password:
         user.password_hash = hash_password(password)
     for field, value in data.items():

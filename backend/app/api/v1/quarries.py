@@ -10,11 +10,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import CurrentUser, get_current_user, require_role
+from app.core.deps import (
+    CurrentUser,
+    ensure_quarry_scope,
+    get_current_user,
+    require_role,
+)
 from app.core.security import create_provision_token
 from app.db.session import get_db
 from app.models.material import Material
 from app.models.quarry import Camera, Post, Quarry, quarry_materials
+from app.models.region import District
 from app.schemas.material import MaterialOut
 from app.schemas.quarry import (
     CameraCreate,
@@ -92,8 +98,21 @@ async def _ensure_camera_unique(
 
 
 @router.get("/quarries", response_model=list[QuarryOut])
-async def list_quarries(_user: CurrentUser, db: DbDep) -> list[Quarry]:
-    result = await db.execute(select(Quarry).order_by(Quarry.created_at.desc()))
+async def list_quarries(user: CurrentUser, db: DbDep) -> list[Quarry]:
+    stmt = select(Quarry).order_by(Quarry.created_at.desc())
+    # DB-level tenant scope, same rule as /events and /trips: this list feeds
+    # the registry, the live-camera picker and every quarry dropdown, so an
+    # unscoped answer here leaks the whole country into a tuman's screens.
+    if user.role == "operator":
+        stmt = stmt.where(Quarry.id == user.quarry_id)
+    elif user.role == "department":
+        if user.district_id is not None:
+            stmt = stmt.where(Quarry.district_id == user.district_id)
+        else:
+            stmt = stmt.join(District, District.id == Quarry.district_id).where(
+                District.region_id == user.region_id
+            )
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -113,8 +132,10 @@ async def create_quarry(
 
 
 @router.get("/quarries/{quarry_id}", response_model=QuarryOut)
-async def get_quarry(quarry_id: UUID, _user: CurrentUser, db: DbDep) -> Quarry:
-    return await _get_quarry(db, quarry_id)
+async def get_quarry(quarry_id: UUID, user: CurrentUser, db: DbDep) -> Quarry:
+    quarry = await _get_quarry(db, quarry_id)
+    await ensure_quarry_scope(db, user, quarry)
+    return quarry
 
 
 @router.patch("/quarries/{quarry_id}", response_model=QuarryOut)
@@ -162,7 +183,8 @@ async def delete_quarry(quarry_id: UUID, db: DbDep, _a: AdminDep) -> None:
 
 # ── posts ──────────────────────────────────────────────────────────────────
 @router.get("/quarries/{quarry_id}/posts", response_model=list[PostOut])
-async def list_posts(quarry_id: UUID, _user: CurrentUser, db: DbDep) -> list[Post]:
+async def list_posts(quarry_id: UUID, user: CurrentUser, db: DbDep) -> list[Post]:
+    await ensure_quarry_scope(db, user, await _get_quarry(db, quarry_id))
     result = await db.execute(select(Post).where(Post.quarry_id == quarry_id))
     return list(result.scalars().all())
 
