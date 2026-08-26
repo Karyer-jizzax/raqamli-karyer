@@ -257,6 +257,9 @@ const uzLatn: Dict = {
   dep_whole_region: 'Butun viloyat',
   dep_district_hint: "Tuman tanlansa, hisob faqat shu tuman ma'lumotini ko'radi",
   dep_full_name: 'F.I.SH.',
+  dep_delete_title: "Foydalanuvchini o'chirish",
+  dep_delete_confirm:
+    '"{{name}}" foydalanuvchisi o‘chirilsinmi? Bu amalni ortga qaytarib bo‘lmaydi.',
   dep_empty: "Hozircha departament foydalanuvchilari yo'q",
   dep_no_match: 'Mos foydalanuvchi topilmadi',
   dep_no_region: '—',
@@ -775,6 +778,9 @@ const uzCyrl: Dict = {
   dep_whole_region: 'Бутун вилоят',
   dep_district_hint: 'Туман танланса, ҳисоб фақат шу туман маълумотини кўради',
   dep_full_name: 'Ф.И.Ш.',
+  dep_delete_title: 'Фойдаланувчини ўчириш',
+  dep_delete_confirm:
+    '"{{name}}" фойдаланувчиси ўчирилсинми? Бу амални ортга қайтариб бўлмайди.',
   dep_empty: 'Ҳозирча департамент фойдаланувчилари йўқ',
   dep_no_match: 'Мос фойдаланувчи топилмади',
   dep_no_region: '—',
@@ -1292,6 +1298,8 @@ const ru: Dict = {
   dep_whole_region: 'Вся область',
   dep_district_hint: 'Если выбран район, учётная запись видит только его данные',
   dep_full_name: 'Ф.И.О.',
+  dep_delete_title: 'Удалить пользователя',
+  dep_delete_confirm: 'Удалить пользователя "{{name}}"? Это действие необратимо.',
   dep_empty: 'Пока нет пользователей департамента',
   dep_no_match: 'Пользователь не найден',
   dep_no_region: '—',

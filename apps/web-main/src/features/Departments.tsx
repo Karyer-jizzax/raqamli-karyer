@@ -2,6 +2,7 @@ import {
   ApiError,
   type AuthUserDto,
   useCreateUser,
+  useDeleteUser,
   useDistricts,
   useRegions,
   useUpdateUser,
@@ -24,7 +25,7 @@ import {
   TableRow,
   UiButton as Button,
 } from '@karier/ui';
-import { PencilIcon, PlusIcon, SearchIcon } from 'lucide-react';
+import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 
 import {
@@ -34,6 +35,7 @@ import {
   Field,
   ModalForm,
   ROW_ACTION,
+  ROW_ACTION_DANGER,
   StatusDot,
   TH,
 } from '../shared';
@@ -240,6 +242,38 @@ function EditModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }
   );
 }
 
+/** Hisob butunlay yo‘qoladi — bosishdan oldin kimligi qaytarib aytiladi. */
+function ConfirmDeleteModal({ user, onClose }: { user: AuthUserDto; onClose: () => void }) {
+  const { t } = useTranslation();
+  const del = useDeleteUser();
+  const [err, setErr] = useState('');
+
+  async function onConfirm(e: FormEvent) {
+    e.preventDefault();
+    setErr('');
+    try {
+      await del.mutateAsync(user.id);
+      onClose();
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : 'Error');
+    }
+  }
+
+  return (
+    <ModalForm
+      title={t('dep_delete_title')}
+      onClose={onClose}
+      onSubmit={onConfirm}
+      err={err}
+      pending={del.isPending}
+      submitLabel={t('q_yes')}
+      cancelLabel={t('q_no')}
+    >
+      <p className="text-sm">{t('dep_delete_confirm', { name: user.full_name || user.username })}</p>
+    </ModalForm>
+  );
+}
+
 export function Departments() {
   const { t } = useTranslation();
   const { data: users, isLoading } = useUsers();
@@ -248,6 +282,7 @@ export function Departments() {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AuthUserDto | null>(null);
+  const [deleting, setDeleting] = useState<AuthUserDto | null>(null);
 
   const regionLabel = (id: string | null) => {
     const r = regions?.find((x) => x.id === id);
@@ -344,6 +379,14 @@ export function Departments() {
                       >
                         <PencilIcon />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={ROW_ACTION_DANGER}
+                        onClick={() => setDeleting(u)}
+                      >
+                        <Trash2Icon />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -355,6 +398,7 @@ export function Departments() {
 
       {creating && <CreateModal onClose={() => setCreating(false)} />}
       {editing && <EditModal user={editing} onClose={() => setEditing(null)} />}
+      {deleting && <ConfirmDeleteModal user={deleting} onClose={() => setDeleting(null)} />}
     </div>
   );
 }

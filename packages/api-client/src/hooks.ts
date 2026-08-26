@@ -21,6 +21,7 @@ import {
   deletePost,
   deleteQuarry,
   deleteRegion,
+  deleteUser,
   getUsers,
   updateCamera,
   updateDistrict,
@@ -290,6 +291,14 @@ export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: UserUpdateInput }) => updateUser(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteUser(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 }

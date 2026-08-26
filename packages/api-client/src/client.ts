@@ -893,3 +893,4 @@ export interface UserUpdateInput {
 }
 export const updateUser = (id: string, body: UserUpdateInput) =>
   api.patch<AuthUserDto>(`/users/${id}`, body);
+export const deleteUser = (id: string) => api.del(`/users/${id}`);

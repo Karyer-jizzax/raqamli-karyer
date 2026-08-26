@@ -4,13 +4,15 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import require_role
 from app.core.security import hash_password
 from app.db.session import get_db
+from app.models.event import Event
+from app.models.quarry import Quarry
 from app.models.region import District
 from app.models.user import User
 from app.schemas.user import UserCreate, UserOut, UserUpdate
@@ -18,7 +20,7 @@ from app.schemas.user import UserCreate, UserOut, UserUpdate
 router = APIRouter(prefix="/users", tags=["users"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
-AdminDep = Annotated[object, Depends(require_role("superadmin"))]
+AdminDep = Annotated[User, Depends(require_role("superadmin"))]
 
 
 @router.get("", response_model=list[UserOut])
@@ -81,3 +83,18 @@ async def update_user(user_id: UUID, body: UserUpdate, db: DbDep, _a: AdminDep) 
         raise HTTPException(status.HTTP_409_CONFLICT, "Username band") from exc
     await db.refresh(user)
     return user
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: UUID, db: DbDep, admin: AdminDep) -> None:
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Foydalanuvchi topilmadi")
+    if user.id == admin.id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "O'zingizni o'chira olmaysiz")
+    # Uning ochgan karyeri va yozgan hodisalari qolaveradi — faqat muallif
+    # ustuni bo'shatiladi, aks holda FK o'chirishga yo'l bermaydi.
+    await db.execute(update(Quarry).where(Quarry.created_by == user_id).values(created_by=None))
+    await db.execute(update(Event).where(Event.created_by == user_id).values(created_by=None))
+    await db.delete(user)
+    await db.commit()
