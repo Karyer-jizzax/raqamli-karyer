@@ -831,6 +831,26 @@ export interface AgentStatus {
   streams: AgentStream[];
 }
 
+/** Karyer tanlagichidagi bitta qator — havolalarsiz, faqat "tirikmi va nechta".
+ *
+ * `cameras_ok` `null` bo'lishi mumkin: agent kameralar haqida hech nima
+ * aytmagan. Bu "nolta ishlayapti" emas, **noma'lum** — ikkalasini bir xil
+ * ko'rsatish ishlayotgan karyerni buzuqdek chizib qo'yardi. */
+export interface QuarryLiveStatus {
+  quarry_id: string;
+  name: string;
+  live_mode: 'hls' | 'snapshot' | 'off';
+  online: boolean;
+  cameras_total: number;
+  cameras_ok: number | null;
+}
+
+/** Ko'rish huquqi bor hamma karyerning jonli holati — bitta so'rovda.
+ *
+ * Yo'l `/quarries/...` ostida emas: serverda u `GET /quarries/{id}` shabloniga
+ * tushib ketardi. */
+export const getQuarriesLiveStatus = () => api.get<QuarryLiveStatus[]>('/live-status');
+
 export const getQuarryAgent = (quarryId: string) =>
   api.get<AgentStatus>(`/quarries/${quarryId}/agent`);
 export const createAgentToken = (quarryId: string) =>
@@ -840,17 +860,34 @@ export const revokeAgentToken = (quarryId: string) =>
 export const updateAgentConfig = (quarryId: string, body: Partial<AgentConfig>) =>
   api.put<AgentStatus>(`/quarries/${quarryId}/agent/config`, body);
 
+export interface LiveSnapshot {
+  blob: Blob;
+  /** Kadr necha soniyalik — server `X-Snapshot-Age`da aytadi. */
+  ageSeconds: number;
+  /** Server hisobicha kadr hali yangimi (`X-Snapshot-Fresh`). */
+  fresh: boolean;
+}
+
 /** Jonli kadrni olish (snapshot rejimi).
  *
  * `<img src>` sarlavha yubora olmaydi, kadr esa autentifikatsiya talab qiladi —
- * shuning uchun blob sifatida olib, `URL.createObjectURL` bilan ko'rsatiladi. */
-export async function fetchLiveSnapshot(path: string): Promise<Blob> {
+ * shuning uchun blob sifatida olib, `URL.createObjectURL` bilan ko'rsatiladi.
+ *
+ * Yoshi ham qaytariladi: agent uzilib qolsa server oxirgi kadrni qaytaraverdi
+ * va ekranda muzlagan rasm turardi — hech kim uni eskirganini bilmasdi. */
+export async function fetchLiveSnapshot(path: string): Promise<LiveSnapshot> {
   const token = getToken();
   const headers = new Headers();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   const resp = await fetch(`${MEDIA_ORIGIN}${path}`, { headers, cache: 'no-store' });
   if (!resp.ok) throw new ApiError(resp.status, `Kadr yo'q: ${resp.status}`);
-  return await resp.blob();
+  // Sarlavha yo'q bo'lsa "yangi" deb hisoblaymiz: eski serverga qarshi
+  // ishlaganda har kadrni eskirgan deb belgilash aniqlikdan ko'ra shovqin.
+  return {
+    blob: await resp.blob(),
+    ageSeconds: Number(resp.headers.get('X-Snapshot-Age') ?? 0) || 0,
+    fresh: resp.headers.get('X-Snapshot-Fresh') !== '0',
+  };
 }
 
 export const getQuarries = () => api.get<Quarry[]>('/quarries');

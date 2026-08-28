@@ -9,15 +9,22 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import CurrentUser, ensure_quarry_scope, require_role
 from app.db.session import get_db
 from app.models.agent import QuarryAgent
 from app.models.quarry import Camera, Post, Quarry
+from app.models.region import District
 from app.models.user import User
-from app.schemas.agent import AgentConfigOut, AgentConfigUpdate, AgentStatusOut, LiveStreamOut
+from app.schemas.agent import (
+    AgentConfigOut,
+    AgentConfigUpdate,
+    AgentStatusOut,
+    LiveStreamOut,
+    QuarryLiveStatusOut,
+)
 from app.services.agents import get_agent, issue_token, revoke_token
 from app.services.live import get_snapshot, hls_url, webrtc_url
 
@@ -51,6 +58,23 @@ def _live_mode(agent: QuarryAgent | None) -> str:
     if agent.current_quality == "snapshot":
         return "snapshot"
     return "hls" if agent.live_streaming else "off"
+
+
+def _reported_cameras(agent: QuarryAgent | None) -> list[tuple[str, bool]]:
+    """Heartbeat aytgan kameralar: `(identifikator, ishlayaptimi)`.
+
+    Agent JSON yuboradi va u yerdan har xil axlat kelishi mumkin, shuning
+    uchun shakl bir joyda tekshiriladi: `_cameras` ham, jonli holat ro'yxati
+    ham shu funksiyadan o'qiydi. Aks holda ikkalasi ikki xil sanab, sahifada
+    "0/0 kamera" yozuvi tagida beshta karta turgan holat chiqadi.
+    """
+    if agent is None:
+        return []
+    return [
+        (str(c["id"]), bool(c.get("ok", True)))
+        for c in (agent.cameras or [])
+        if isinstance(c, dict) and c.get("id")
+    ]
 
 
 async def _cameras(
@@ -87,11 +111,7 @@ async def _cameras(
         known[code] = known[name] = (name, post)
         order[code] = order[name] = i
 
-    reported = [
-        str(c["id"])
-        for c in (agent.cameras or [])
-        if isinstance(c, dict) and c.get("id")
-    ] if agent is not None else []
+    reported = [cam for cam, _ok in _reported_cameras(agent)]
     if reported:
         # Agent aytgan tartib emas, bazadagi post tartibi: heartbeat ro'yxati
         # ixtiyoriy kelishi mumkin va ekrandagi kartalar joyini almashtirib
@@ -139,6 +159,82 @@ async def _status_out(
         live_mode=mode,
         streams=streams,
     )
+
+
+@router.get("/live-status", response_model=list[QuarryLiveStatusOut])
+async def live_status(user: CurrentUser, db: DbDep) -> list[QuarryLiveStatusOut]:
+    """Ko'rish huquqi bor har bir karyerning jonli holati — bitta ro'yxatda.
+
+    Nega kerak: inspektor sahifasi bitta karyerni ochadi va agar aynan o'sha
+    karyerda oqim bo'lmasa, ekranda "jonli ko'rinish yo'q" turadi — qo'shni
+    karyerda kamera bemalol ishlayotgan bo'lsa ham. Bitta so'rovda hammasining
+    holati kelsa, sahifa ishlaydiganini o'zi tanlaydi va tanlagichda qaysi
+    biri tirikligi ko'rinib turadi.
+
+    Yo'l `/quarries/live-status` emas: `quarries` router `agents`dan oldin
+    ulanadi (router.py) va `GET /quarries/{quarry_id}` bu satrni o'ziga olib,
+    UUID o'rniga "live-status" ko'rgani uchun 422 qaytarardi.
+    """
+    # Qamrov qoidasi `quarries.list_quarries` bilan bir xil bo'lishi shart:
+    # bu ro'yxat ham butun mamlakatni bitta tumanning ekraniga chiqarib
+    # yuborishi mumkin. Qator-ma-qator `ensure_quarry_scope` emas — u har
+    # chaqiruvda tuman so'rovini qiladi (karyer soniga teng so'rov) va begona
+    # karyerni filtrlash o'rniga 403 otadi; bu yerda begona karyer xato emas,
+    # shunchaki bo'lmasligi kerak.
+    stmt = (
+        select(Quarry, QuarryAgent)
+        .outerjoin(QuarryAgent, QuarryAgent.quarry_id == Quarry.id)
+        .order_by(Quarry.name)
+    )
+    if user.role == "operator":
+        stmt = stmt.where(Quarry.id == user.quarry_id)
+    elif user.role == "department":
+        if user.district_id is not None:
+            stmt = stmt.where(Quarry.district_id == user.district_id)
+        else:
+            # `list_quarries`dagi kabi join emas, ichki so'rov: `Quarry`
+            # allaqachon `QuarryAgent`ga ulangan va ikkinchi join qatorlarni
+            # ko'paytirib yuborardi. `District.id` — PK, natija bir xil.
+            stmt = stmt.where(
+                Quarry.district_id.in_(
+                    select(District.id).where(District.region_id == user.region_id)
+                )
+            )
+    rows = (await db.execute(stmt)).all()
+    if not rows:
+        return []
+
+    # Agent kamera aytmagan karyerlar uchun zaxira son — `_cameras`ning
+    # zaxira yo'li bilan bir xil filtr (faqat faol kameralar). Bitta guruhli
+    # so'rov: karyer soniga qarab so'rov ko'paymasin.
+    counts = dict(
+        (
+            await db.execute(
+                select(Post.quarry_id, func.count(Camera.id))
+                .join(Camera, Camera.post_id == Post.id)
+                .where(
+                    Post.quarry_id.in_([q.id for q, _ in rows]),
+                    Camera.is_active.is_(True),
+                )
+                .group_by(Post.quarry_id)
+            )
+        ).all()
+    )
+
+    out: list[QuarryLiveStatusOut] = []
+    for quarry, agent in rows:
+        reported = _reported_cameras(agent)
+        out.append(
+            QuarryLiveStatusOut(
+                quarry_id=str(quarry.id),
+                name=quarry.name,
+                live_mode=_live_mode(agent),
+                online=bool(agent is not None and agent.is_active and agent.is_online),
+                cameras_total=len(reported) or counts.get(quarry.id, 0),
+                cameras_ok=sum(1 for _, ok in reported if ok) if reported else None,
+            )
+        )
+    return out
 
 
 @router.get("/quarries/{quarry_id}/agent", response_model=AgentStatusOut)

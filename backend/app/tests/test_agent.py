@@ -382,3 +382,93 @@ async def test_live_snapshot_round_trip(client: httpx.AsyncClient, seeded: None)
     ).json()
     assert status_resp["live_mode"] == "snapshot"
     assert any(s["snapshot_url"].endswith("/cam1") for s in status_resp["streams"])
+
+
+@pytest.mark.asyncio
+async def test_live_status_lists_every_quarry_with_its_mode(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """Jonli holat ro'yxati — inspektor sahifasi shundan ishlaydiganini tanlaydi."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    quarry = await _new_quarry(client, admin)
+    qid = str(quarry["id"])
+
+    def row(payload: list[dict]) -> dict:
+        found = [r for r in payload if r["quarry_id"] == qid]
+        assert found, "karyer ro'yxatda yo'q"
+        return found[0]
+
+    # Yo'l `/quarries/{quarry_id}` shabloniga tushib ketmagan: 422 emas, 200.
+    listed = await client.get("/api/v1/live-status", headers=admin)
+    assert listed.status_code == 200, listed.text
+
+    # Agent hali yo'q: rejim "off", lekin bazadagi faol kamera sanaladi va
+    # "nechtasi ishlayapti" — noma'lum, nol emas.
+    fresh = row(listed.json())
+    assert fresh["name"] == quarry["name"]
+    assert fresh["live_mode"] == "off"
+    assert fresh["online"] is False
+    assert fresh["cameras_total"] == 1
+    assert fresh["cameras_ok"] is None
+
+    token = await _agent_token(client, admin, qid)
+    await client.post(
+        "/api/agent/heartbeat",
+        headers=auth_header(token),
+        json={
+            "scale_ok": True,
+            "cameras": [{"id": "cam1", "ok": True}, {"id": "cam2", "ok": False}],
+            "live_streaming": True,
+            "current_quality": "medium",
+        },
+    )
+
+    live = row((await client.get("/api/v1/live-status", headers=admin)).json())
+    assert live["live_mode"] == "hls"
+    assert live["online"] is True
+    assert live["cameras_ok"] == 1
+    # Tanlagichdagi son devordagi kartalar soni bilan bir xil bo'lishi shart —
+    # aks holda "2 kamera" yozuvi tagida boshqa miqdorda karta turadi.
+    agent = (await client.get(f"/api/v1/quarries/{qid}/agent", headers=admin)).json()
+    assert live["cameras_total"] == len(agent["streams"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_live_status_counts_match_when_agent_reports_nothing(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """Agent kamera aytmasa ikkala tomon ham bazadagi faol kameralarni sanaydi."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    quarry = await _new_quarry(client, admin)
+    qid = str(quarry["id"])
+    token = await _agent_token(client, admin, qid)
+    await client.post(
+        "/api/agent/heartbeat",
+        headers=auth_header(token),
+        json={"scale_ok": True, "cameras": [], "current_quality": "snapshot"},
+    )
+
+    listed = (await client.get("/api/v1/live-status", headers=admin)).json()
+    row = next(r for r in listed if r["quarry_id"] == qid)
+    agent = (await client.get(f"/api/v1/quarries/{qid}/agent", headers=admin)).json()
+
+    assert row["live_mode"] == "snapshot"
+    assert row["cameras_ok"] is None
+    assert row["cameras_total"] == len(agent["streams"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_live_status_is_scoped_like_the_quarry_list(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """Qamrov `/quarries` bilan bir xil — aks holda tuman butun mamlakatni ko'radi."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    dept = auth_header(await login(client, "department", "dept123"))
+
+    for headers in (admin, dept):
+        listed = await client.get("/api/v1/live-status", headers=headers)
+        assert listed.status_code == 200, listed.text
+        quarries = (await client.get("/api/v1/quarries", headers=headers)).json()
+        assert {r["quarry_id"] for r in listed.json()} == {q["id"] for q in quarries}
+
+    assert (await client.get("/api/v1/live-status")).status_code == 401

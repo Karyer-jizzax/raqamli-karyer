@@ -108,3 +108,29 @@ class AgentStatusOut(BaseModel):
     # ko'rinish yo'q (agent offline, o'chirilgan yoki kanal juda sekin).
     live_mode: Literal["hls", "snapshot", "off"] = "off"
     streams: list[LiveStreamOut] = []
+
+
+class QuarryLiveStatusOut(BaseModel):
+    """Bitta qatorli jonli holat — karyer tanlagichi uchun (havolalarsiz).
+
+    Nega alohida sxema: inspektor o'nlab karyerli viloyatni ko'radi va sahifa
+    ochilishida "qaysi birida kamera ishlayapti" degan savolga javob kerak.
+    Har bir karyer uchun to'liq `AgentStatusOut` so'rash — o'nlab so'rov va
+    kerak bo'lmagan token/config/streams. Bu yerda faqat nuqta rangi va son.
+
+    `district_id` ataylab yo'q: sahifa karyerlar ro'yxatini baribir
+    `/quarries` dan oladi (viloyat → tuman kaskadi shusiz ishlamaydi), ikkinchi
+    nusxa faqat eskirardi. Qo'shilish `quarry_id` bo'yicha.
+    """
+
+    quarry_id: str
+    name: str
+    live_mode: Literal["hls", "snapshot", "off"] = "off"
+    online: bool = False
+    # Devorda nechta karta chiziladi — `AgentStatusOut.streams` bilan bir xil
+    # qoidada sanaladi, aks holda tanlagichdagi son ekrandagidan farq qiladi.
+    cameras_total: int = 0
+    # None — agent kameralar haqida hech nima aytmagan: bu "noldasi ishlayapti"
+    # emas, **noma'lum**. Ikkalasini bir xil ko'rsatish ishlaydigan karyerni
+    # buzuqdek ko'rsatib qo'yardi.
+    cameras_ok: int | None = None

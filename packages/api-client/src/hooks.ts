@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   createAgentToken,
+  getQuarriesLiveStatus,
   getQuarryAgent,
   revokeAgentToken,
   updateAgentConfig,
@@ -169,6 +170,20 @@ export function useQuarryAgent(quarryId: string | undefined, poll = true) {
     queryFn: () => getQuarryAgent(quarryId!),
     enabled: !!quarryId,
     refetchInterval: poll ? 30_000 : false,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Hamma karyerning jonli holati — tanlagichdagi nuqta va standart tanlov.
+ *
+ * `useQuarryAgent` bilan birlashtirilmaydi: panelga to'liq `streams` kerak,
+ * bu ro'yxat esa o'nlab karyer uchun ataylab yengil. Yangilanish oralig'i
+ * bir xil va sababi ham bir xil — agent 60 soniyada heartbeat yuboradi. */
+export function useQuarriesLive() {
+  return useQuery({
+    queryKey: ['quarries-live'],
+    queryFn: getQuarriesLiveStatus,
+    refetchInterval: 30_000,
     placeholderData: (prev) => prev,
   });
 }

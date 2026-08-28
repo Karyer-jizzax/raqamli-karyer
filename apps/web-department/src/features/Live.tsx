@@ -1,7 +1,7 @@
-import { useDistricts, useQuarries, useRegions } from '@karier/api-client';
+import { useDistricts, useQuarries, useQuarriesLive, useRegions } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
-import { FilterSelect, LivePanel, localizedName, PageHeader, useAuth } from '@karier/ui';
-import { useMemo, useState } from 'react';
+import { Button, FilterSelect, LivePanel, localizedName, PageHeader, useAuth } from '@karier/ui';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /**
  * Viloyatdagi istalgan karyerni jonli ko'rish.
@@ -22,6 +22,13 @@ import { useMemo, useState } from 'react';
  * Viloyat tanlagichi faqat superadminda: departament foydalanuvchisi o'z
  * viloyatiga bog'langan va unga bitta variantli ro'yxat ko'rsatish — bosishga
  * hech nima bermaydigan boshqaruv.
+ *
+ * Nima uchun karyerlarning jonli holati ham yuklanadi: sahifa ilgari alifbo
+ * bo'yicha birinchi karyerni ochardi va agar aynan o'shanda oqim bo'lmasa,
+ * ekranda "jonli ko'rinish yo'q" turardi — qo'shni karyerda kamera bemalol
+ * ishlayotgan bo'lsa ham. Inspektor esa bundan "tizimda kamera yo'q" degan
+ * xulosa chiqarardi. Endi tanlagichda har bir karyerning holati ko'rinadi va
+ * standart tanlov tirik karyerga tushadi.
  */
 export function Live() {
   const { t } = useTranslation();
@@ -39,6 +46,18 @@ export function Live() {
   const [picked, setPicked] = useState('');
 
   const { data: districts } = useDistricts(locked || region || undefined);
+  const { data: live } = useQuarriesLive();
+
+  // Karyer → holat. Ro'yxat 30 soniyada yangilanadi, shuning uchun xarita
+  // har safar qayta yig'iladi — muzlagan holat ko'rsatgandan ko'ra arzon.
+  const liveById = useMemo(() => new Map((live ?? []).map((r) => [r.quarry_id, r])), [live]);
+  const hasLive = useCallback(
+    (id: string) => {
+      const row = liveById.get(id);
+      return !!row && row.live_mode !== 'off' && row.cameras_total > 0;
+    },
+    [liveById],
+  );
 
   const regionOptions = useMemo(
     () =>
@@ -65,9 +84,34 @@ export function Live() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [quarries, districts, district]);
 
-  // Tanlangani ro'yxatdan tushib qolsa (tuman almashdi) — birinchisi, ya'ni
-  // sahifa hech qachon sababsiz bo'sh turmaydi.
-  const quarryId = options.some((q) => q.id === picked) ? picked : options[0]?.id;
+  // Tanlangani ro'yxatdan tushib qolsa (tuman almashdi) — oqimi borlarning
+  // birinchisi, u ham bo'lmasa ro'yxatning birinchisi: sahifa hech qachon
+  // sababsiz bo'sh turmaydi. Zaxira tanlov quyidagi effekt bilan bir xil
+  // qoidada hisoblanadi, aks holda ekran avval o'lik karyerni ko'rsatib,
+  // keyin tirigiga sakrardi.
+  const fallback = options.find((q) => hasLive(q.id)) ?? options[0];
+  const quarryId = options.some((q) => q.id === picked) ? picked : fallback?.id;
+
+  // Standart tanlov — oqimi bor karyer. Effektning sharti yuqoridagi render
+  // sharti bilan aynan bir xil: `picked` bir marta ro'yxatga tushgach effekt
+  // darrov chiqib ketadi, ya'ni 30 soniyalik yangilanish foydalanuvchi qo'lda
+  // tanlagan karyerni tortib olmaydi.
+  useEffect(() => {
+    if (options.some((q) => q.id === picked)) return;
+    // Holatlar hali kelmagan bo'lsa kutamiz: shoshsak alifbodagi birinchisiga
+    // yopishib qolamiz va butun ish behuda.
+    if (live === undefined) return;
+    if (fallback) setPicked(fallback.id);
+  }, [options, live, picked, fallback]);
+
+  // Ochiq karyerda oqim bo'lmasa — qayerda borligini aytadigan ro'yxat.
+  // Faqat birinchisi ishlatiladi, lekin sanog'i ham aytiladi: "yana bittasi
+  // bor" bilan "yana o'ntasi bor" — boshqa-boshqa xabar.
+  const otherLive = useMemo(
+    () => options.filter((q) => q.id !== quarryId && hasLive(q.id)),
+    [options, quarryId, hasLive],
+  );
+  const firstLive = otherLive[0];
 
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-3.5 p-4 lg:p-6">
@@ -106,14 +150,36 @@ export function Live() {
                 label={t('q_name')}
                 value={quarryId ?? ''}
                 onChange={setPicked}
-                options={options.map((q): [string, string] => [q.id, q.name])}
+                // Holat yorlig'ining ichida: `FilterSelect` variantlari oddiy
+                // satr va u uchala ilovadagi deyarli har bir filtr — bitta
+                // ekran uchun uni kengaytirish narxi foydasidan katta.
+                options={options.map((q): [string, string] => {
+                  const row = liveById.get(q.id);
+                  const dot = hasLive(q.id) ? '●' : '○';
+                  const count = row?.cameras_total ? ` · ${row.cameras_total}` : '';
+                  return [q.id, `${dot} ${q.name}${count}`];
+                })}
                 allowAll={false}
               />
             </div>
           </div>
         }
       />
-      <LivePanel quarryId={quarryId} />
+      <LivePanel
+        quarryId={quarryId}
+        offHint={
+          firstLive ? (
+            <div className="grid justify-items-center gap-2">
+              <span className="text-2xs text-muted-foreground">
+                {t('live_other_quarries', { n: otherLive.length })}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => setPicked(firstLive.id)}>
+                {t('live_go_first')}
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
     </div>
   );
 }

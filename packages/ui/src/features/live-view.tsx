@@ -27,7 +27,7 @@ import {
 } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import { CameraOffIcon, Maximize2Icon, RadioIcon, VideoOffIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { EmptyState, TableSkeleton } from '../data-table';
 import { FilterSelect, FilterText } from '../filters';
@@ -39,11 +39,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 /** Kadr yangilash oralig'i — doc §4.1: snapshot profilida har 2-3 soniya. */
 const SNAPSHOT_INTERVAL_MS = 3000;
 
+/** WHEP SDP almashinuvi shuncha kutadi — MediaMTX javob bermasa uzamiz. */
+const WHEP_FETCH_TIMEOUT_MS = 8000;
+/** Birinchi kadrgacha umumiy chegara. `playWhep` ichidagi ICE kutuvidan (3 s)
+ *  va SDP taymautidan (8 s) kattaroq bo'lishi shart. */
+const CONNECT_TIMEOUT_MS = 15_000;
+/** Oqim qotganini bilish oralig'i: sekin kanalda kadrlar siyrak keladi,
+ *  shuning uchun o'lchov qo'pol — ikki tekshiruvda ham surilmasa xato. */
+const WATCHDOG_INTERVAL_MS = 6000;
+/** `disconnected` odatda o'tkinchi — shuncha kutamiz. */
+const DISCONNECT_GRACE_MS = 5000;
+/** Avtomatik qayta ulanish oraliqlari; tugagach tugma foydalanuvchida. */
+const RETRY_DELAYS_MS = [2000, 5000, 10_000];
+
 // ── snapshot rejimi ─────────────────────────────────────────────────────────
 function SnapshotPlayer({ stream }: { stream: AgentStream }) {
   const { t } = useTranslation();
   const [src, setSrc] = useState('');
-  const [failed, setFailed] = useState(false);
+  // "Eskirgan" — kadr kelmayapti yoki server uni eskirgan deb belgiladi.
+  // Ikkalasi bir xil ko'rinadi: ekranda o'sha bitta qotib qolgan rasm.
+  const [stale, setStale] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,17 +67,17 @@ function SnapshotPlayer({ stream }: { stream: AgentStream }) {
 
     async function tick() {
       try {
-        const blob = await fetchLiveSnapshot(stream.snapshot_url);
+        const snap = await fetchLiveSnapshot(stream.snapshot_url);
         if (cancelled) return;
-        const next = URL.createObjectURL(blob);
+        const next = URL.createObjectURL(snap.blob);
         // Eski kadrni bo'shatamiz — 20 daqiqalik ko'rishda minglab blob
         // yig'ilib qolmasin.
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         objectUrl = next;
         setSrc(next);
-        setFailed(false);
+        setStale(!snap.fresh);
       } catch {
-        if (!cancelled) setFailed(true);
+        if (!cancelled) setStale(true);
       }
       if (!cancelled) timer = setTimeout(tick, SNAPSHOT_INTERVAL_MS);
     }
@@ -75,10 +90,23 @@ function SnapshotPlayer({ stream }: { stream: AgentStream }) {
     };
   }, [stream.snapshot_url]);
 
-  return src ? (
-    <img src={src} alt="" className="block size-full object-contain" />
-  ) : (
-    <Placeholder icon={CameraOffIcon} text={t(failed ? 'live_no_frame' : 'live_connecting')} />
+  // Eskirgan kadr o'chirilmaydi — qora ekrandan ko'ra "yarim soat oldingi
+  // manzara" foydaliroq. Lekin uni jim ko'rsatish yaramaydi: agent uzilganda
+  // muzlagan rasm jonli ko'rinib turardi, shuning uchun ustiga yozuv qo'yiladi.
+  if (!src) {
+    return (
+      <Placeholder icon={CameraOffIcon} text={t(stale ? 'live_no_frame' : 'live_connecting')} />
+    );
+  }
+  return (
+    <>
+      <img src={src} alt="" className="block size-full object-contain" />
+      {stale && (
+        <span className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-center text-2xs text-white/80">
+          {t('live_no_frame')}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -86,6 +114,22 @@ function SnapshotPlayer({ stream }: { stream: AgentStream }) {
 /** WHEP: SDP offer'ni POST qilib, javobni o'rnatamiz (MediaMTX §5). */
 async function playWhep(url: string, video: HTMLVideoElement): Promise<RTCPeerConnection> {
   const pc = new RTCPeerConnection();
+  try {
+    return await negotiateWhep(pc, url, video);
+  } catch (e) {
+    // Har qanday yo'lda yopiladi. Ilgari faqat `!resp.ok` da yopilardi:
+    // tarmoq uzilsa yoki SDP javobi buzuq bo'lsa ulanish osilib qolar, va
+    // qayta urinishlar bir kameraga o'nlab ochiq PeerConnection to'plardi.
+    pc.close();
+    throw e;
+  }
+}
+
+async function negotiateWhep(
+  pc: RTCPeerConnection,
+  url: string,
+  video: HTMLVideoElement,
+): Promise<RTCPeerConnection> {
   pc.addTransceiver('video', { direction: 'recvonly' });
   pc.addTransceiver('audio', { direction: 'recvonly' });
   pc.ontrack = (e) => {
@@ -107,15 +151,22 @@ async function playWhep(url: string, video: HTMLVideoElement): Promise<RTCPeerCo
       setTimeout(resolve, 3000);
     });
   }
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/sdp' },
-    body: pc.localDescription?.sdp ?? '',
-  });
-  if (!resp.ok) {
-    pc.close();
-    throw new Error(`WHEP ${resp.status}`);
+  // MediaMTX o'chib qolsa `fetch` javobsiz osilib turardi va karta abadiy
+  // "Ulanmoqda…" da qolardi — brauzerning o'z taymauti bir necha daqiqa.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), WHEP_FETCH_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: pc.localDescription?.sdp ?? '',
+      signal: abort.signal,
+    });
+  } finally {
+    clearTimeout(timer);
   }
+  if (!resp.ok) throw new Error(`WHEP ${resp.status}`);
   await pc.setRemoteDescription({ type: 'answer', sdp: await resp.text() });
   return pc;
 }
@@ -124,18 +175,69 @@ function StreamPlayer({ stream, controls }: { stream: AgentStream; controls?: bo
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<'connecting' | 'playing' | 'error'>('connecting');
+  // Nechanchi urinish — effekt deps'ida, ya'ni oshirilishi qayta ulanish.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     let pc: RTCPeerConnection | null = null;
     let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    setState('connecting');
+
+    const fail = () => {
+      if (!cancelled) setState('error');
+    };
+
+    // Ulanish qotib qolmasin: WHEP'ning o'z taymautlari ustiga umumiy chegara,
+    // aks holda "Ulanmoqda…" cheksiz aylanaveradi va operator kamerani buzuq
+    // deb o'ylaydi.
+    timers.push(
+      setTimeout(() => {
+        if (videoRef.current && videoRef.current.readyState < 2) fail();
+      }, CONNECT_TIMEOUT_MS),
+    );
+
+    // Muzlagan kadr qorovuli. `stalled` hodisasi bu yerda yaramaydi: u ~3
+    // soniya ma'lumot kelmasa uchadi, bu tizim esa 144 kbps kanallar uchun
+    // (doc §4.1) — yolg'on xato berardi. `currentTime` esa ketma-ket ikki
+    // tekshiruvda surilmasa, oqim haqiqatan to'xtagan.
+    let lastTime = -1;
+    let frozen = 0;
+    const watchdog = setInterval(() => {
+      const v = videoRef.current;
+      if (cancelled || !v || v.paused || v.readyState < 2) return;
+      if (v.currentTime === lastTime) {
+        frozen += 1;
+        if (frozen >= 2) fail();
+      } else {
+        frozen = 0;
+        lastTime = v.currentTime;
+      }
+    }, WATCHDOG_INTERVAL_MS);
 
     async function start() {
       if (stream.webrtc_url) {
         try {
-          pc = await playWhep(stream.webrtc_url, video!);
-          if (!cancelled) setState('playing');
+          const conn = await playWhep(stream.webrtc_url, video!);
+          // Effekt await ichida tozalangan bo'lishi mumkin — o'sha paytda
+          // cleanup `pc`ni hali null ko'rgan, ya'ni bu ulanishni o'zimiz
+          // yopamiz, aks holda u ochiq qolib ketardi.
+          if (cancelled) {
+            conn.close();
+            return;
+          }
+          pc = conn;
+          conn.onconnectionstatechange = () => {
+            if (cancelled) return;
+            const st = conn.connectionState;
+            if (st === 'failed' || st === 'closed') fail();
+            // `disconnected` ko'pincha o'tkinchi (tarmoq sakradi) — darrov
+            // xato deb e'lon qilish ishlab turgan oqimni bekorga uzardi.
+            else if (st === 'disconnected') timers.push(setTimeout(fail, DISCONNECT_GRACE_MS));
+          };
           return;
         } catch {
           /* HLS'ga tushamiz */
@@ -147,20 +249,35 @@ function StreamPlayer({ stream, controls }: { stream: AgentStream; controls?: bo
       const canHls = video!.canPlayType('application/vnd.apple.mpegurl');
       if (stream.hls_url && canHls) {
         video!.src = stream.hls_url;
-        setState('playing');
         return;
       }
-      setState('error');
+      fail();
     }
 
     start();
     return () => {
       cancelled = true;
-      pc?.close();
+      for (const timer of timers) clearTimeout(timer);
+      clearInterval(watchdog);
+      if (pc) {
+        pc.onconnectionstatechange = null;
+        pc.close();
+      }
       video.srcObject = null;
       video.removeAttribute('src');
     };
-  }, [stream.webrtc_url, stream.hls_url]);
+  }, [stream.webrtc_url, stream.hls_url, attempt]);
+
+  const retryable = attempt + 1 < RETRY_DELAYS_MS.length;
+
+  // Chegaralangan avtomatik qayta ulanish: MediaMTX qayta ko'tarilganda
+  // devordagi o'nlab karta o'zi tiklanadi. Cheksiz emas — o'chirilgan kamera
+  // brauzerni bekorga qiynamasin, qolgani foydalanuvchi ixtiyorida.
+  useEffect(() => {
+    if (state !== 'error' || !retryable) return;
+    const timer = setTimeout(() => setAttempt((n) => n + 1), RETRY_DELAYS_MS[attempt]);
+    return () => clearTimeout(timer);
+  }, [state, attempt, retryable]);
 
   return (
     <>
@@ -169,6 +286,13 @@ function StreamPlayer({ stream, controls }: { stream: AgentStream; controls?: bo
         autoPlay
         muted
         playsInline
+        // Holat haqiqiy ijrodan olinadi, ulanish muvaffaqiyatidan emas: ilgari
+        // `playing` SDP almashinuvidan keyin darrov qo'yilardi va bir kadr ham
+        // kelmagan oqim "ishlayapti" bo'lib turaverardi.
+        onPlaying={() => setState('playing')}
+        onLoadedData={() => setState('playing')}
+        onError={() => setState('error')}
+        onEnded={() => setState('error')}
         // Boshqaruv tugmalari faqat modalda: jadvaldagi kichik kadrda ular
         // bosishga xalaqit berardi (butun kadr — "kattalashtirish" tugmasi).
         controls={controls}
@@ -177,7 +301,29 @@ function StreamPlayer({ stream, controls }: { stream: AgentStream; controls?: bo
       {state !== 'playing' && (
         <Placeholder
           icon={VideoOffIcon}
-          text={t(state === 'error' ? 'live_error' : 'live_connecting')}
+          text={t(
+            state === 'error' && !retryable
+              ? 'live_error'
+              : attempt > 0 || state === 'error'
+                ? 'live_retrying'
+                : 'live_connecting',
+          )}
+          action={
+            state === 'error' && !retryable ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  // Karta butunligicha "kattalashtirish" tugmasi — bosish
+                  // modalni ochib yubormasin.
+                  e.stopPropagation();
+                  setAttempt(0);
+                }}
+              >
+                {t('live_retry')}
+              </Button>
+            ) : undefined
+          }
         />
       )}
     </>
@@ -219,45 +365,62 @@ function CameraTile({
   stream,
   mode,
   paused,
+  ok,
   onOpen,
 }: {
   stream: AgentStream;
   mode: 'hls' | 'snapshot';
   paused: boolean;
+  ok: boolean | undefined;
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
+  // `undefined` — agent kameralar haqida hech nima aytmagan (ro'yxat bazadan
+  // yig'ilgan). Uni "buzuq"ga qo'shib yuborish ishlayotgan kamerani qizil
+  // qilib qo'yardi, shuning uchun faqat aniq `false` hisobga olinadi.
+  const down = ok === false;
   return (
     <article className="group overflow-hidden rounded-2xl border bg-card shadow-card">
       <header className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
         <b className="truncate text-data text-foreground">{cameraLabel(stream)}</b>
-        <Chip tone="neutral">
-          {t(mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode')}
+        <Chip tone={down ? 'danger' : 'neutral'}>
+          {t(
+            down ? 'live_cam_down' : mode === 'snapshot' ? 'live_snapshot_mode' : 'live_stream_mode',
+          )}
         </Chip>
       </header>
       <button
         type="button"
         onClick={onOpen}
+        disabled={down}
         aria-label={t('live_open', { camera: cameraLabel(stream) })}
         className={cn(
-          'relative block aspect-video w-full cursor-pointer bg-black',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'relative block aspect-video w-full bg-black',
+          down
+            ? 'cursor-default'
+            : 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         )}
       >
-        {paused ? (
+        {/* Buzuq kameraga umuman ulanmaymiz: pleer baribir qora ekran va
+            "Oqimni ochib bo'lmadi" berardi — sababi esa allaqachon ma'lum. */}
+        {down ? (
+          <Placeholder icon={CameraOffIcon} text={t('live_cam_down_hint')} />
+        ) : paused ? (
           <Placeholder icon={Maximize2Icon} text={t('live_open_here')} />
         ) : (
           <Player stream={stream} mode={mode} />
         )}
-        <span
-          aria-hidden
-          className={cn(
-            'pointer-events-none absolute top-2 right-2 grid size-7 place-items-center rounded-lg',
-            'bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100',
-          )}
-        >
-          <Maximize2Icon className="size-3.5" strokeWidth={2} />
-        </span>
+        {!down && (
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute top-2 right-2 grid size-7 place-items-center rounded-lg',
+              'bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100',
+            )}
+          >
+            <Maximize2Icon className="size-3.5" strokeWidth={2} />
+          </span>
+        )}
       </button>
     </article>
   );
@@ -294,12 +457,21 @@ function CameraDialog({
   );
 }
 
-function Placeholder({ icon: Icon, text }: { icon: typeof CameraOffIcon; text: string }) {
+function Placeholder({
+  icon: Icon,
+  text,
+  action,
+}: {
+  icon: typeof CameraOffIcon;
+  text: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="absolute inset-0 grid place-items-center gap-2 text-center">
       <div className="grid gap-1.5 justify-items-center">
         <Icon className="size-6 text-white/40" strokeWidth={1.6} />
         <span className="text-2xs text-white/60">{text}</span>
+        {action}
       </div>
     </div>
   );
@@ -323,6 +495,12 @@ function qualityLabel(quality: string, t: (k: string) => string): string {
  * soya va burchak bo'lmasin. */
 export function AgentStatusStrip({ status, flat }: { status: AgentStatus; flat?: boolean }) {
   const { t } = useTranslation();
+  // Maxraj — ekranda nechta karta chizilsa, o'sha. Ilgari heartbeat ro'yxati
+  // sanalardi va agent hech nima aytmagan karyerda chiziq "0/0" deb turar,
+  // tagida esa bazadan kelgan beshta kamera ko'rinardi.
+  const total = status.streams.length;
+  // Agent aytmagan bo'lsa "nechtasi sog'" degani noma'lum — nol emas.
+  const reported = status.cameras.length > 0;
   const cameraOk = status.cameras.filter((c) => c.ok).length;
   return (
     <div
@@ -343,7 +521,7 @@ export function AgentStatusStrip({ status, flat }: { status: AgentStatus; flat?:
         </b>
       </span>
       <Meta label={t('agent_scale')} value={t(status.scale_ok ? 'agent_ok' : 'agent_fail')} />
-      <Meta label={t('agent_cameras')} value={`${cameraOk}/${status.cameras.length || 0}`} />
+      <Meta label={t('agent_cameras')} value={reported ? `${cameraOk}/${total}` : `${total}`} />
       <Meta label={t('agent_queue')} value={String(status.queue_size)} />
       {status.upload_kbps_avg > 0 && (
         <Meta label={t('agent_upload')} value={`${status.upload_kbps_avg} kbps`} />
@@ -458,7 +636,7 @@ function ColumnPicker({ cols, onChange }: { cols: number; onChange: (v: number) 
  * posti bilan birga ma'noli, va o'nlab karta bir tekis to'r bo'lib yotsa
  * qaysi biri qayerdaligi bilinmaydi. Tartib serverdan keladi (post kodi →
  * kamera yoshi), shuning uchun kartalar joyini o'zgartirmaydi. */
-export function LiveGrid({ status }: { status: AgentStatus }) {
+export function LiveGrid({ status, offHint }: { status: AgentStatus; offHint?: ReactNode }) {
   const { t } = useTranslation();
   // Kattalashtirilgan kamera. Kamera identifikatorini saqlaymiz, obyektni
   // emas: holat 30 soniyada yangilanadi va eski obyekt "muzlab" qolardi.
@@ -468,6 +646,13 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
   const [cols, setCols] = useGridCols();
 
   const streams = status.streams;
+  // Agent heartbeat'da har bir kamera holatini aytadi. Ro'yxat bazadan
+  // yig'ilgan bo'lsa bu xarita bo'sh bo'ladi va hamma kamera "noma'lum"
+  // qoladi — bu to'g'ri: bilmaganni buzuq deb ko'rsatib bo'lmaydi.
+  const health = useMemo(
+    () => new Map(status.cameras.map((c) => [c.id, c.ok])),
+    [status.cameras],
+  );
   const postOptions = useMemo(
     () => [...new Set(streams.map((s) => s.post_name).filter(Boolean))],
     [streams],
@@ -516,6 +701,9 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
                 : 'live_off_disabled',
           )}
         </span>
+        {/* Bu karyerda oqim yo'qligi "hech qayerda yo'q" degani emas —
+            chaqiruvchi bilsa, qayerda borligini shu yerda aytadi. */}
+        {offHint && <div className="mt-2.5">{offHint}</div>}
       </div>
     );
   }
@@ -584,6 +772,7 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
                   key={s.camera_id}
                   stream={s}
                   mode={mode}
+                  ok={health.get(s.camera_id)}
                   paused={s.camera_id === openCamera}
                   onOpen={() => setOpenCamera(s.camera_id)}
                 />
@@ -603,22 +792,38 @@ export function LiveGrid({ status }: { status: AgentStatus }) {
  * Karyer ilovasi operatorning o'z karyerini beradi, departament esa
  * ro'yxatdan tanlanganini — ekranning qolgan qismi ikkalasida bir xil.
  */
-export function LivePanel({ quarryId }: { quarryId: string | undefined }) {
+export function LivePanel({
+  quarryId,
+  offHint,
+}: {
+  quarryId: string | undefined;
+  /** "Bu karyerda yo'q, lekin ana u yerda bor" — bo'sh holatlar ostida
+   *  chiziladi. Karyer ilovasida bitta karyer bor, ya'ni aytadigan gap yo'q:
+   *  berilmasa ekran bugungidek qoladi. */
+  offHint?: ReactNode;
+}) {
   const { t } = useTranslation();
-  const { data: agent, isLoading } = useQuarryAgent(quarryId);
+  const { data: agent, isLoading, isError } = useQuarryAgent(quarryId);
 
   if (!quarryId) return <EmptyState title={t('live_pick_quarry')} />;
   // `agent` saqlanib turadi (placeholderData) — karyer almashganda ekran
   // bo'shab ketmasin, faqat birinchi yuklashda skeleton ko'rsatiladi.
   if (isLoading && !agent) return <TableSkeleton rows={2} cols={2} />;
+  // Tarmoq xatosi "agent sozlanmagan" emas. Ilgari ikkalasi bir tarmoqqa
+  // tushib, uzilgan internet karyerni sozlanmagan qilib ko'rsatardi.
+  // `!agent` sharti muhim: pollingdagi bitta uzilish ishlab turgan ekranni
+  // o'chirib yubormasin.
+  if (isError && !agent) {
+    return <EmptyState title={t('err_load')} hint={t('err_load_hint')} action={offHint} />;
+  }
   if (!agent || !agent.is_active) {
-    return <EmptyState title={t('agent_none')} hint={t('agent_none_hint')} />;
+    return <EmptyState title={t('agent_none')} hint={t('agent_none_hint')} action={offHint} />;
   }
 
   return (
     <>
       <AgentStatusStrip status={agent} />
-      <LiveGrid status={agent} />
+      <LiveGrid status={agent} offHint={offHint} />
     </>
   );
 }
