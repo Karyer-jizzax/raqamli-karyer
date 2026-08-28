@@ -167,7 +167,8 @@ export function AppShell({
           <h1 className="truncate text-[15px] font-semibold tracking-[-0.01em]">{heading}</h1>
           <div className="ml-auto flex shrink-0 items-center gap-3.5">
             <LangSwitcher />
-            <ProfileMenu />
+            {/* Tuman va karyer kabinetlarida parolni faqat admin almashtiradi. */}
+            <ProfileMenu canChangePassword={false} />
           </div>
         </header>
         <main className="flex-1">{children}</main>

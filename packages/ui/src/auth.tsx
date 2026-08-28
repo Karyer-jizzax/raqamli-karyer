@@ -251,8 +251,8 @@ function LoginScreen({
   );
 }
 
-/** Header profile dropdown: shows the user, opens password-change, and logs out. */
-export function ProfileMenu() {
+/** Header profile dropdown: shows the user, logs out, and — where allowed — changes the password. */
+export function ProfileMenu({ canChangePassword = true }: { canChangePassword?: boolean }) {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [pwOpen, setPwOpen] = useState(false);
@@ -280,10 +280,12 @@ export function ProfileMenu() {
             </span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setPwOpen(true)}>
-            <KeyRoundIcon />
-            {t('pw_change')}
-          </DropdownMenuItem>
+          {canChangePassword && (
+            <DropdownMenuItem onSelect={() => setPwOpen(true)}>
+              <KeyRoundIcon />
+              {t('pw_change')}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem variant="destructive" onSelect={logout}>
             <LogOutIcon />
             {t('logout')}
@@ -291,7 +293,7 @@ export function ProfileMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ChangePasswordModal open={pwOpen} onOpenChange={setPwOpen} />
+      {canChangePassword && <ChangePasswordModal open={pwOpen} onOpenChange={setPwOpen} />}
     </>
   );
 }
