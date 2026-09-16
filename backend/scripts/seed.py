@@ -154,8 +154,20 @@ async def seed() -> None:
             # Two fixed posts per quarry: the entrance gate (in/out control) and
             # the weighbridge post at the factory. Each post carries one pole
             # with two cameras — plate (ANPR) + record (evidentiary video).
-            entrance = Post(quarry_id=demo_quarry.id, code="P-KIRISH", name="Kirish nazorati posti")
-            scale_post = Post(quarry_id=demo_quarry.id, code="P-TAROZI", name="Tarozi posti")
+            # `role` is what the trip chain dispatches on; a quarry whose post
+            # sits at the crusher gets role="drabilka" instead of "tarozi".
+            entrance = Post(
+                quarry_id=demo_quarry.id,
+                code="P-KIRISH",
+                name="Kirish nazorati posti",
+                role="kon",
+            )
+            scale_post = Post(
+                quarry_id=demo_quarry.id,
+                code="P-TAROZI",
+                name="Tarozi posti",
+                role="tarozi",
+            )
             db.add_all([entrance, scale_post])
             await db.flush()
             db.add_all(

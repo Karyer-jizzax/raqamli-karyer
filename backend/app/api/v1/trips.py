@@ -12,7 +12,7 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.quarry import Quarry
 from app.models.region import District
-from app.models.trip import Trip
+from app.models.trip import Trip, TripStop
 from app.schemas.trip import TripOut
 from app.schemas.waybill import WaybillDocument
 from app.services.app_settings import TRIP_OPEN_TIMEOUT_HOURS, get_int_setting
@@ -26,6 +26,10 @@ DbDep = Annotated[AsyncSession, Depends(get_db)]
 # manually created events may be naive, treat those as UZ local too.
 _UZ_TZ = timezone(timedelta(hours=5))
 
+# Zanjirning birinchi tuguni (karyer darvozasi) ko'pi bilan ikki bosqich
+# beradi — undan keyingi `seq` mashina karyerdan chiqib ketganini bildiradi.
+_FIRST_NODE_STEPS = 2
+
 
 def _aware(dt: datetime | None) -> datetime | None:
     if dt is not None and dt.tzinfo is None:
@@ -34,26 +38,19 @@ def _aware(dt: datetime | None) -> datetime | None:
 
 
 def _apply_open_timeout(trip: Trip, out: TripOut, cutoff: datetime) -> TripOut:
-    """Read-side violation rule (no migration, no background job): a trip
-    stuck at the factory scale — enter without exit, or exit without enter —
-    beyond trip_open_timeout_hours (runtime-tunable from web-main) is shown
-    as "incomplete" (huquqbuzarlik)."""
+    """Read-side violation rule (no migration, no background job): a trip that
+    left the quarry gate and then went quiet past trip_open_timeout_hours
+    (runtime-tunable from web-main) is shown as "incomplete" (chala).
+
+    Only chains that got past the gate count: a truck that drove in and has
+    not come out yet is simply still inside, not a violation."""
     if trip.status != "open":
         return out
-    enter_at, exit_at = _aware(trip.main_enter_at), _aware(trip.main_exit_at)
-    stuck_after_enter = (
-        trip.main_enter_event_id is not None
-        and trip.main_exit_event_id is None
-        and enter_at is not None
-        and enter_at < cutoff
-    )
-    stuck_after_exit = (
-        trip.main_exit_event_id is not None
-        and trip.main_enter_event_id is None
-        and exit_at is not None
-        and exit_at < cutoff
-    )
-    if stuck_after_enter or stuck_after_exit:
+    last = trip.last_stop
+    if last is None or last.seq < 1:
+        return out
+    last_at = _aware(last.occurred_at)
+    if last_at is not None and last_at < cutoff:
         out.status = "incomplete"
         out.stage = "chala"
     return out
@@ -67,9 +64,12 @@ async def list_trips(
     plate: Annotated[str | None, Query()] = None,
     trip_status: Annotated[str | None, Query(alias="status")] = None,
     kind: Annotated[str | None, Query()] = None,
-    # Faqat zavod (tarozi) hodisasi bo'lgan qatnovlar — karyerda/yo'lda
-    # turgan, hali zavodga yetmagan qatnovlar chiqarilmaydi.
-    main_only: Annotated[bool, Query()] = False,
+    # Karyer darvozasidan nariga o'tgan qatnovlar — karyer ichida turgan,
+    # hali hech qayerga yetmagan qatnovlar chiqarilmaydi. Eski nomi
+    # `main_only` edi ("zavodga yetganlar"), lekin drabilkali karyerda zavod
+    # yo'q va u filtr jadvalni butunlay bo'shatib qo'yardi.
+    past_kon: Annotated[bool, Query()] = False,
+    main_only: Annotated[bool, Query()] = False,  # eskirgan alias
     limit: Annotated[int, Query(le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TripOut]:
@@ -99,9 +99,11 @@ async def list_trips(
         stmt = stmt.where(Trip.status == trip_status)
     if kind is not None:
         stmt = stmt.where(Trip.kind == kind)
-    if main_only:
+    if past_kon or main_only:
         stmt = stmt.where(
-            (Trip.main_enter_event_id.is_not(None)) | (Trip.main_exit_event_id.is_not(None))
+            select(TripStop.id)
+            .where(TripStop.trip_id == Trip.id, TripStop.seq >= _FIRST_NODE_STEPS)
+            .exists()
         )
 
     stmt = stmt.limit(limit).offset(offset)

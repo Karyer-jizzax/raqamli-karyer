@@ -1,27 +1,30 @@
 """Trip (qatnov) linking — pairs checkpoint events into one vehicle journey.
 
 Called from the /api/weigh ingest after each NEW event (idempotent re-sends
-never reach here). Matching key: (quarry, plate). Chain:
+never reach here). Matching key: (quarry, plate).
 
-  kon enter (karyerga kirdi) → kon exit (chiqdi) → main enter (tarozi) → main exit
+The chain is **not hardcoded**: `services.flow` turns the quarry's post roles
+into an ordered list of steps (`"kon:exit"`, `"drabilka:enter"`, …) and this
+module simply walks it. That is what lets one code path serve
 
-* kon enter → opens a trip (kind="karyer"). A previous enter that never
-  produced a kon exit is superseded (status="incomplete").
-* kon exit  → attaches to the open kon-enter trip; without one it opens a
-  new trip (kind="karyer"). A previous kon-exit trip that never reached the
-  scale is superseded.
-* main enter → attaches to the open kon-exit trip within the link window;
-  if none exists the vehicle came from outside → new trip (kind="tashqi").
-  A previous enter-without-exit trip is superseded.
-* main exit → completes the trip: netto = enter−exit (karyer, olib keldi)
-  yoki exit−enter (tashqi, olib ketdi). Netto below trip_min_netto_kg means
-  no real cargo (a staff car) → status "no_cargo" instead of "done". An exit
-  with no matching enter opens an exit-only trip: a late enter completes it,
-  otherwise the read-side timeout surfaces it as a violation.
+    karyer → zavod             kon enter/exit → tarozi enter/exit
+    karyer → drabilka          kon enter/exit → drabilka enter/exit (no scale)
+    karyer → drabilka → zavod  all three nodes
 
-Events can arrive out of order (the local server retries with backoff): a
-late kon exit is grafted onto the already-created tashqi trip instead of
-opening a duplicate.
+Per event, in order:
+
+* the event's step is located in the quarry's flow; a step the flow does not
+  contain is never linked (a stray drabilka event in a zavod-only quarry must
+  not fabricate a trip);
+* it attaches to the open trip that has not reached this step yet;
+* out of order (the local server retries with backoff) it is **grafted** onto
+  a trip that already holds later steps, instead of opening a duplicate;
+* an open trip for the same plate that this event overtook is superseded
+  (status="incomplete" — chala);
+* the flow's last step completes the trip. With a weighbridge on the chain
+  netto comes from the two scale readings (`netto_source="scale"`); without
+  one the trip is only counted (`netto_source="count"` and `netto_kg` stays
+  NULL, so reports never read an unmeasured trip as zero tonnes).
 """
 
 from datetime import timedelta
@@ -30,12 +33,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import Event
-from app.models.trip import Trip
+from app.models.trip import NODE_KON, WEIGHED_NODE, Trip, TripStop
 from app.services.app_settings import (
     TRIP_LINK_WINDOW_HOURS,
     TRIP_MIN_NETTO_KG,
     get_int_setting,
 )
+from app.services.flow import has_scale, node_for_event, quarry_flow
 
 
 def _weight(event: Event) -> int | None:
@@ -52,27 +56,79 @@ def _netto(trip: Trip) -> int | None:
     return max(trip.exit_weight_kg - trip.enter_weight_kg, 0)  # tashqi
 
 
-async def _finalize(db: AsyncSession, trip: Trip, completed_at) -> None:
-    """Close a trip that has both scale readings: compute netto and decide
-    whether it was real cargo. Netto below the floor means a staff car simply
-    drove across the scale — counted separately, never as material. The floor
-    is runtime-tunable from web-main (app_settings, env default 300 kg)."""
+def _resync(trip: Trip) -> None:
+    """Header fields that are only a view over the stops.
+
+    They stay columns because the trips list and the reports filter on them in
+    SQL, but they are recomputed here so the stops remain the single source of
+    truth (two independently-written copies drift apart eventually)."""
+    if not trip.stops:
+        return
+    trip.started_at = min(s.occurred_at for s in trip.stops)
+    # Kon tugunida to'xtagan bo'lsa — karyerdan yuk olib chiqqan qatnov; aks
+    # holda tashqaridan kelgan mashina (tayyor mahsulot olib ketadi).
+    trip.kind = "karyer" if any(s.node == NODE_KON for s in trip.stops) else "tashqi"
+    enter = trip.stop(WEIGHED_NODE, "enter")
+    exit_ = trip.stop(WEIGHED_NODE, "exit")
+    trip.enter_weight_kg = enter.weight_kg if enter else None
+    trip.exit_weight_kg = exit_.weight_kg if exit_ else None
+
+
+async def _finalize(db: AsyncSession, trip: Trip, completed_at, *, scale: bool) -> None:
+    """Close a trip that reached the last step of its chain.
+
+    With a scale: compute netto and decide whether it was real cargo — netto
+    below the floor means a staff car simply drove across the weighbridge,
+    counted separately and never as material. The floor is runtime-tunable
+    from web-main (app_settings, env default 300 kg).
+
+    Without a scale (drabilka): nothing was weighed. `netto_kg` deliberately
+    stays NULL rather than 0 — a zero would be summed into the reports as if
+    the truck had hauled nothing."""
+    trip.completed_at = completed_at
+    if not scale:
+        trip.netto_source = "count"
+        trip.netto_kg = None
+        trip.status = "done"
+        return
+
+    trip.netto_source = "scale"
     trip.netto_kg = _netto(trip)
     min_netto = await get_int_setting(db, TRIP_MIN_NETTO_KG)
     if trip.netto_kg is not None and trip.netto_kg < min_netto:
         trip.status = "no_cargo"
     else:
         trip.status = "done"
-    trip.completed_at = completed_at
+
+
+def _progress(trip: Trip) -> int:
+    """Zanjirda qay darajaga yetgan (oxirgi to'xtash o'rni); -1 = bo'sh."""
+    return max((s.seq for s in trip.stops), default=-1)
+
+
+def _add_stop(trip: Trip, event: Event, node: str, seq: int) -> None:
+    trip.stops.append(
+        TripStop(
+            seq=seq,
+            node=node,
+            direction=event.direction,
+            post_id=event.post_id,
+            event_id=event.id,
+            # Vazn faqat tarozili tugunda ma'noga ega.
+            weight_kg=_weight(event) if node == WEIGHED_NODE else None,
+            occurred_at=event.occurred_at,
+        )
+    )
 
 
 async def link_event(db: AsyncSession, event: Event) -> Trip | None:
     """Attach the event to its trip (creating/completing as needed).
 
-    Adds/updates rows on the session without committing — the caller owns
-    the transaction. Returns the touched trip, or None for plateless events
-    (those stay visible as "no_plate" until an operator fills the plate in
-    and this function is called again).
+    Adds/updates rows on the session without committing — the caller owns the
+    transaction. Returns the touched trip, or None when the event cannot join
+    a chain: no plate (it stays visible as "no_plate" until an operator fills
+    it in and this runs again), no measured direction, or a checkpoint this
+    quarry's flow does not contain.
     """
     if not event.plate_number:
         return None
@@ -81,238 +137,94 @@ async def link_event(db: AsyncSession, event: Event) -> Trip | None:
     if event.direction not in ("enter", "exit"):
         return None
 
-    # Karyerdan chiqish → zavodga kirish oralig'i shu oynadan oshsa zanjir
-    # ulanmaydi — zavod hodisasi "tashqi" (sotuv) qatnov sifatida ochiladi.
-    # Web-main'dagi "Qatnov qoidalari"dan boshqariladi (app_settings).
+    flow = await quarry_flow(db, event.quarry_id)
+    node = node_for_event(event.post_role, event.is_main)
+    step = f"{node}:{event.direction}"
+    if step not in flow:
+        # Bu karyerning zanjirida bunday bosqich yo'q (masalan zavodli
+        # karyerga drabilka hodisasi keldi) — hodisa jurnalda qoladi, lekin
+        # taxminiy qatnov yasalmaydi.
+        return None
+    idx = flow.index(step)
+    # Qatnov oxirgi tugunning **kutilgan hamma** bosqichlari kelganda yopiladi.
+    # Faqat oxirgi bosqichga qarab bo'lmaydi: tarozidan chiqish kirishsiz
+    # kelsa (kirish hodisasi kechikayotgan bo'lishi mumkin), qatnov "done"
+    # bo'lib netto'siz yopilib qolardi.
+    terminal_node = flow[-1].split(":")[0]
+    terminal_steps = [tuple(s.split(":")) for s in flow if s.startswith(f"{terminal_node}:")]
+
+    # Bosqichlar orasidagi tanaffus shu oynadan oshsa zanjir ulanmaydi —
+    # web-main'dagi "Qatnov qoidalari"dan boshqariladi (app_settings).
     window = timedelta(hours=await get_int_setting(db, TRIP_LINK_WINDOW_HOURS))
 
-    def base_query():  # noqa: ANN202 - local helper
-        return (
-            select(Trip)
-            .where(
-                Trip.quarry_id == event.quarry_id,
-                Trip.plate_region == event.plate_region,
-                Trip.plate_number == event.plate_number,
-                Trip.status == "open",
-            )
-            .order_by(Trip.started_at.desc())
-        )
-
-    if not event.is_main:
-        if event.direction != "exit":
-            return await _on_kon_enter(db, event, base_query, window)
-        return await _on_kon_exit(db, event, base_query, window)
-    if event.direction == "enter":
-        return await _on_main_enter(db, event, base_query, window)
-    return await _on_main_exit(db, event, base_query, window)
-
-
-async def _on_kon_enter(db: AsyncSession, event: Event, base_query, window) -> Trip:
-    # Out-of-order: kon chiqishi (yoki keyingi bosqich) oldinroq yetib kelgan
-    # bo'lishi mumkin — kon kirishsiz ochilgan karyer qatnoviga ulaymiz.
-    orphan = (
-        await db.execute(
-            base_query().where(
-                Trip.kind == "karyer",
-                Trip.kon_enter_event_id.is_(None),
-                Trip.started_at >= event.occurred_at,
-                Trip.started_at <= event.occurred_at + window,
+    open_trips = list(
+        (
+            await db.execute(
+                select(Trip)
+                .where(
+                    Trip.quarry_id == event.quarry_id,
+                    Trip.plate_region == event.plate_region,
+                    Trip.plate_number == event.plate_number,
+                    Trip.status == "open",
+                )
+                .order_by(Trip.started_at.desc())
             )
         )
-    ).scalars().first()
-    if orphan is not None:
-        orphan.kon_enter_event_id = event.id
-        orphan.started_at = event.occurred_at
-        return orphan
-
-    # Avvalgi kirish chiqishsiz qolgan — eskisini yopamiz.
-    stale = (
-        await db.execute(
-            base_query().where(
-                Trip.kon_enter_event_id.is_not(None),
-                Trip.kon_exit_event_id.is_(None),
-                Trip.main_enter_event_id.is_(None),
-            )
-        )
-    ).scalars().all()
-    for t in stale:
-        t.status = "incomplete"
-
-    trip = Trip(
-        quarry_id=event.quarry_id,
-        plate_region=event.plate_region,
-        plate_number=event.plate_number,
-        kind="karyer",
-        status="open",
-        kon_enter_event_id=event.id,
-        started_at=event.occurred_at,
+        .scalars()
+        .all()
     )
-    db.add(trip)
-    return trip
+    # Shu bosqichi allaqachon to'lgan qatnov nomzod bo'la olmaydi.
+    free = [t for t in open_trips if t.stop(node, event.direction) is None]
 
-
-async def _on_kon_exit(db: AsyncSession, event: Event, base_query, window) -> Trip:
-    # Oddiy yo'l: karyerga kirgan (kon enter) ochiq qatnovga ulaymiz.
-    entered = (
-        await db.execute(
-            base_query().where(
-                Trip.kon_enter_event_id.is_not(None),
-                Trip.kon_exit_event_id.is_(None),
-                Trip.started_at >= event.occurred_at - window,
-                Trip.started_at <= event.occurred_at,
-            )
-        )
-    ).scalars().first()
-    if entered is not None:
-        entered.kon_exit_event_id = event.id
-        return entered
-
-    # Out-of-order: zavod kirishi kon chiqishidan OLDIN yetib kelgan bo'lishi
-    # mumkin (retry backoff) — o'sha "tashqi" qatnovga ulab, turini tuzatamiz.
-    orphan = (
-        await db.execute(
-            base_query().where(
-                Trip.kon_exit_event_id.is_(None),
-                Trip.main_enter_event_id.is_not(None),
-                Trip.started_at >= event.occurred_at,
-                Trip.started_at <= event.occurred_at + window,
-            )
-        )
-    ).scalars().first()
-    if orphan is not None:
-        orphan.kon_exit_event_id = event.id
-        orphan.kind = "karyer"
-        if orphan.kon_enter_event_id is None:
-            orphan.started_at = event.occurred_at
-        orphan.netto_kg = _netto(orphan)
-        return orphan
-
-    # Avvalgi kon chiqishi zavodga yetib bormagan — eskisini yopamiz.
-    stale = (
-        await db.execute(
-            base_query().where(Trip.main_enter_event_id.is_(None))
-        )
-    ).scalars().all()
-    for t in stale:
-        t.status = "incomplete"
-
-    trip = Trip(
-        quarry_id=event.quarry_id,
-        plate_region=event.plate_region,
-        plate_number=event.plate_number,
-        kind="karyer",
-        status="open",
-        kon_exit_event_id=event.id,
-        started_at=event.occurred_at,
+    # 1) Odatiy yo'l: shu bosqichgacha yetgan ochiq qatnov.
+    trip = next(
+        (t for t in free if _progress(t) < idx and t.started_at >= event.occurred_at - window),
+        None,
     )
-    db.add(trip)
-    return trip
-
-
-async def _on_main_enter(db: AsyncSession, event: Event, base_query, window) -> Trip:
-    # Mashina chiqmasdan qayta kira olmaydi — chiqishi yo'qolgan eski
-    # qatnov(lar)ni yopamiz.
-    dangling = (
-        await db.execute(
-            base_query().where(
-                Trip.main_enter_event_id.is_not(None),
-                Trip.main_exit_event_id.is_(None),
-            )
-        )
-    ).scalars().all()
-    for t in dangling:
-        t.status = "incomplete"
-
-    # Karyerdan chiqqan ochiq qatnovga ulaymiz (link oynasi ichida).
-    trip = (
-        await db.execute(
-            base_query().where(
-                Trip.kon_exit_event_id.is_not(None),
-                Trip.main_enter_event_id.is_(None),
-                Trip.started_at >= event.occurred_at - window,
-                Trip.started_at <= event.occurred_at,
-            )
-        )
-    ).scalars().first()
-
-    # Out-of-order: zavod chiqishi kirishdan OLDIN yetib kelgan bo'lishi
-    # mumkin (retry backoff) — chiqishgina bor ochiq qatnov qolgan.
-    orphan = (
-        await db.execute(
-            base_query().where(
-                Trip.main_enter_event_id.is_(None),
-                Trip.main_exit_event_id.is_not(None),
-                Trip.started_at >= event.occurred_at,
-                Trip.started_at <= event.occurred_at + window,
-            )
-        )
-    ).scalars().first()
+    # 2) Tartibsiz kelish (retry backoff): keyingi bosqich(lar)i allaqachon
+    #    yozilgan qatnov — dublikat ochmasdan o'shanga ulaymiz.
+    orphan = next(
+        (t for t in free if _progress(t) > idx and t.started_at <= event.occurred_at + window),
+        None,
+    )
 
     if trip is None and orphan is not None:
-        # Kon zanjiri yo'q — chiqish ochgan qatnovning o'zini yakunlaymiz.
-        orphan.main_enter_event_id = event.id
-        orphan.enter_weight_kg = _weight(event)
-        exit_at = orphan.main_exit_at or event.occurred_at
-        orphan.started_at = event.occurred_at
-        await _finalize(db, orphan, exit_at)
-        return orphan
-
+        trip, orphan = orphan, None
     if trip is None:
-        # Kon chiqishi yo'q — tashqaridan kelgan mashina (2-tur).
         trip = Trip(
             quarry_id=event.quarry_id,
             plate_region=event.plate_region,
             plate_number=event.plate_number,
-            kind="tashqi",
+            kind="karyer",
             status="open",
             started_at=event.occurred_at,
         )
         db.add(trip)
 
-    trip.main_enter_event_id = event.id
-    trip.enter_weight_kg = _weight(event)
+    _add_stop(trip, event, node, idx)
 
+    # Ikkalasi ham topilgan edi — bitta qatnovga birlashtiramiz: kechikkan
+    # bosqichlar asosiy zanjirga ko'chadi, ortiqcha qator o'chadi.
     if orphan is not None and orphan is not trip:
-        # Kon zanjiri ham, oldin kelgan chiqish ham bor — bitta qatnovga
-        # birlashtiramiz: chiqish hodisasi karyer qatnoviga o'tadi, ortiqcha
-        # qator o'chadi (netto yo'nalishi kind bo'yicha to'g'ri hisoblanadi).
-        trip.main_exit_event_id = orphan.main_exit_event_id
-        trip.exit_weight_kg = orphan.exit_weight_kg
-        exit_at = orphan.main_exit_at or event.occurred_at
+        for stop in list(orphan.stops):
+            if trip.stop(stop.node, stop.direction) is None:
+                orphan.stops.remove(stop)
+                trip.stops.append(stop)
         await db.delete(orphan)
-        await _finalize(db, trip, exit_at)
 
-    return trip
+    _resync(trip)
 
+    # Mashina bir vaqtda ikki joyda tura olmaydi: shu bosqichdan nariga
+    # o'tmagan boshqa ochiq qatnov uzilib qolgan. Oxirgi bosqichda tegilmaydi
+    # — u qatnovni yopadi, qolganini o'qish tomonidagi timeout (api/v1/trips)
+    # chala deb ko'rsatadi.
+    if idx < len(flow) - 1:
+        for other in open_trips:
+            if other is not trip and other is not orphan and _progress(other) <= idx:
+                other.status = "incomplete"
 
-async def _on_main_exit(db: AsyncSession, event: Event, base_query, window) -> Trip:
-    trip = (
-        await db.execute(
-            base_query().where(
-                Trip.main_enter_event_id.is_not(None),
-                Trip.main_exit_event_id.is_(None),
-                Trip.started_at >= event.occurred_at - window,
-            )
-        )
-    ).scalars().first()
-    if trip is None:
-        # Kirishsiz chiqish. Kirish hodisasi retry tufayli kechikayotgan
-        # bo'lishi mumkin — ochiq qatnov ochamiz; kirish kelsa juftlanadi,
-        # kelmasa timeout'dan keyin "incomplete" (huquqbuzarlik) ko'rinadi.
-        trip = Trip(
-            quarry_id=event.quarry_id,
-            plate_region=event.plate_region,
-            plate_number=event.plate_number,
-            kind="tashqi",
-            status="open",
-            main_exit_event_id=event.id,
-            exit_weight_kg=_weight(event),
-            started_at=event.occurred_at,
-        )
-        db.add(trip)
-        return trip
+    if all(trip.stop(node_, dir_) is not None for node_, dir_ in terminal_steps):
+        completed_at = max(s.occurred_at for s in trip.stops)
+        await _finalize(db, trip, completed_at, scale=has_scale(flow))
 
-    trip.main_exit_event_id = event.id
-    trip.exit_weight_kg = _weight(event)
-    await _finalize(db, trip, event.occurred_at)
     return trip

@@ -12,28 +12,20 @@ Idempotent — already-linked events are skipped, safe to run multiple times.
 
 import asyncio
 
-from sqlalchemy import select, union_all
+from sqlalchemy import select
 
 from app.db.session import SessionLocal
 from app.models.event import Event
-from app.models.trip import Trip
+from app.models.trip import TripStop
 from app.services.trips import link_event
 
 
 async def main() -> None:
     async with SessionLocal() as db:
-        # Events already attached to a trip via any of the 4 checkpoint slots.
-        linked = union_all(
-            select(Trip.kon_enter_event_id),
-            select(Trip.kon_exit_event_id),
-            select(Trip.main_enter_event_id),
-            select(Trip.main_exit_event_id),
-        ).subquery()
-        linked_ids = {
-            row[0]
-            for row in (await db.execute(select(linked))).all()
-            if row[0] is not None
-        }
+        # Qatnov zanjiriga allaqachon ulangan hodisalar.
+        linked_ids = set(
+            (await db.execute(select(TripStop.event_id))).scalars().all()
+        )
 
         events = (
             (

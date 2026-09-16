@@ -101,5 +101,6 @@ async def build_waybill(db: AsyncSession, trip: Trip, base_url: str) -> WaybillD
         enter=WaybillWeighing(at=trip.main_enter_at, weight_kg=trip.enter_weight_kg),
         exit=WaybillWeighing(at=trip.main_exit_at, weight_kg=trip.exit_weight_kg),
         netto_kg=trip.netto_kg,
+        netto_source=trip.netto_source,
         volume_m3=trip.volume_m3,
     )

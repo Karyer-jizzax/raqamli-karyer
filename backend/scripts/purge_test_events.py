@@ -20,7 +20,7 @@ from sqlalchemy import delete, or_, select
 from app.db.session import SessionLocal
 from app.models.event import Event
 from app.models.media import Media
-from app.models.trip import Trip
+from app.models.trip import Trip, TripStop
 
 # (plate_region, plate_number) as stored by services.plates.split_plate.
 TEST_PLATES = [
@@ -53,10 +53,9 @@ async def main(apply: bool) -> None:
         if event_ids:
             trip_where = or_(
                 trip_where,
-                Trip.kon_enter_event_id.in_(event_ids),
-                Trip.kon_exit_event_id.in_(event_ids),
-                Trip.main_enter_event_id.in_(event_ids),
-                Trip.main_exit_event_id.in_(event_ids),
+                Trip.id.in_(
+                    select(TripStop.trip_id).where(TripStop.event_id.in_(event_ids))
+                ),
             )
         trip_ids = list((await db.execute(select(Trip.id).where(trip_where))).scalars().all())
 

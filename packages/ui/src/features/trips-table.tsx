@@ -4,7 +4,14 @@
  * One component for both apps: web-quarry passes its own `quarryId`, the
  * department passes none and gets the quarry column plus a quarry filter.
  */
-import { type TripRecord, type TripStage, useQuarries, useTrips } from '@karier/api-client';
+import {
+  TRIP_NODES,
+  type TripNode,
+  type TripRecord,
+  type TripStage,
+  useQuarries,
+  useTrips,
+} from '@karier/api-client';
 import { currentLang, formatDecimal, useTranslation } from '@karier/i18n';
 import { FileTextIcon } from 'lucide-react';
 import { type MouseEvent, useMemo, useState } from 'react';
@@ -35,9 +42,42 @@ import { HoverPreview, MediaChips, type Preview, StageSection } from './media';
 import { type Filters, plateMatches, setFilter, splitDateTime } from './util';
 
 const KINDS = ['karyer', 'tashqi'] as const;
-// Only zavod-side trips are listed, so karyerda/yolda can never appear here.
-const STAGES = ['zavodda', 'yakunlandi', 'yuk_emas', 'chala'] as const;
+// Only trips past the quarry gate are listed, so karyerda/yolda never appear.
+const STAGES = ['drabilkada', 'zavodda', 'yakunlandi', 'yuk_emas', 'chala'] as const;
 const PAGE_SIZES = [10, 25, 50] as const;
+
+// Zanjirdagi tugunning ustun sarlavhasi. `kon` bu yerda ko'rsatilmaydi —
+// jadval karyerdan chiqqandan keyingi nazoratni ko'rsatadi.
+const NODE_LABEL: Record<TripNode, string> = {
+  kon: 'grp_karyer',
+  drabilka: 'grp_drabilka',
+  tarozi: 'grp_zavod',
+};
+
+/** Which checkpoint columns to draw, from the trips actually on screen.
+ *
+ * The pair of zavod columns used to be hardcoded; a quarry whose control point
+ * is the crusher has no zavod at all, and a three-node quarry has both. Taking
+ * the columns from the data keeps one grid honest for every layout. */
+function checkpointColumns(rows: TripRecord[]): { node: TripNode; direction: string }[] {
+  const seen = new Map<string, { node: TripNode; direction: string }>();
+  for (const r of rows) {
+    for (const s of r.stages ?? []) {
+      if (s.node === 'kon') continue;
+      const key = `${s.node}:${s.direction}`;
+      if (!seen.has(key)) seen.set(key, { node: s.node, direction: s.direction });
+    }
+  }
+  // Tugun bo'yicha, keyin kirish→chiqish. `seq` bo'yicha saralab bo'lmaydi:
+  // u karyerga nisbiy, shuning uchun ikkita karyer yonma-yon ko'rsatilganda
+  // (departament ko'rinishi) turli tugunlar bir xil raqamga tushib, ustun
+  // guruhlari sarlavhadan siljib qolardi.
+  return [...seen.values()].sort(
+    (a, b) =>
+      TRIP_NODES.indexOf(a.node) - TRIP_NODES.indexOf(b.node) ||
+      (a.direction === b.direction ? 0 : a.direction === 'enter' ? -1 : 1),
+  );
+}
 
 /** One checkpoint cell: time on top, weight (scale stages), then media chips. */
 function StageCell({
@@ -117,7 +157,7 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const lang = currentLang();
   const showQuarry = !quarryId;
   const { data: quarries } = useQuarries();
-  // main_only: zavod tarozisiga yetmagan (karyerda/yo'lda) qatnovlar ko'rinmaydi.
+  // past_kon: karyer ichida turgan (karyerda/yo'lda) qatnovlar ko'rinmaydi.
   const {
     data,
     isLoading,
@@ -125,8 +165,8 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
     refetch,
   } = useTrips(
     quarryId
-      ? { limit: '200', main_only: 'true', quarry_id: quarryId }
-      : { limit: '200', main_only: 'true' },
+      ? { limit: '200', past_kon: 'true', quarry_id: quarryId }
+      : { limit: '200', past_kon: 'true' },
   );
 
   const [f, setF] = useState<Filters>({});
@@ -194,9 +234,15 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
   const pageStart = (cur - 1) * pageSize;
   const pageRows = filtered.slice(pageStart, pageStart + pageSize);
 
+  // Nazorat ustunlari ma'lumotdan: zavodli karyerda ikkita, drabilkalida
+  // ikkita, uchala tugunli karyerda to'rtta.
+  const checkpoints = useMemo(() => checkpointColumns(filtered), [filtered]);
+  const stageOf = (r: TripRecord, node: TripNode, direction: string) =>
+    (r.stages ?? []).find((s) => s.node === node && s.direction === direction) ?? null;
+
   const activeCount = Object.keys(f).length;
-  // +1 for the yuk xati action column
-  const cols = showQuarry ? 10 : 9;
+  // fixed columns (no, plate, kind, m³, t, status, yuk xati) + checkpoints
+  const cols = (showQuarry ? 8 : 7) + checkpoints.length;
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -263,7 +309,16 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     )}
                     <th rowSpan={2} className={GRID_TH} scope="col">{t('th_plate')}</th>
                     <th rowSpan={2} className={GRID_TH} scope="col">{t('trip_kind')}</th>
-                    <th colSpan={2} className={GRID_TH} scope="colgroup">{t('grp_zavod')}</th>
+                    {[...new Set(checkpoints.map((c) => c.node))].map((node) => (
+                      <th
+                        key={node}
+                        colSpan={checkpoints.filter((c) => c.node === node).length}
+                        className={GRID_TH}
+                        scope="colgroup"
+                      >
+                        {t(NODE_LABEL[node])}
+                      </th>
+                    ))}
                     <th colSpan={2} className={cn(GRID_TH, 'bg-col-ai')} scope="colgroup">
                       {t('grp_ai')}
                     </th>
@@ -271,8 +326,11 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     <th rowSpan={2} className={GRID_TH} scope="col">{t('wb_open')}</th>
                   </tr>
                   <tr>
-                    <th className={GRID_TH_SUB} scope="col">{t('dir_enter')}</th>
-                    <th className={GRID_TH_SUB} scope="col">{t('dir_exit')}</th>
+                    {checkpoints.map((c) => (
+                      <th key={`${c.node}:${c.direction}`} className={GRID_TH_SUB} scope="col">
+                        {t(c.direction === 'enter' ? 'dir_enter' : 'dir_exit')}
+                      </th>
+                    ))}
                     <th className={cn(GRID_TH_SUB, 'bg-col-ai')} scope="col">{t('th_m3')}</th>
                     <th className={cn(GRID_TH_SUB, 'bg-col-ai')} scope="col">{t('th_ton')}</th>
                   </tr>
@@ -303,18 +361,18 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                             {t(`trip_kind_${r.kind}`)}
                           </span>
                         </td>
-                        <StageCell
-                          at={r.main_enter_at}
-                          stage={r.main_enter}
-                          weightKg={r.enter_weight_kg}
-                          onPreview={setPrev}
-                        />
-                        <StageCell
-                          at={r.main_exit_at}
-                          stage={r.main_exit}
-                          weightKg={r.exit_weight_kg}
-                          onPreview={setPrev}
-                        />
+                        {checkpoints.map((c) => {
+                          const s = stageOf(r, c.node, c.direction);
+                          return (
+                            <StageCell
+                              key={`${c.node}:${c.direction}`}
+                              at={s?.occurred_at ?? null}
+                              stage={s}
+                              weightKg={s?.weight_kg ?? null}
+                              onPreview={setPrev}
+                            />
+                          );
+                        })}
                         <td className={metric}>{cubes(r.volume_m3)}</td>
                         <td className={metric}>{tons(r.netto_kg)}</td>
                         <td className={GRID_CTR}>
@@ -344,7 +402,10 @@ export function TripsTable({ quarryId }: { quarryId?: string } = {}) {
                     const top = i === 0 && 'border-t-2 border-t-col-ai-rule';
                     return (
                       <tr key={x.kind} className="bg-col-ai font-bold">
-                        <td className={cn(GRID_CTR, top)} colSpan={showQuarry ? 6 : 5}>
+                        <td
+                          className={cn(GRID_CTR, top)}
+                          colSpan={(showQuarry ? 4 : 3) + checkpoints.length}
+                        >
                           {t(`trip_kind_${x.kind}`)} ({x.count})
                         </td>
                         <td className={cn(GRID_NUM, top)}>{cubes(x.m3)}</td>

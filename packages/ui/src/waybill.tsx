@@ -102,7 +102,11 @@ export function WaybillSheet({ doc }: { doc: WaybillDocument }) {
       <hr />
 
       {/* The bottom line of the slip: the cargo itself, both ways of counting it. */}
-      <Line label={t('wb_netto')} value={tons(doc.netto_kg)} strong />
+      <Line
+        label={t('wb_netto')}
+        value={doc.netto_source === 'count' ? t('wb_unweighed') : tons(doc.netto_kg)}
+        strong
+      />
       <Line
         label={t('wb_volume')}
         value={

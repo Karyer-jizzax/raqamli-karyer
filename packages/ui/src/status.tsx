@@ -43,10 +43,13 @@ export const TONE_DOT: Record<Tone, string> = {
   neutral: 'bg-slate-300',
 };
 
-/** karyerda → yolda → zavodda → yakunlandi; chala = unfinished, yuk_emas = empty run. */
+/** karyerda → yolda → drabilkada/zavodda → yakunlandi; chala = unfinished,
+ *  yuk_emas = empty run. Which of them can appear depends on the quarry's
+ *  chain (a quarry with no scale never reaches "zavodda"). */
 export const TRIP_STAGE_TONE = {
   karyerda: 'info',
   yolda: 'info',
+  drabilkada: 'warning',
   zavodda: 'stage',
   yakunlandi: 'success',
   chala: 'danger',
@@ -87,8 +90,25 @@ export function directionTone(direction: string): Tone {
 /** Trip kind — karyer = raw material in, tashqi = product sold out. */
 export const TRIP_KIND_TONE = { karyer: 'success', tashqi: 'stage' } as const;
 
-/** Event source — zavod scale vs karyer eco-post. */
-export const SOURCE_TONE = { zavod: 'stage', karyer: 'info' } as const;
+/** Nuqta turi — hodisa qaysi nazorat nuqtasida yozilgan. Avval bu `is_main`
+ *  boolean edi (zavod/karyer); endi post roli, chunki drabilka ikkalasi ham
+ *  emas. Rol belgilanmagan eski qatorlar `kon`ga tushadi. */
+export const POST_ROLE_TONE = {
+  kon: 'info',
+  kon_kirish: 'info',
+  kon_chiqish: 'info',
+  tarozi: 'stage',
+  drabilka: 'warning',
+} as const satisfies Record<string, Tone>;
+
+export function postRoleTone(role: string | null | undefined): Tone {
+  return POST_ROLE_TONE[(role ?? 'kon') as keyof typeof POST_ROLE_TONE] ?? 'neutral';
+}
+
+/** i18n key for a post-role chip. */
+export function postRoleLabelKey(role: string | null | undefined): string {
+  return `role_${role ?? 'kon'}`;
+}
 
 /** Rounded status chip. The one badge shape used across both apps. */
 export function Chip({

@@ -128,6 +128,17 @@ export function Dashboard() {
           delta={deltaPct(overview?.total_volume, before?.total_volume)}
           deltaLabel={t('an_vs_prev')}
         />
+        {/* Tarozisiz (drabilkali) karyerlar hajm bermaydi — usiz o'sha tuman
+            dashboardda bo'sh ko'rinardi. */}
+        {(overview?.trips_counted ?? 0) > 0 && (
+          <StatTile
+            icon={BarChart3Icon}
+            label={t('dash_trips_counted')}
+            value={fn(overview?.trips_counted)}
+            delta={deltaPct(overview?.trips_counted, before?.trips_counted)}
+            deltaLabel={t('an_vs_prev')}
+          />
+        )}
         <StatTile icon={MountainIcon} label={t('dash_quarries')} value={fn(overview?.quarries)} />
         <StatTile
           icon={CameraIcon}

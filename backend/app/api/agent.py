@@ -128,7 +128,7 @@ async def receive_event(
             "video_pending": existing.video_pending,
         }
 
-    post_id, camera_id = await resolve_camera(db, agent.quarry_id, payload.camera_id)
+    binding = await resolve_camera(db, agent.quarry_id, payload.camera_id)
 
     # Foto ustidan backend detektori (hozircha stub) — model va material uchun
     # zaxira manba; qaror baribir karyer mahsulotlari ro'yxati bilan cheklanadi.
@@ -157,16 +157,19 @@ async def receive_event(
     event = Event(
         event_uid=payload_uid(payload),
         quarry_id=agent.quarry_id,
-        post_id=post_id,
-        camera_id=camera_id,
+        post_id=binding.post_id,
+        camera_id=binding.camera_id,
         material_id=material.id if material is not None else None,
-        is_main=True,
+        # Tarozi punkti — rol belgilangan bo'lsa undan, aks holda eskicha.
+        is_main=binding.role is None or binding.role == "tarozi",
+        post_role=binding.role or "tarozi",
         source="agent",
         plate_region=plate_region,
         plate_number=plate_number,
         model=det.model,
-        # Yo'nalish o'lchanmaydi (modul izohiga qarang).
-        direction="unknown",
+        # Yo'nalish o'lchanmaydi (modul izohiga qarang) — post sozlamasida
+        # majburiy yo'nalish berilgan bo'lsagina qatnov zanjiriga ulanadi.
+        direction=binding.default_direction or "unknown",
         occurred_at=_aware(payload.occurred_at),
         density=density,
         weight_kg=int(payload.weight_kg),

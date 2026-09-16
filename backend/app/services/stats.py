@@ -10,6 +10,7 @@ from app.models.event import Event
 from app.models.organization import Organization
 from app.models.quarry import Camera, Post, Quarry
 from app.models.region import District
+from app.models.trip import Trip
 
 
 def _scoped_event_query(
@@ -33,6 +34,73 @@ def _scoped_event_query(
             .where(District.region_id == region_id)
         )
     return base
+
+
+def _scoped_trip_query(
+    base: Select,
+    *,
+    region_id: UUID | None,
+    district_id: UUID | None,
+    quarry_id: UUID | None,
+) -> Select:
+    """Apply region/district/quarry scope to a query selecting from Trip."""
+    if quarry_id is not None:
+        return base.where(Trip.quarry_id == quarry_id)
+    if district_id is not None:
+        return base.join(Quarry, Quarry.id == Trip.quarry_id).where(
+            Quarry.district_id == district_id
+        )
+    if region_id is not None:
+        return (
+            base.join(Quarry, Quarry.id == Trip.quarry_id)
+            .join(District, District.id == Quarry.district_id)
+            .where(District.region_id == region_id)
+        )
+    return base
+
+
+# Yakunlangan qatnovlar, netto qayerdan kelganiga qarab ajratilgan.
+# Tarozisiz (drabilkali) karyerda hajm har doim 0 bo'lib chiqadi — usiz o'sha
+# tuman viloyat dashboardida ishlamayotgandek ko'rinardi. "O'lchanmagan"ni
+# "yuk yo'q" bilan aralashtirmaslik uchun ular alohida sanaladi.
+_TRIP_AGGS = (
+    func.count(Trip.id).filter(Trip.netto_source == "scale").label("trips_weighed"),
+    func.count(Trip.id).filter(Trip.netto_source == "count").label("trips_counted"),
+)
+
+
+async def _trip_counts(
+    db: AsyncSession,
+    *,
+    region_id: UUID | None = None,
+    district_id: UUID | None = None,
+    quarry_id: UUID | None = None,
+    conds: list[ColumnElement[bool]] | None = None,
+) -> tuple[int, int]:
+    stmt = _scoped_trip_query(
+        select(*_TRIP_AGGS),
+        region_id=region_id,
+        district_id=district_id,
+        quarry_id=quarry_id,
+    )
+    for cond in conds or []:
+        stmt = stmt.where(cond)
+    weighed, counted = (await db.execute(stmt)).one()
+    return int(weighed or 0), int(counted or 0)
+
+
+def trip_period_conds(
+    date_from: date | None, date_to: date | None
+) -> list[ColumnElement[bool]]:
+    """Inclusive [date_from, date_to] filter on Trip.started_at."""
+    conds: list[ColumnElement[bool]] = []
+    if date_from is not None:
+        conds.append(Trip.started_at >= datetime.combine(date_from, datetime.min.time()))
+    if date_to is not None:
+        conds.append(
+            Trip.started_at < datetime.combine(date_to + timedelta(days=1), datetime.min.time())
+        )
+    return conds
 
 
 async def overview(
@@ -93,6 +161,15 @@ async def overview(
         agg = agg.where(func.extract("month", Event.occurred_at) == month)
     events, total_volume, avg_conf = (await db.execute(agg)).one()
 
+    trip_conds: list[ColumnElement[bool]] = []
+    if year is not None:
+        trip_conds.append(func.extract("year", Trip.started_at) == year)
+    if month is not None:
+        trip_conds.append(func.extract("month", Trip.started_at) == month)
+    trips_weighed, trips_counted = await _trip_counts(
+        db, region_id=region_id, district_id=district_id, conds=trip_conds
+    )
+
     return {
         "quarries": quarries,
         "districts": districts,
@@ -103,6 +180,8 @@ async def overview(
         "events": events or 0,
         "total_volume": round(float(total_volume), 2),
         "avg_confidence": round(float(avg_conf), 2),
+        "trips_weighed": trips_weighed,
+        "trips_counted": trips_counted,
     }
 
 
@@ -150,12 +229,17 @@ async def quarry_stats(
         .where(Post.quarry_id == quarry_id)
     )
     cameras, cameras_active = (await db.execute(cam_stmt)).one()
+    trips_weighed, trips_counted = await _trip_counts(
+        db, quarry_id=quarry_id, conds=trip_period_conds(date_from, date_to)
+    )
 
     return {
         "events": int(events),
         "trucks": int(trucks),
         "volume": round(float(volume), 2),
         "unidentified": int(unidentified),
+        "trips_weighed": trips_weighed,
+        "trips_counted": trips_counted,
         "cameras": int(cameras),
         "cameras_active": int(cameras_active),
         "cameras_inactive": int(cameras) - int(cameras_active),

@@ -97,6 +97,23 @@ async def _ensure_camera_unique(
         )
 
 
+async def _ensure_single_scale_post(
+    db: AsyncSession, quarry_id: UUID, role: str | None, *, exclude_id: UUID | None = None
+) -> None:
+    """Bir karyerda `tarozi` roli bittadan ortiq bo'lmasin.
+
+    Netto ikkita tortish ayirmasi — ikkinchi tarozi qo'shilsa qaysi juftlik
+    olinishi noaniq bo'lib qoladi va qatnov zanjiri jimgina noto'g'ri
+    hisoblanadi. Qolgan rollar (kon, drabilka) takrorlanishi mumkin."""
+    if role != "tarozi":
+        return
+    stmt = select(Post.id).where(Post.quarry_id == quarry_id, Post.role == "tarozi").limit(1)
+    if exclude_id is not None:
+        stmt = stmt.where(Post.id != exclude_id)
+    if (await db.execute(stmt)).scalar_one_or_none() is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu karyerda tarozi posti allaqachon bor")
+
+
 @router.get("/quarries", response_model=list[QuarryOut])
 async def list_quarries(user: CurrentUser, db: DbDep) -> list[Quarry]:
     stmt = select(Quarry).order_by(Quarry.created_at.desc())
@@ -194,6 +211,7 @@ async def list_posts(quarry_id: UUID, user: CurrentUser, db: DbDep) -> list[Post
 )
 async def create_post(quarry_id: UUID, body: PostCreate, db: DbDep, _a: AdminDep) -> Post:
     await _get_quarry(db, quarry_id)
+    await _ensure_single_scale_post(db, quarry_id, body.role)
     post = Post(quarry_id=quarry_id, **body.model_dump())
     db.add(post)
     try:
@@ -208,7 +226,10 @@ async def create_post(quarry_id: UUID, body: PostCreate, db: DbDep, _a: AdminDep
 @router.patch("/posts/{post_id}", response_model=PostOut)
 async def update_post(post_id: UUID, body: PostUpdate, db: DbDep, _a: AdminDep) -> Post:
     post = await _get_post(db, post_id)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    if "role" in updates:
+        await _ensure_single_scale_post(db, post.quarry_id, updates["role"], exclude_id=post.id)
+    for field, value in updates.items():
         setattr(post, field, value)
     await db.commit()
     await db.refresh(post)

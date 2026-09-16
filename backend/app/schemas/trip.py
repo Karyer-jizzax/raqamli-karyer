@@ -15,6 +15,17 @@ class TripStageOut(BaseModel):
     video_url: str | None = None
 
 
+class TripStopOut(TripStageOut):
+    """A stop with its place in the chain — the generic shape the trips table
+    builds its columns from, so a drabilka stage needs no new field."""
+
+    node: str  # kon | drabilka | tarozi
+    direction: str  # enter | exit
+    seq: int
+    # Faqat tarozili tugunda o'lchanadi; drabilkada doim None.
+    weight_kg: int | None = None
+
+
 class TripOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -23,9 +34,15 @@ class TripOut(BaseModel):
     plate_region: str
     plate_number: str
     kind: str  # karyer | tashqi
-    status: str  # open | done | incomplete
-    # derived progress: karyerda | yolda | zavodda | yakunlandi | chala
+    status: str  # open | done | incomplete | no_cargo
+    # scale = netto tarozida o'lchandi; count = zanjirda tarozi yo'q, qatnov
+    # sanaldi (netto_kg NULL — nol deb o'qilmasin).
+    netto_source: str | None = None
+    # derived: karyerda | yolda | drabilkada | zavodda | yakunlandi | chala
     stage: str
+    # Zanjirdagi barcha to'xtashlar, tartib bilan. Quyidagi kon_*/main_*
+    # maydonlari shundan hisoblanadi va faqat eski mijozlar uchun qoladi.
+    stages: list[TripStopOut] = []
     kon_enter_event_id: UUID | None
     kon_exit_event_id: UUID | None
     main_enter_event_id: UUID | None

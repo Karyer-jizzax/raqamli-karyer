@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Provision token (web-main "token berish" -> local server GET
     # /api/local/config) lifetime. Long enough to hand over to a technician.
     provision_token_expire_hours: int = 72
+    # Public origin the quarry local server uploads to. The browser-facing API
+    # sits behind the Cloudflare proxy, which caps request bodies at 100MB —
+    # below weigh_max_upload_mb — so ingest goes to a DNS-only host
+    # (https://ingest.raqamli-karyer.uz). Empty: use the provision token's url.
+    ingest_public_url: str = ""
     # Trip (qatnov) linking: how long after "kon exit" a "main enter" (and
     # after "main enter" a "main exit") may arrive and still join the trip.
     trip_link_window_hours: int = 24

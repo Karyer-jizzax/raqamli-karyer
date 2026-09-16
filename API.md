@@ -133,11 +133,59 @@ curl -X POST http://SERVER:5555/api/weigh \
 | `material_id` | string / null | ⛔ | Lokal YOLO aniqlagan mahsulot (slug, masalan `shagal`). Bu faqat **taklif** — yakuniy qaror backendda: karyerga biriktirilgan mahsulotlar ro'yxati bilan cheklanadi (1 ta mahsulotli karyerda har doim o'sha yoziladi; taklif ro'yxatga mos kelmasa hodisa `inspect` bo'ladi). |
 | `material_confidence` | number / null | ⛔ | YOLO ishonch foizi (0–100). `material_id` bilan birga yuboriladi. |
 
-### `is_main` semantikasi
+### `is_main` semantikasi (eskirgan — pastdagi `post_role`ga qarang)
 - **`is_main: true`** — asosiy zavod tarozisi: raqam **+ vazn + video** keladi.
 - **`is_main: false`** — kon nazorat nuqtasi: **raqam + rasm + video**, vazn yo'q
   (`weight: null`). Video mexanizmi zavod bilan bir xil — mashina zonaga
   kirishi bilan klip yoziladi, yo'nalish videodan aniqlanadi.
+
+### Nuqta turi endi serverda: `post_role`
+Nuqtaning turi local server configida turgani uchun server uni tekshira olmasdi,
+va faqat ikki xil bo'la olardi. Endi bu **adminkada, postga** yoziladi:
+
+| Rol | Ma'nosi |
+|---|---|
+| `kon` | Karyer darvozasi (kirish ham, chiqish ham shu yerdan) |
+| `kon_kirish` / `kon_chiqish` | Bir tomonlama darvoza (ikkita alohida kamera) |
+| `tarozi` | Asosiy zavod tarozisi — vazn shu yerda o'lchanadi |
+| `drabilka` | Drabilka posti; **tarozi yo'q**, faqat kamera |
+
+- Kamera bog'langan postda rol turgan bo'lsa, server **payload'dagi `is_main`ni
+  e'tiborsiz qoldiradi**. Rol qo'yilmagan karyerlarda hech narsa o'zgarmaydi —
+  eskicha `is_main` ishlaydi, shuning uchun o'rnatilgan local serverlarni
+  yangilash shart emas.
+- `GET /api/local/config` javobidagi har kamera endi `post_role` va
+  `default_direction` maydonlarini ham beradi (ma'lumot uchun).
+- **`default_direction`** — post sozlamasi: kamera yo'nalishni o'lchay olmaganda
+  (bir tomonlama o'rnatilgan bo'lsa) server shu yo'nalishni qo'yadi. Usiz bunday
+  hodisa `unknown` bo'lib qatnov zanjiriga umuman ulanmasdi.
+- **`debounce_seconds`** — post sozlamasi: navbatda turgan mashina kameraga
+  qayta tushsa, shu oyna ichidagi bir xil raqamli hodisa **yangi yozuv
+  yaratmaydi**, javobda `{"duplicate": true, "debounced": true}` va mavjud
+  `id` qaytadi.
+- **Kamera nomi topilmasa** hodisa endi karyerning birinchi postiga
+  yopishtirilmaydi: yozuv postsiz saqlanadi va `inspect` holatiga tushadi
+  (operator adminkadagi kamera nomini to'g'rilaydi). Avval jimgina noto'g'ri
+  nuqtaga yozilardi.
+- **Vaznsiz nuqtada hodisa `inspect` bo'lmaydi.** O'lchov holati (vazn/zichlik
+  yo'q → tekshirish kerak) faqat `tarozi` rolida qo'llanadi; kon darvozasi va
+  drabilkada tortish yo'qligi nuqson emas.
+
+### Qatnov zanjiri sozlanadigan (javobdagi `trip_id`)
+Zanjir endi karyerdagi post rollaridan chiqariladi, kodda qattiq yozilmagan:
+
+| Karyerdagi rollar | Zanjir | Netto |
+|---|---|---|
+| `kon` + `tarozi` | kon kirish/chiqish → tarozi kirish/chiqish | tortishlar ayirmasi |
+| `kon` + `drabilka` | kon kirish/chiqish → drabilka kirish/chiqish | **o'lchanmaydi** — qatnov sanaladi |
+| `kon` + `drabilka` + `tarozi` | uchala tugun ketma-ket | tortishlar ayirmasi |
+
+- Zanjirda tarozi bo'lmasa qatnov `netto_source: "count"` bilan yopiladi va
+  `netto_kg` **NULL** bo'lib qoladi (nol emas — aks holda hisobotlarda mashina
+  hech narsa tashimagandek qo'shilib ketardi).
+- Karyer zanjirida yo'q bosqich (masalan faqat chiqish darvozasi bor karyerga
+  kirish hodisasi) qatnovga ulanmaydi — hodisa jurnalda qoladi, lekin taxminiy
+  qatnov yasalmaydi.
 
 ### `direction` semantikasi (kirish/chiqish)
 Bitta darvoza/tarozidan mashina **ham kiradi, ham chiqadi**. Yo'nalish ikki

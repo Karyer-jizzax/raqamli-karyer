@@ -19,7 +19,7 @@ import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, select
 
 from app.main import app
 
@@ -71,18 +71,14 @@ async def purge_events(event_ids: list[UUID | str]) -> None:
     from app.db.session import SessionLocal
     from app.models.event import Event
     from app.models.media import Media
-    from app.models.trip import Trip
+    from app.models.trip import Trip, TripStop
 
     ids = [UUID(str(e)) for e in event_ids]
     async with SessionLocal() as db:
+        # Qatnov o'chsa to'xtashlari ham o'chadi (ON DELETE CASCADE).
         await db.execute(
             delete(Trip).where(
-                or_(
-                    Trip.kon_enter_event_id.in_(ids),
-                    Trip.kon_exit_event_id.in_(ids),
-                    Trip.main_enter_event_id.in_(ids),
-                    Trip.main_exit_event_id.in_(ids),
-                )
+                Trip.id.in_(select(TripStop.trip_id).where(TripStop.event_id.in_(ids)))
             )
         )
         await db.execute(delete(Media).where(Media.event_id.in_(ids)))

@@ -28,22 +28,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, select
 
 from app.db.session import SessionLocal
 from app.models.event import Event
 from app.models.media import Media
 from app.models.protocol import Protocol
 from app.models.quarry import Quarry
-from app.models.trip import Trip
-
-# The four checkpoint columns a trip can hold an event in.
-EVENT_COLS = (
-    Trip.kon_enter_event_id,
-    Trip.kon_exit_event_id,
-    Trip.main_enter_event_id,
-    Trip.main_exit_event_id,
-)
+from app.models.trip import Trip, TripStop
 
 
 def _arg(flag: str) -> str | None:
@@ -76,17 +68,7 @@ async def main(apply: bool, with_protocols: bool, quarry_code: str | None) -> No
         # tegishli bo'ladi (birlashtirishda ortiqcha qator o'chadi), lekin
         # ishonch uchun quyida omon qoladigan qatnovlar bo'yicha tekshiriladi.
         by_trip: dict[object, list[object]] = {
-            t.id: [
-                eid
-                for eid in (
-                    t.kon_enter_event_id,
-                    t.kon_exit_event_id,
-                    t.main_enter_event_id,
-                    t.main_exit_event_id,
-                )
-                if eid is not None
-            ]
-            for t in trips
+            t.id: [s.event_id for s in t.stops] for t in trips
         }
         all_event_ids = {eid for ids in by_trip.values() for eid in ids}
 
@@ -115,9 +97,10 @@ async def main(apply: bool, with_protocols: bool, quarry_code: str | None) -> No
         still_used = set(
             (
                 await db.execute(
-                    select(Event.id)
-                    .join(Trip, or_(*(col == Event.id for col in EVENT_COLS)))
-                    .where(Event.id.in_(all_event_ids), Trip.id.notin_(trip_ids))
+                    select(TripStop.event_id).where(
+                        TripStop.event_id.in_(all_event_ids),
+                        TripStop.trip_id.notin_(trip_ids),
+                    )
                 )
             ).scalars().all()
         ) if all_event_ids and trip_ids else set()

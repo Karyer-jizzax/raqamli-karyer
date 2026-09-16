@@ -5,6 +5,8 @@
 import type { M1Row, Material } from '@karier/api-client';
 import type { Lang } from '@karier/types';
 
+import { postRoleLabelKey } from './status';
+
 type Tr = (key: string) => string;
 
 export interface ExportM1Options {
@@ -84,7 +86,7 @@ export async function exportM1ToExcel(opts: ExportM1Options): Promise<void> {
       ...(includeQuarry ? [quarryNames?.get(r.quarry_id) ?? r.quarry_id] : []),
       r.post_code ?? '',
       r.camera_label ?? '',
-      ...(includeSource ? [t(r.is_main ? 'grp_zavod' : 'grp_karyer')] : []),
+      ...(includeSource ? [t(postRoleLabelKey(r.post_role))] : []),
       plate,
       vtypeLabel(r.vtype),
       t(`dir_${r.direction}`),

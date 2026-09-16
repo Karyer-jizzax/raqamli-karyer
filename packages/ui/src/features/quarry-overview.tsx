@@ -143,6 +143,15 @@ export function QuarryOverview({
           unit="m³"
         />
         <StatTile icon={TruckIcon} label={t('dash_trucks_total')} value={fn(stat?.trucks)} />
+        {/* Tarozisi yo'q karyerda hajm har doim 0 — qatnov sanaladi, shuning
+            uchun bu kafel faqat shunday qatnov bo'lganda chiqadi. */}
+        {(stat?.trips_counted ?? 0) > 0 && (
+          <StatTile
+            icon={TruckIcon}
+            label={t('dash_trips_counted')}
+            value={fn(stat?.trips_counted)}
+          />
+        )}
         <StatTile icon={ActivityIcon} label={t('dash_events')} value={fn(stat?.events)} />
         <StatTile icon={CameraIcon} label={t('dash_cameras')} value={fn(stat?.cameras)} />
       </div>

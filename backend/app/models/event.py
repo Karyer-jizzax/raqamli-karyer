@@ -38,7 +38,13 @@ class Event(Base, UUIDMixin, TimestampMixin):
 
     # true = main factory weighbridge (plate + weight + video); false = kon
     # checkpoint (plate + photo only, no weight). See API.md is_main semantics.
+    # Eskirgan: rol paydo bo'lgach `post_role` autoritativ, bu esa o'rnatilgan
+    # local serverlar bilan moslik uchun va eski hodisalar uchun qoladi.
     is_main: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Hodisa yozilgan paytdagi post roli (POST_ROLES). Nusxa olinadi — post
+    # keyin tahrirlansa yoki o'chirilsa jurnal tarixi buzilmasin, va M-1
+    # filtri/eksporti posts jadvaliga join qilmasin.
+    post_role: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
     direction: Mapped[str] = mapped_column(String(8), default="exit")  # exit | enter | unknown
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True

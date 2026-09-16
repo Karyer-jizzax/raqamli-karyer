@@ -275,6 +275,7 @@ async def m1(
                 vtype=e.vtype,
                 direction=e.direction,
                 is_main=e.is_main,
+                post_role=e.post_role,
                 occurred_at=e.occurred_at.isoformat(),
                 material_id=e.material_id,
                 weight_kg=e.weight_kg,

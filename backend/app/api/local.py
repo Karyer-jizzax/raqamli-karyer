@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.quarry import Post, Quarry
@@ -77,18 +78,23 @@ async def local_config(
         "quarry_id": quarry.code,
         "quarry_name": quarry.name,
         "server": {
-            "url": server_url,
+            "url": settings.ingest_public_url.rstrip("/") or server_url,
             "api_key": quarry.api_key or "",
             "endpoint": "/api/weigh",
             "enabled": True,
             "send_files": True,
         },
         # camera_name the local server sends must match one of these (weigh
-        # resolves Camera by name OR code within the quarry).
+        # resolves Camera by name OR code within the quarry). `post_role` is
+        # advisory: the backend decides the checkpoint type from the post row,
+        # not from the payload's `is_main` — the local server no longer has to
+        # be told which camera is the factory scale.
         "cameras": [
             {
                 "post_code": p.code,
                 "post_name": p.name,
+                "post_role": p.role or "",
+                "default_direction": p.default_direction or "",
                 "code": c.code,
                 "name": c.name,
                 "kind": c.kind,

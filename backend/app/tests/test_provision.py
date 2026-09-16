@@ -12,6 +12,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
+from app.core.config import settings
 from app.tests.conftest import auth_header, login, purge_quarries
 
 # Shu modul yaratgan karyerlar — har testdan keyin o'chiriladi.
@@ -45,7 +46,7 @@ async def _make_quarry(client: httpx.AsyncClient, headers: dict[str, str]) -> di
 
 @pytest.mark.asyncio
 async def test_provision_token_and_local_config(
-    client: httpx.AsyncClient, seeded: None
+    client: httpx.AsyncClient, seeded: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     token = await login(client, "admin", "admin123")
     headers = auth_header(token)
@@ -97,6 +98,14 @@ async def test_provision_token_and_local_config(
         headers={"Authorization": f"Bearer {again.json()['token']}"},
     )
     assert cfg2.json()["server"]["api_key"] == api_key
+
+    # a configured ingest host wins over the browser origin in the token
+    monkeypatch.setattr(settings, "ingest_public_url", "https://ingest.example.uz/")
+    cfg3 = await client.get(
+        "/api/local/config",
+        headers={"Authorization": f"Bearer {again.json()['token']}"},
+    )
+    assert cfg3.json()["server"]["url"] == "https://ingest.example.uz"
 
     # the provisioned key is accepted on /api/weigh for this quarry...
     weigh = await client.post(

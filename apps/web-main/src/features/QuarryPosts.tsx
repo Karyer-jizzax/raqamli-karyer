@@ -4,6 +4,9 @@ import {
   type CameraBrand,
   type CameraKind,
   type Post,
+  type PostDirection,
+  POST_ROLES,
+  type PostRole,
   type Quarry,
   useCreateCamera,
   useCreatePost,
@@ -48,6 +51,40 @@ const CAMERA_KIND_LABEL: Record<CameraKind, string> = {
   plate: 'camera_kind_plate',
   record: 'camera_kind_record',
 };
+
+// Radix Select cannot hold an empty value, so "belgilanmagan" travels as a
+// sentinel and maps back to null on save (mirrors Departments.tsx).
+const NO_ROLE = '__none__';
+const NO_DIRECTION = '__auto__';
+
+/** Post role picker — the checkpoint's place in the trip chain. */
+function RoleSelect({
+  value,
+  onChange,
+}: {
+  value: PostRole | null;
+  onChange: (v: PostRole | null) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Select
+      value={value ?? NO_ROLE}
+      onValueChange={(v) => onChange(v === NO_ROLE ? null : (v as PostRole))}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder={t('post_role')} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NO_ROLE}>{t('post_role_none')}</SelectItem>
+        {POST_ROLES.map((r) => (
+          <SelectItem key={r} value={r}>
+            {t(`role_${r}`)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 // ── delete confirmations (stacked on top of the manage dialog) ──────────────
 function ConfirmDeletePostModal({
@@ -133,14 +170,19 @@ function AddPostForm({ quarryId, onDone }: { quarryId: string; onDone: () => voi
   const { t } = useTranslation();
   const create = useCreatePost();
   const [name, setName] = useState('');
+  const [role, setRole] = useState<PostRole | null>(null);
   const [err, setErr] = useState('');
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr('');
     try {
-      await create.mutateAsync({ quarryId, body: { code: slugCode(name), name: name.trim() } });
+      await create.mutateAsync({
+        quarryId,
+        body: { code: slugCode(name), name: name.trim(), role },
+      });
       setName('');
+      setRole(null);
       onDone();
     } catch (e2) {
       setErr(e2 instanceof ApiError ? e2.message : 'Error');
@@ -156,6 +198,9 @@ function AddPostForm({ quarryId, onDone }: { quarryId: string; onDone: () => voi
         className="min-w-40 flex-1"
         required
       />
+      <div className="min-w-44">
+        <RoleSelect value={role} onChange={setRole} />
+      </div>
       <Button type="submit" size="sm" disabled={create.isPending || !name.trim()}>
         <PlusIcon />
         {t('post_add')}
@@ -399,26 +444,84 @@ function PostCard({ post, quarryId }: { post: Post; quarryId: string }) {
   const update = useUpdatePost();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(post.name);
+  const [role, setRole] = useState<PostRole | null>(post.role);
+  const [direction, setDirection] = useState<PostDirection | null>(post.default_direction);
+  const [debounce, setDebounce] = useState(String(post.debounce_seconds ?? 0));
+  const [err, setErr] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [addingCamera, setAddingCamera] = useState(false);
 
+  function startEditing() {
+    // Forma har ochilganda serverdagi joriy qiymatdan boshlansin — bekor
+    // qilingan avvalgi tahrir qoldig'i saqlanib qolmasin.
+    setName(post.name);
+    setRole(post.role);
+    setDirection(post.default_direction);
+    setDebounce(String(post.debounce_seconds ?? 0));
+    setErr('');
+    setEditing(true);
+  }
+
   async function onSave() {
-    await update.mutateAsync({ id: post.id, body: { name: name.trim() } });
-    setEditing(false);
+    setErr('');
+    try {
+      await update.mutateAsync({
+        id: post.id,
+        body: {
+          name: name.trim(),
+          role,
+          default_direction: direction,
+          debounce_seconds: Number(debounce) || 0,
+        },
+      });
+      setEditing(false);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Error');
+    }
   }
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f1f5f9] bg-[#fbfcfe] px-4 py-3">
         {editing ? (
-          <div className="flex flex-1 items-center gap-2">
-            <Input value={name} onChange={(e) => setName(e.target.value)} className="max-w-64" />
-            <Button type="button" size="icon" variant="ghost" onClick={onSave} disabled={update.isPending}>
-              <CheckIcon />
-            </Button>
-            <Button type="button" size="icon" variant="ghost" onClick={() => setEditing(false)}>
-              <XIcon />
-            </Button>
+          <div className="grid flex-1 gap-2">
+            <div className="flex items-center gap-2">
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="max-w-64" />
+              <Button type="button" size="icon" variant="ghost" onClick={onSave} disabled={update.isPending}>
+                <CheckIcon />
+              </Button>
+              <Button type="button" size="icon" variant="ghost" onClick={() => setEditing(false)}>
+                <XIcon />
+              </Button>
+            </div>
+            {/* Rol — nuqtaning qatnov zanjiridagi o'rni; majburiy yo'nalish va
+                takror oynasi shu nuqtaga tegishli sozlamalar. */}
+            <div className="grid gap-2 sm:grid-cols-3">
+              <RoleSelect value={role} onChange={setRole} />
+              <Select
+                value={direction ?? NO_DIRECTION}
+                onValueChange={(v) => setDirection(v === NO_DIRECTION ? null : (v as PostDirection))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('post_default_direction')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_DIRECTION}>{t('post_role_none')}</SelectItem>
+                  <SelectItem value="enter">{t('dir_enter')}</SelectItem>
+                  <SelectItem value="exit">{t('dir_exit')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                min={0}
+                max={3600}
+                value={debounce}
+                onChange={(e) => setDebounce(e.target.value)}
+                placeholder={t('post_debounce')}
+              />
+            </div>
+            <p className="text-[11px] text-slate-400">{t('post_debounce_hint')}</p>
+            {err && <span className="text-xs text-destructive">{err}</span>}
           </div>
         ) : (
           <>
@@ -426,6 +529,7 @@ function PostCard({ post, quarryId }: { post: Post; quarryId: string }) {
               <MapPinIcon className="size-4 text-primary" />
               <span className="text-sm font-semibold">{post.name}</span>
               <span className="text-[11px] text-slate-400">{post.code}</span>
+              {post.role && <Badge variant="secondary">{t(`role_${post.role}`)}</Badge>}
             </div>
             <div className="flex gap-0.5">
               <Button
@@ -433,7 +537,7 @@ function PostCard({ post, quarryId }: { post: Post; quarryId: string }) {
                 size="icon"
                 variant="ghost"
                 className={ROW_ACTION}
-                onClick={() => setEditing(true)}
+                onClick={startEditing}
               >
                 <PencilIcon />
               </Button>

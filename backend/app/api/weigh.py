@@ -30,9 +30,9 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.event import Event
 from app.models.media import Media
-from app.models.quarry import Quarry
+from app.models.quarry import WEIGHED_ROLES, Quarry
 from app.services.detection import get_detector
-from app.services.ingest import resolve_camera, resolve_material
+from app.services.ingest import find_debounced, resolve_camera, resolve_material
 from app.services.plates import split_plate
 from app.services.storage import save_bytes
 from app.services.trips import link_event
@@ -188,11 +188,28 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
             "duplicate": True,
         }
 
-    # Resolve the camera by name/code within the quarry; fall back to first post.
-    post_id, camera_id = await resolve_camera(db, quarry.id, payload.camera_name)
+    # Kamerani karyer ichida nomi/kodi bo'yicha topamiz — post roli, majburiy
+    # yo'nalishi va debounce oynasi shu yerdan keladi. Topilmasa taxmin
+    # qilinmaydi (pastda hodisa inspect bo'ladi).
+    binding = await resolve_camera(db, quarry.id, payload.camera_name)
 
     plate_region, plate_number = split_plate(payload.plate)
     weight_kg = int(payload.weight) if payload.weight else 0
+    occurred_at = _parse_event_time(payload.event_time)
+
+    # Navbatda turgan mashina bir necha marta kadrga tushadi — shu nuqtaning
+    # oynasi ichidagi takror o'tish yangi qatnov yasamasin (post sozlamasi).
+    repeat = await find_debounced(
+        db, quarry.id, binding, plate_region, plate_number, occurred_at
+    )
+    if repeat is not None:
+        return {
+            "ok": True,
+            "id": str(repeat.id),
+            "event_uid": payload.event_uid,
+            "duplicate": True,
+            "debounced": True,
+        }
 
     # Backend detektori (hozircha stub) — mashina modeli hamda lokal taklif
     # kelmaganda material uchun zaxira manba.
@@ -226,30 +243,47 @@ async def weigh(request: Request, db: DbDep, api_key: ApiKeyDep) -> dict[str, ob
     vol = compute_volume(VolumeInput(density=density, weight_kg=weight_kg), spec)
 
     direction = _map_direction(payload.direction)
+    if direction == "unknown" and binding.default_direction:
+        # Bir tomonlama kamera yo'nalishni o'lchay olmaydi — post sozlamasidagi
+        # majburiy yo'nalish qo'llanadi, aks holda hodisa qatnovga ulanmasdi.
+        direction = binding.default_direction
+
+    # Nuqtaning turi endi bazadan (post roli) keladi. Rol belgilanmagan
+    # karyerlarda eski yo'l saqlanadi: payload'dagi `is_main`.
+    is_main = binding.role == "tarozi" if binding.role is not None else payload.is_main
+    post_role = binding.role or ("tarozi" if is_main else "kon")
 
     # Raqam bo'sh = ANPR o'qiy olmagan → "no_plate" (chalkashlik): operator
     # dashboardda raqamni qo'lda kiritgach, event qatnovga juftlanadi.
-    # Yo'nalish null/notanish yoki material karyer ro'yxatiga mos kelmasa →
-    # "inspect" (operator ko'radi).
+    # Yo'nalish null/notanish, material karyer ro'yxatiga mos kelmasa yoki
+    # kamera nomi bazadagi biror kameraga tushmasa → "inspect" (operator ko'radi).
+    #
+    # O'lchov holati (`vol.status`) faqat **tarozili** nuqtada ma'noga ega:
+    # u vazn/zichlik yo'qligini nuqson deb belgilaydi. Kon darvozasi va
+    # drabilkada tarozi yo'q — o'sha qoida qo'llansa har bir hodisa
+    # "tekshirish kerak" navbatiga tushib, navbatni ma'nosiz qilib qo'yardi.
     if not plate_number:
         event_status = "no_plate"
-    elif direction == "unknown" or material_inspect:
+    elif direction == "unknown" or material_inspect or not binding.matched:
         event_status = "inspect"
-    else:
+    elif post_role in WEIGHED_ROLES:
         event_status = vol.status
+    else:
+        event_status = "confirm"
 
     event = Event(
         event_uid=payload.event_uid,
         quarry_id=quarry.id,
-        post_id=post_id,
-        camera_id=camera_id,
+        post_id=binding.post_id,
+        camera_id=binding.camera_id,
         material_id=material_id,
-        is_main=payload.is_main,
+        is_main=is_main,
+        post_role=post_role,
         plate_region=plate_region,
         plate_number=plate_number,
         model=model,
         direction=direction,
-        occurred_at=_parse_event_time(payload.event_time),
+        occurred_at=occurred_at,
         vtype=_norm_vtype(payload.vtype),
         density=density,
         weight_kg=weight_kg,

@@ -37,7 +37,14 @@ import { FilterBar, FilterSelect, FilterText, useFilterPanel } from '../filters'
 import { cn } from '../lib/utils';
 import { PlateBadge } from '../plate';
 import { Field, ModalForm } from '../primitives';
-import { Chip, directionTone, M1_STATUS_TONE, SOURCE_TONE, TONE_TEXT } from '../status';
+import {
+  Chip,
+  directionTone,
+  M1_STATUS_TONE,
+  postRoleLabelKey,
+  postRoleTone,
+  TONE_TEXT,
+} from '../status';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { MediaDialog } from './media';
@@ -262,13 +269,19 @@ export function M1Table({
     [rows],
   );
   const vtypeOpts = useMemo(() => [...new Set(rows.map((r) => r.vtype).filter(Boolean))], [rows]);
+  // Nuqta turlari ma'lumotdan chiqariladi — drabilkasiz karyerda o'sha
+  // variant umuman ko'rinmasin (avval ikkitasi qattiq yozilgan edi).
+  const roleOpts = useMemo(
+    () => [...new Set(rows.map((r) => r.post_role ?? 'kon'))].sort(),
+    [rows],
+  );
 
   const vtypeLabel = (v: string) => (v === 'truck' ? t('vt_truck') : v === 'car' ? t('vt_car') : v);
 
   // All filtering is client-side over the single fetch (mirrors the reference).
   const filtered = rows.filter((r) => {
     if (f.quarry && r.quarry_id !== f.quarry) return false;
-    if (f.source && (f.source === 'zavod') !== r.is_main) return false;
+    if (f.source && (r.post_role ?? 'kon') !== f.source) return false;
     if (f.post && r.post_code !== f.post) return false;
     if (f.camera && r.camera_label !== f.camera) return false;
     if (f.direction && r.direction !== f.direction) return false;
@@ -321,10 +334,7 @@ export function M1Table({
           label={t('th_source')}
           value={f.source}
           onChange={set('source')}
-          options={[
-            ['zavod', t('grp_zavod')],
-            ['karyer', t('grp_karyer')],
-          ]}
+          options={roleOpts.map((role) => [role, t(postRoleLabelKey(role))])}
         />
         <FilterSelect
           label={t('filt_post')}
@@ -463,8 +473,8 @@ export function M1Table({
                         <td className={GRID_CTR}>{r.post_code ?? '—'}</td>
                         <td className={GRID_CTR}>{r.camera_label ?? '—'}</td>
                         <td className={GRID_CTR}>
-                          <Chip tone={SOURCE_TONE[r.is_main ? 'zavod' : 'karyer']}>
-                            {t(r.is_main ? 'grp_zavod' : 'grp_karyer')}
+                          <Chip tone={postRoleTone(r.post_role)}>
+                            {t(postRoleLabelKey(r.post_role))}
                           </Chip>
                         </td>
                         <td className={GRID_CTR}>

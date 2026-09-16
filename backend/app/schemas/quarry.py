@@ -3,11 +3,14 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 QuarryStatus = Literal["active", "suspended"]
 CameraKind = Literal["plate", "record"]
 CameraBrand = Literal["dahua", "hikvision"]
+# Nazorat nuqtasining zanjirdagi o'rni — models.quarry.POST_ROLES bilan bir xil.
+PostRole = Literal["kon", "kon_kirish", "kon_chiqish", "tarozi", "drabilka"]
+PostDirection = Literal["enter", "exit"]
 
 
 class QuarryCreate(BaseModel):
@@ -38,10 +41,18 @@ class QuarryOut(BaseModel):
 class PostCreate(BaseModel):
     code: str
     name: str
+    # None = rol belgilanmagan: hodisa turi eskicha, local server yuborgan
+    # `is_main` bo'yicha aniqlanadi.
+    role: PostRole | None = None
+    default_direction: PostDirection | None = None
+    debounce_seconds: int = Field(default=0, ge=0, le=3600)
 
 
 class PostUpdate(BaseModel):
     name: str | None = None
+    role: PostRole | None = None
+    default_direction: PostDirection | None = None
+    debounce_seconds: int | None = Field(default=None, ge=0, le=3600)
 
 
 class PostOut(BaseModel):
@@ -51,6 +62,9 @@ class PostOut(BaseModel):
     quarry_id: UUID
     code: str
     name: str
+    role: str | None = None
+    default_direction: str | None = None
+    debounce_seconds: int = 0
 
 
 class CameraCreate(BaseModel):

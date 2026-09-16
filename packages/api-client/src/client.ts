@@ -254,6 +254,9 @@ export interface EventRecord {
   model: string;
   direction: string;
   is_main: boolean;
+  // Nuqtaning zanjirdagi o'rni. `is_main` shundan kelib chiqadi va eskirgan;
+  // eski qatorlarda null bo'lishi mumkin.
+  post_role: PostRole | null;
   occurred_at: string;
   material_id: string | null;
   density: number;
@@ -302,6 +305,21 @@ export interface TripStage {
   video_url: string | null;
 }
 
+/** Chain nodes a trip can stop at, in travel order. Which of them a quarry
+ *  actually has is its own configuration — see `Post.role`. */
+export const TRIP_NODES = ['kon', 'drabilka', 'tarozi'] as const;
+export type TripNode = (typeof TRIP_NODES)[number];
+
+/** One stop with its place in the chain. The trips grid builds its columns
+ *  from these, so a quarry with a drabilka needs no new field. */
+export interface TripStop extends TripStage {
+  node: TripNode;
+  direction: 'enter' | 'exit';
+  seq: number;
+  // Tarozili tugunda o'lchangan vazn; drabilkada doim null.
+  weight_kg: number | null;
+}
+
 export interface TripRecord {
   id: string;
   quarry_id: string;
@@ -311,7 +329,13 @@ export interface TripRecord {
   // no_cargo = netto below the floor (staff car); incomplete = violation
   status: 'open' | 'done' | 'incomplete' | 'no_cargo';
   // derived progress from which checkpoints have fired (status chip)
-  stage: 'karyerda' | 'yolda' | 'zavodda' | 'yakunlandi' | 'chala' | 'yuk_emas';
+  stage: 'karyerda' | 'yolda' | 'drabilkada' | 'zavodda' | 'yakunlandi' | 'chala' | 'yuk_emas';
+  // scale = tarozida o'lchandi; count = zanjirda tarozi yo'q, qatnov sanaldi
+  // (netto_kg null bo'lib qoladi va nol deb o'qilmasligi kerak)
+  netto_source: 'scale' | 'count' | null;
+  // Butun zanjir, tartib bilan. Quyidagi kon_*/main_* maydonlari shundan
+  // hisoblanadi va faqat moslik uchun qoladi.
+  stages: TripStop[];
   kon_enter_event_id: string | null;
   kon_exit_event_id: string | null;
   main_enter_event_id: string | null;
@@ -339,7 +363,10 @@ export interface TripParams {
   plate?: string;
   status?: string;
   kind?: string;
-  // 'true' → faqat zavod tarozisiga yetgan qatnovlar
+  // 'true' → karyer darvozasidan nariga o'tgan qatnovlar (eski nomi main_only,
+  // "zavodga yetganlar" — drabilkali karyerda zavod yo'q va u hammasini yashirardi)
+  past_kon?: string;
+  // eskirgan alias
   main_only?: string;
   limit?: string;
   offset?: string;
@@ -384,6 +411,9 @@ export interface WaybillDocument {
   enter: WaybillWeighing;
   exit: WaybillWeighing;
   netto_kg: number | null;
+  // count = zanjirda tarozi yo'q (drabilka) — hujjatda vazn o'rniga
+  // "o'lchanmagan" yoziladi, bo'sh 0 emas.
+  netto_source?: 'scale' | 'count' | null;
   volume_m3: number | null;
 }
 
@@ -483,6 +513,11 @@ export interface Overview {
   events: number;
   total_volume: number;
   avg_confidence: number;
+  // Yakunlangan qatnovlar: tarozida o'lchangan va faqat sanalgan
+  // (drabilkali karyerda tarozi yo'q). Sanalganlarning hajmi yo'q —
+  // `total_volume`ga qo'shilmaydi, shuning uchun alohida ko'rsatiladi.
+  trips_weighed: number;
+  trips_counted: number;
 }
 
 export interface QuarryStats {
@@ -490,6 +525,8 @@ export interface QuarryStats {
   trucks: number;
   volume: number;
   unidentified: number;
+  trips_weighed: number;
+  trips_counted: number;
   cameras: number;
   cameras_active: number;
   cameras_inactive: number;
@@ -560,6 +597,7 @@ export interface M1Row {
   vtype: string;
   direction: string;
   is_main: boolean;
+  post_role: PostRole | null;
   occurred_at: string;
   material_id: string | null;
   weight_kg: number;
@@ -709,18 +747,35 @@ export const getDistrictCargo = (districtId: string, params: DateRangeParams = {
   api.get<DistrictCargo>(`/stats/districts/${districtId}/cargo${dateRangeQuery(params)}`);
 
 // ── posts / cameras (superadmin — physical camera topology per quarry) ──────
-// Two fixed posts per quarry: the entrance gate (in/out control) and the
-// weighbridge post at the factory. Each post's pole carries two cameras:
-// `plate` (ANPR) and `record` (evidentiary video — does not measure volume).
+// A post is one checkpoint; `role` says where it sits in the trip chain. Each
+// post's pole carries cameras: `plate` (ANPR) and `record` (evidentiary video
+// — does not measure volume).
+//
+// Typical quarry: a `kon` gate + a `tarozi` (factory weighbridge). A quarry
+// whose control point stands at the crusher has `drabilka` instead — no scale
+// there, so those passes are counted, not weighed.
+export const POST_ROLES = ['kon', 'kon_kirish', 'kon_chiqish', 'tarozi', 'drabilka'] as const;
+export type PostRole = (typeof POST_ROLES)[number];
+export type PostDirection = 'enter' | 'exit';
 export interface Post {
   id: string;
   quarry_id: string;
   code: string;
   name: string;
+  // null = rol belgilanmagan: hodisa turi eskicha, local server yuborgan
+  // `is_main` bo'yicha aniqlanadi.
+  role: PostRole | null;
+  // Kamera yo'nalishni o'lchay olmaganda majburlanadigan yo'nalish.
+  default_direction: PostDirection | null;
+  // Navbatdagi takror kadr shu oyna ichida yangi hodisa yaratmaydi (0 = o'chiq).
+  debounce_seconds: number;
 }
 export interface PostInput {
   code: string;
   name: string;
+  role?: PostRole | null;
+  default_direction?: PostDirection | null;
+  debounce_seconds?: number;
 }
 export type CameraKind = 'plate' | 'record';
 export type CameraBrand = 'dahua' | 'hikvision';

@@ -51,4 +51,7 @@ class WaybillDocument(BaseModel):
     enter: WaybillWeighing
     exit: WaybillWeighing
     netto_kg: int | None = None
+    # scale = tarozida o'lchangan; count = zanjirda tarozi yo'q (drabilka) —
+    # hujjatda "o'lchanmagan" deb ko'rsatiladi, bo'sh 0 emas.
+    netto_source: str | None = None
     volume_m3: float | None = None

@@ -66,6 +66,12 @@ async def create_event(
         post_id = (
             await db.execute(select(Post.id).where(Post.quarry_id == quarry_id).limit(1))
         ).scalar_one_or_none()
+    # Nuqta turi postdan olinadi — qatnov zanjiri shu bo'yicha ulanadi.
+    post_role = (
+        (await db.execute(select(Post.role).where(Post.id == post_id))).scalar_one_or_none()
+        if post_id is not None
+        else None
+    )
     camera_id = body.camera_id
     if camera_id is None and post_id is not None:
         camera_id = (
@@ -79,6 +85,7 @@ async def create_event(
         quarry_id=quarry_id,
         post_id=post_id,
         camera_id=camera_id,
+        post_role=post_role,
         material_id=body.material_id,
         created_by=user.id,  # type: ignore[attr-defined]
         plate_region=body.plate_region,

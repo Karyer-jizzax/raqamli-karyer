@@ -66,6 +66,9 @@ class EventOut(BaseModel):
     model: str
     direction: str
     is_main: bool
+    # Nuqtaning zanjirdagi o'rni (kon/tarozi/drabilka…) — hodisa yozilgan
+    # paytdagi nusxasi; `is_main` shundan kelib chiqadi va eskirgan.
+    post_role: str | None = None
     occurred_at: datetime
     is_loaded: bool
     vtype: str

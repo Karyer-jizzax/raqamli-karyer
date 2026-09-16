@@ -15,6 +15,10 @@ class Overview(BaseModel):
     events: int
     total_volume: float
     avg_confidence: float
+    # Yakunlangan qatnovlar: tarozida o'lchangan va faqat sanalgan (drabilka).
+    # Sanalganlarning hajmi yo'q — `total_volume`ga qo'shilmaydi.
+    trips_weighed: int = 0
+    trips_counted: int = 0
 
 
 class QuarryStats(BaseModel):
@@ -24,6 +28,8 @@ class QuarryStats(BaseModel):
     trucks: int
     volume: float
     unidentified: int
+    trips_weighed: int = 0
+    trips_counted: int = 0
     cameras: int
     cameras_active: int
     cameras_inactive: int
@@ -92,6 +98,8 @@ class M1Row(BaseModel):
     vtype: str
     direction: str
     is_main: bool
+    # kon | kon_kirish | kon_chiqish | tarozi | drabilka (yoki eski qatorda None)
+    post_role: str | None = None
     occurred_at: str
     material_id: str | None
     weight_kg: int
