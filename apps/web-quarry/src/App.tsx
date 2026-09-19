@@ -11,8 +11,8 @@ import { Waybill } from './features/Waybill';
 /** Sidebar entry ↔ route. The shell stays router-free, so the map lives here. */
 const NAV: (NavEntry & { path: string })[] = [
   { key: 'dashboard', path: '/dashboard', labelKey: 'nav_dashboard', icon: LayoutDashboardIcon },
-  { key: 'trips', path: '/trips', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'events', path: '/events', labelKey: 'ev_list', icon: ClipboardListIcon },
+  { key: 'trips', path: '/trips', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'live', path: '/live', labelKey: 'nav_live', icon: RadioIcon },
 ];
 

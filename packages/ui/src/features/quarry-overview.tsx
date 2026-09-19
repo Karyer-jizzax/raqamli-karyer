@@ -262,7 +262,7 @@ export function QuarryOverview({
 /** Switches between the per-vehicle stage table and the raw M-1 event log. */
 function DataTabs({ quarryId }: { quarryId?: string }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<'trips' | 'events'>('trips');
+  const [tab, setTab] = useState<'trips' | 'events'>('events');
   return (
     <div>
       <div className="mb-2.5">
@@ -270,8 +270,8 @@ function DataTabs({ quarryId }: { quarryId?: string }) {
           value={tab}
           onChange={setTab}
           items={[
-            { value: 'trips', label: t('nav_data') },
             { value: 'events', label: t('ev_list') },
+            { value: 'trips', label: t('nav_data') },
           ]}
         />
       </div>

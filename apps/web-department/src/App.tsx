@@ -24,8 +24,8 @@ const NAV: (NavEntry & { path: string })[] = [
   { key: 'dashboard', path: '/dashboard', labelKey: 'nav_dashboard', icon: LayoutDashboardIcon },
   { key: 'analytics', path: '/analytics', labelKey: 'nav_analytics', icon: ChartColumnIcon },
   { key: 'quarries', path: '/quarries', labelKey: 'nav_quarries', icon: MountainIcon },
-  { key: 'data', path: '/data', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'events', path: '/events', labelKey: 'ev_list', icon: ClipboardListIcon },
+  { key: 'data', path: '/data', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'live', path: '/live', labelKey: 'nav_live', icon: RadioIcon },
 ];
 
