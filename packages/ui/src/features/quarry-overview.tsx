@@ -13,10 +13,18 @@ import {
   useRegions,
 } from '@karier/api-client';
 import { formatDateTime, formatNumber, currentLang, useTranslation } from '@karier/i18n';
-import { ActivityIcon, BarChart3Icon, CameraIcon, MountainIcon, TruckIcon } from 'lucide-react';
+import {
+  ActivityIcon,
+  BarChart3Icon,
+  CameraIcon,
+  MountainIcon,
+  RadioIcon,
+  TruckIcon,
+} from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 
 import { BucketColumns, ChartCard, ChartTable, StatTile } from '../charts';
+import { Button } from '../components';
 import { cn } from '../lib/utils';
 import { type Period, PeriodPicker, periodRange } from '../period';
 import { localizedName } from '../primitives';
@@ -70,15 +78,20 @@ function StatBox({ label, value, danger }: { label: string; value: string; dange
  *                  drill-down wants them (it is the end of the trail); the
  *                  quarry app does not — there the two grids are their own
  *                  sidebar screens.
+ * @param onLive    Opens the live view on this quarry. Optional because the
+ *                  shell stays router-free: whoever has the router hands the
+ *                  jump in, the same way `breadcrumb` is passed.
  */
 export function QuarryOverview({
   quarryId,
   breadcrumb,
   showData = true,
+  onLive,
 }: {
   quarryId?: string;
   breadcrumb?: ReactNode;
   showData?: boolean;
+  onLive?: () => void;
 }) {
   const { t } = useTranslation();
   const lang = currentLang();
@@ -132,7 +145,17 @@ export function QuarryOverview({
         title={quarryName}
         breadcrumb={breadcrumb}
         meta={<UpdatedStamp at={updatedAt} />}
-        actions={<PeriodPicker value={period} onChange={setPeriod} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {onLive && (
+              <Button variant="outline" size="sm" onClick={onLive}>
+                <RadioIcon className="size-4" strokeWidth={1.7} />
+                {t('nav_live')}
+              </Button>
+            )}
+            <PeriodPicker value={period} onChange={setPeriod} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3">

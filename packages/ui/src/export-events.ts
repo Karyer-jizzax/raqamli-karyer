@@ -72,8 +72,6 @@ export async function exportM1ToExcel(opts: ExportM1Options): Promise<void> {
     t('th_m3'),
     t('th_ton'),
     t('th_matname'),
-    t('th_stir'),
-    t('th_owner'),
   ];
 
   const body = rows.map((r, i) => {
@@ -94,8 +92,6 @@ export async function exportM1ToExcel(opts: ExportM1Options): Promise<void> {
       num(r.volume_final, 1),
       num(r.weight_kg / 1000, 2),
       r.material_id ? materialName(matById.get(r.material_id), lang) : '',
-      r.stir ?? '',
-      r.owner_name ?? '',
     ];
     return cells;
   });
@@ -116,8 +112,6 @@ export async function exportM1ToExcel(opts: ExportM1Options): Promise<void> {
     9, // m³
     9, // ton
     22, // material
-    14, // stir
-    22, // owner
   ];
   ws['!cols'] = widths.map((w) => ({ wch: w }));
 

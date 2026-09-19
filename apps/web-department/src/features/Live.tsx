@@ -2,6 +2,7 @@ import { useDistricts, useQuarries, useQuarriesLive, useRegions } from '@karier/
 import { useTranslation } from '@karier/i18n';
 import { Button, FilterSelect, LivePanel, localizedName, PageHeader, useAuth } from '@karier/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 /**
  * Viloyatdagi istalgan karyerni jonli ko'rish.
@@ -48,6 +49,10 @@ export function Live() {
   const { data: districts } = useDistricts(locked || region || undefined);
   const { data: live } = useQuarriesLive();
 
+  // Karyer sahifasidagi "Jonli ko'rish" shu yerga `?quarry=<id>` bilan keladi.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get('quarry') ?? '';
+
   // Karyer → holat. Ro'yxat 30 soniyada yangilanadi, shuning uchun xarita
   // har safar qayta yig'iladi — muzlagan holat ko'rsatgandan ko'ra arzon.
   const liveById = useMemo(() => new Map((live ?? []).map((r) => [r.quarry_id, r])), [live]);
@@ -90,19 +95,39 @@ export function Live() {
   // qoidada hisoblanadi, aks holda ekran avval o'lik karyerni ko'rsatib,
   // keyin tirigiga sakrardi.
   const fallback = options.find((q) => hasLive(q.id)) ?? options[0];
-  const quarryId = options.some((q) => q.id === picked) ? picked : fallback?.id;
+  // Havola bilan kelingan bo'lsa ekran o'sha karyerni kutadi: zaxira tanlovga
+  // tushib ketsa, bir lahzaga boshqa karyerning oqimi ochilib yopilardi.
+  const quarryId = options.some((q) => q.id === picked)
+    ? picked
+    : requested
+      ? options.find((q) => q.id === requested)?.id
+      : fallback?.id;
 
   // Standart tanlov — oqimi bor karyer. Effektning sharti yuqoridagi render
   // sharti bilan aynan bir xil: `picked` bir marta ro'yxatga tushgach effekt
   // darrov chiqib ketadi, ya'ni 30 soniyalik yangilanish foydalanuvchi qo'lda
   // tanlagan karyerni tortib olmaydi.
   useEffect(() => {
+    // Havoladagi karyer hal bo'lmaguncha zaxira tanlov kutadi, aks holda u
+    // so'ralgan karyerni ochilishiga ulgurmasidan almashtirib yuborardi.
+    if (requested) return;
     if (options.some((q) => q.id === picked)) return;
     // Holatlar hali kelmagan bo'lsa kutamiz: shoshsak alifbodagi birinchisiga
     // yopishib qolamiz va butun ish behuda.
     if (live === undefined) return;
     if (fallback) setPicked(fallback.id);
-  }, [options, live, picked, fallback]);
+  }, [options, live, picked, fallback, requested]);
+
+  // Manzildagi karyer bir marta qo'llanadi va so'rov tozalanadi: qolsa,
+  // tanlagichdan boshqasiga o'tilganda ham havola uni qaytarib tortardi.
+  // Ro'yxat ikkala so'rovdan yig'iladi, shuning uchun ikkalasi kelguncha
+  // "topilmadi" deb hisoblamaymiz.
+  useEffect(() => {
+    if (!requested) return;
+    if (!quarries || !districts) return;
+    if (options.some((q) => q.id === requested)) setPicked(requested);
+    setParams({}, { replace: true });
+  }, [requested, quarries, districts, options, setParams]);
 
   // Ochiq karyerda oqim bo'lmasa — qayerda borligini aytadigan ro'yxat.
   // Faqat birinchisi ishlatiladi, lekin sanog'i ham aytiladi: "yana bittasi

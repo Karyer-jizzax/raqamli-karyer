@@ -29,6 +29,9 @@ export function QuarryDetail() {
     <QuarryOverview
       quarryId={quarryId}
       breadcrumb={<Breadcrumb items={crumbs} onHome={() => navigate('/dashboard')} />}
+      // Jonli ko'rish sahifasi karyerni manzildan oladi — aks holda inspektor
+      // drill-down oxirida topgan karyerni u yerda qaytadan izlardi.
+      onLive={quarryId ? () => navigate(`/live?quarry=${quarryId}`) : undefined}
     />
   );
 }

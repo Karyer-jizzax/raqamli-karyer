@@ -442,9 +442,6 @@ export function M1Table({
                     <th colSpan={1} className={cn(GRID_TH, 'bg-col-mat')} scope="colgroup">
                       {t('grp_mat')}
                     </th>
-                    <th colSpan={2} className={cn(GRID_TH, 'bg-col-own')} scope="colgroup">
-                      {t('grp_yhxx')}
-                    </th>
                   </tr>
                   <tr>
                     <th className={GRID_TH_SUB} scope="col">{t('th_type')}</th>
@@ -455,8 +452,6 @@ export function M1Table({
                     <th className={cn(GRID_TH_SUB, 'bg-col-ai')} scope="col">{t('th_m3')}</th>
                     <th className={cn(GRID_TH_SUB, 'bg-col-ai')} scope="col">{t('th_ton')}</th>
                     <th className={cn(GRID_TH_SUB, 'bg-col-mat')} scope="col">{t('th_matname')}</th>
-                    <th className={cn(GRID_TH_SUB, 'bg-col-own')} scope="col">{t('th_stir')}</th>
-                    <th className={cn(GRID_TH_SUB, 'bg-col-own')} scope="col">{t('th_owner')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -570,8 +565,6 @@ export function M1Table({
                         <td className={GRID_CELL}>
                           {r.material_id ? materialName(matById.get(r.material_id), lang) : '-'}
                         </td>
-                        <td className={cn(GRID_CTR, 'tabular-nums')}>{r.stir || '—'}</td>
-                        <td className={GRID_CELL}>{r.owner_name || '—'}</td>
                       </tr>
                     );
                   })}
@@ -590,7 +583,7 @@ export function M1Table({
                     <td className={cn(GRID_NUM, 'border-t-2 border-t-col-ai-rule')}>
                       {f2(totalTon)}
                     </td>
-                    <td className={cn(GRID_CELL, 'border-t-2 border-t-col-ai-rule')} colSpan={3} />
+                    <td className={cn(GRID_CELL, 'border-t-2 border-t-col-ai-rule')} />
                   </tr>
                 </tfoot>
               </DataGrid>
