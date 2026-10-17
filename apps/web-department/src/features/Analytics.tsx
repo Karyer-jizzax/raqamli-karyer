@@ -14,7 +14,6 @@ import {
   previousPeriod,
   StatTile,
   TrendColumns,
-  TrendLine,
   useAuth,
 } from '@karier/ui';
 import { ActivityIcon, BarChart3Icon } from 'lucide-react';
@@ -23,10 +22,9 @@ import { useMemo, useState } from 'react';
 import { ReportCard } from './ReportCard';
 
 /**
- * Four questions about one period, each in the form that answers it: how much
- * work came in (columns over the year), how well it was confirmed (a rate, so a
- * line on its own scale), what was hauled (a share, so a ring) and where from
- * (a ranking, so bars).
+ * Three questions about one period, each in the form that answers it: how much
+ * work came in (columns over the year), what was hauled (a share, so a ring)
+ * and where from (a ranking, so bars).
  *
  * Every card reads the same filter row; every chart can flip to its table.
  */
@@ -62,7 +60,6 @@ export function Analytics() {
   });
 
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
-  const pctFmt = (v: number) => `${formatNumber(Math.round(v), lang)}%`;
 
   // The query covers the whole year, so a month missing from the buckets is a
   // month with nothing in it — worth a gap in the row rather than a shorter
@@ -83,19 +80,6 @@ export function Analytics() {
     { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
     { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
   ];
-
-  // Zero events is no rate at all, not a rate of zero — `null` breaks the line
-  // instead of drawing a collapse that never happened.
-  const rateTrend = useMemo(() => {
-    const byMonth = new Map((dynamics?.buckets ?? []).map((b) => [b.month, b]));
-    return Array.from({ length: 12 }, (_, i) => {
-      const b = byMonth.get(i + 1);
-      return {
-        month: String(i + 1).padStart(2, '0'),
-        rate: b && b.total > 0 ? b.detection_pct : null,
-      };
-    });
-  }, [dynamics]);
 
   const hasTrend = (dynamics?.buckets ?? []).length > 0;
   const monthLabel = (m: string) => trend.find((r) => r.month === m)?.name ?? m;
@@ -173,43 +157,10 @@ export function Analytics() {
         )}
       </ChartCard>
 
-      {/* A rate and a count never share a plot — the second y-scale would be an
-          arbitrary alignment — so the quality question gets its own card, beside
-          the material split. No items-start: the ring is the shorter of the two,
-          and it centers in a stretched card instead of leaving a ragged edge. */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <ChartCard
-          className="lg:col-span-2"
-          title={`${t('an_rate')} · ${period.year}`}
-          subtitle={t('an_rate_hint')}
-          stale={dynFetching}
-          table={
-            <ChartTable
-              head={[t('an_month'), t('an_rate')]}
-              rows={rateTrend.map((r) => ({
-                key: r.month,
-                label: monthLabel(r.month),
-                values: [r.rate == null ? '—' : pctFmt(r.rate)],
-              }))}
-            />
-          }
-        >
-          {hasTrend ? (
-            <TrendLine
-              data={rateTrend}
-              xKey="month"
-              valueKey="rate"
-              label={t('an_confirmed')}
-              domain={[0, 100]}
-              format={pctFmt}
-              height={230}
-              labelFor={monthLabel}
-            />
-          ) : (
-            <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
-          )}
-        </ChartCard>
-
+      {/* A ranking of districts is a comparison, and a tuman account has
+          nothing to compare against — its own bar alone says nothing. Without
+          it the ring keeps half the width rather than stretching across. */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <ReportCard
           n={2}
           title={t('an_by_material')}
@@ -219,20 +170,17 @@ export function Analytics() {
           range={range}
           districtId={district || undefined}
         />
+        {!lockedDistrict && (
+          <ReportCard
+            n={4}
+            title={t('an_by_district')}
+            subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
+            metric="volume"
+            range={range}
+            districtId={district || undefined}
+          />
+        )}
       </div>
-
-      {/* A ranking of districts is a comparison, and a tuman account has
-          nothing to compare against — its own bar alone says nothing. */}
-      {!lockedDistrict && (
-        <ReportCard
-          n={4}
-          title={t('an_by_district')}
-          subtitle={`${t('rep_vol')} · ${t('an_top_hint')}`}
-          metric="volume"
-          range={range}
-          districtId={district || undefined}
-        />
-      )}
     </div>
   );
 }
