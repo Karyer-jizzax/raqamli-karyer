@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import {
   createAgentToken,
@@ -129,6 +130,31 @@ export function useDistricts(regionId?: string) {
 
 export function useQuarries() {
   return useQuery({ queryKey: ['quarries'], queryFn: getQuarries });
+}
+
+/**
+ * Karyeri bor tumanlar — filtr tanlagichlari uchun.
+ *
+ * `/districts` ma'muriy ro'yxatni beradi: unda hali bironta karyer ochilmagan
+ * tuman ham bor. Filtrda bunday tumanni ko'rsatish — tanlanganda hamisha bo'sh
+ * ekran beradigan variant; inspektor esa buni "ma'lumot yo'qoldi" deb o'qiydi.
+ *
+ * Sanoq `/quarries` dan olinadi (`District`da `quarry_count` yo'q). Ikkala
+ * so'rov ham allaqachon kesh'da: `useQuarries` boshqa ekranlarda ishlatiladi.
+ * To'xtatilgan karyer ham hisoblanadi — uning tarixiy ma'lumoti bor.
+ */
+export function useDistrictsWithQuarries(regionId?: string) {
+  const districts = useDistricts(regionId);
+  const quarries = useQuarries();
+  const withQuarries = useMemo(() => {
+    if (!districts.data) return undefined;
+    // Karyerlar hali kelmagan bo'lsa ro'yxatni qirqmaymiz: bo'sh ro'yxat
+    // ko'rsatgandan ko'ra, bir lahza ortiqcha tuman ko'rsatgan yaxshi.
+    if (!quarries.data) return districts.data;
+    const has = new Set(quarries.data.map((q) => q.district_id));
+    return districts.data.filter((d) => has.has(d.id));
+  }, [districts.data, quarries.data]);
+  return { ...districts, data: withQuarries };
 }
 
 export function useCreateQuarry() {

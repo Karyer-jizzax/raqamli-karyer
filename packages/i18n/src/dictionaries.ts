@@ -69,7 +69,7 @@ const uzLatn: Dict = {
 
   cam_stream: 'Oqim manzili',
   ql_subtitle: "Viloyatdagi barcha karyerlar ro'yxati",
-  ql_search: 'Karyer nomi yoki kodi…',
+  ql_search: 'Karyer nomi…',
   ql_empty: "Karyerlar topilmadi",
 
   q_new: 'Yangi karyer',
@@ -614,7 +614,7 @@ const uzCyrl: Dict = {
 
   cam_stream: 'Оқим манзили',
   ql_subtitle: 'Вилоятдаги барча карьерлар рўйхати',
-  ql_search: 'Карьер номи ёки коди…',
+  ql_search: 'Карьер номи…',
   ql_empty: 'Карьерлар топилмади',
 
   q_new: 'Янги карьер',
@@ -1155,7 +1155,7 @@ const ru: Dict = {
 
   cam_stream: 'Адрес потока',
   ql_subtitle: 'Список всех карьеров области',
-  ql_search: 'Название или код карьера…',
+  ql_search: 'Название карьера…',
   ql_empty: 'Карьеры не найдены',
 
   q_new: 'Новый карьер',

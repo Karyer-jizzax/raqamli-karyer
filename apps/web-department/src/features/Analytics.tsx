@@ -1,4 +1,4 @@
-import { useDistricts, useDynamics, useOverview } from '@karier/api-client';
+import { useDistrictsWithQuarries, useDynamics, useOverview } from '@karier/api-client';
 import { currentLang, formatNumber, monthName, useTranslation } from '@karier/i18n';
 import {
   ChartCard,
@@ -34,7 +34,8 @@ export function Analytics() {
   const { t } = useTranslation();
   const lang = currentLang();
   const { user } = useAuth();
-  const { data: districts } = useDistricts(user?.region_id ?? undefined);
+  // Karyeri yo'q tuman tanlagichga kirmaydi — u hamisha bo'sh ekran berardi.
+  const { data: districts } = useDistrictsWithQuarries(user?.region_id ?? undefined);
   // Tumanga bog'langan hisob uchun tuman tanlagichi tanlashga hech nima
   // bermaydi — server ham, ro'yxat ham allaqachon bitta tumandan iborat.
   const lockedDistrict = user?.district_id ?? null;

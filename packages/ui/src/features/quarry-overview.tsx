@@ -221,7 +221,6 @@ export function QuarryOverview({
               return (
                 <span
                   key={i}
-                  title={quarry ? `${quarry.code}-CAM${i + 1}` : undefined}
                   className="inline-flex items-center gap-[5px] rounded-lg border px-2.5 py-[5px] text-xs text-foreground tabular-nums"
                 >
                   <span

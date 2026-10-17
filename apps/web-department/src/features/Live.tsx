@@ -1,4 +1,9 @@
-import { useDistricts, useQuarries, useQuarriesLive, useRegions } from '@karier/api-client';
+import {
+  useDistrictsWithQuarries,
+  useQuarries,
+  useQuarriesLive,
+  useRegions,
+} from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import { Button, FilterSelect, LivePanel, localizedName, PageHeader, useAuth } from '@karier/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -46,7 +51,8 @@ export function Live() {
   const district = lockedDistrict || pickedDistrict;
   const [picked, setPicked] = useState('');
 
-  const { data: districts } = useDistricts(locked || region || undefined);
+  // Karyeri yo'q tuman tanlagichga kirmaydi.
+  const { data: districts } = useDistrictsWithQuarries(locked || region || undefined);
   const { data: live } = useQuarriesLive();
 
   // Karyer sahifasidagi "Jonli ko'rish" shu yerga `?quarry=<id>` bilan keladi.

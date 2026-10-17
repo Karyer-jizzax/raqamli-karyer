@@ -133,6 +133,7 @@ export {
   useQuarryMaterials,
   useSetQuarryMaterials,
   useDistricts,
+  useDistrictsWithQuarries,
   useQuarries,
   useCreateQuarry,
   useUpdateQuarry,

@@ -52,9 +52,7 @@ export function Quarries() {
     if (district && r.district_id !== district) return false;
     if (q) {
       const needle = q.trim().toLowerCase();
-      if (!r.name.toLowerCase().includes(needle) && !r.code.toLowerCase().includes(needle)) {
-        return false;
-      }
+      if (!r.name.toLowerCase().includes(needle)) return false;
     }
     return true;
   });
@@ -121,9 +119,6 @@ export function Quarries() {
                     {t('q_name')}
                   </th>
                   <th className={GRID_TH} scope="col">
-                    {t('q_code')}
-                  </th>
-                  <th className={GRID_TH} scope="col">
                     {t('q_district')}
                   </th>
                   <th className={GRID_TH} scope="col">
@@ -146,7 +141,6 @@ export function Quarries() {
                   >
                     <td className={cn(GRID_CTR, 'tabular-nums')}>{i + 1}</td>
                     <td className={cn(GRID_CELL, 'font-semibold text-primary')}>{r.name}</td>
-                    <td className={cn(GRID_CTR, 'tabular-nums')}>{r.code}</td>
                     <td className={GRID_CELL}>{districtById.get(r.district_id) ?? '—'}</td>
                     <td className={GRID_CTR}>
                       <Chip tone={r.status === 'suspended' ? 'danger' : 'success'}>
