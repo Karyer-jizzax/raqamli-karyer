@@ -88,7 +88,7 @@ departamentda ikkita slot bir xil rangga tushardi) va CVD/kontrast bo'yicha teks
 - Qolgani: kamera uptime tarixi (backendda hodisa tarixi yo'q — alohida endpoint kerak)
 
 ### A2.4 Analitika sahifasi ✅
-`/analytics` — oylik dinamika (ustunlar), tasdiqlash darajasi (chiziq), M2 material (halqa),
+`/analytics` — oylik dinamika (ustunlar), M2 material (halqa),
 M4 tuman (reyting); tuman + davr filtri, har bir karta jadvalga o'tadi. Excel eksporti hali
 yo'q (M-1 eksporti bor) — kichik qolgan ish.
 
