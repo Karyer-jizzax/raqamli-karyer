@@ -67,6 +67,14 @@ function StatusBlock({ status }: { status: AgentStatus }) {
     [t('agent_upload'), status.upload_kbps_avg ? `${status.upload_kbps_avg} kbps` : '—'],
     [t('agent_quality'), status.current_quality || '—'],
     [t('agent_version'), status.agent_version || '—'],
+    [
+      t('agent_route'),
+      status.route === 'fallback'
+        ? t('agent_route_fallback')
+        : status.route === 'primary'
+          ? t('agent_route_primary')
+          : '—',
+    ],
   ];
 
   return (

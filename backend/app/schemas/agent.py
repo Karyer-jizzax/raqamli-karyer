@@ -1,9 +1,10 @@
 """Tarozi punkti agenti DTO'lari — doc.txt §3 sxemalari."""
 
+from datetime import date as Day
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 VideoQuality = Literal["auto", "snapshot", "low", "medium", "high"]
 
@@ -40,6 +41,71 @@ class AgentHeartbeatIn(BaseModel):
     upload_kbps_avg: int = 0
     live_streaming: bool = False
     current_quality: str = ""
+    # "primary" | "fallback" — agent qaysi yo'ldan kelyapti (karyer-local endpoints.py)
+    route: str = ""
+    # Kunlik onlayn/oflayn statistikasi (karyer-local API.md §9). Xom holda
+    # qabul qilinadi va har bir kun alohida tekshiriladi: bitta buzuq kun
+    # butun heartbeat'ni 422 qilib, agentni "oflayn" ko'rsatib qo'ymasin.
+    uptime: list[Any] = []
+
+
+UptimeReason = Literal["internet", "server", "off"]
+
+
+class AgentOutage(BaseModel):
+    """Bitta uzilish oralig'i: `from`/`to` — HH:MM (UTC+5)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: str = Field(alias="from", max_length=5)
+    to: str = Field(max_length=5)
+    min: int = Field(ge=0, le=1440)
+    reason: UptimeReason
+
+
+class AgentUptimeDayIn(BaseModel):
+    """Heartbeat'dagi `uptime[]` elementi."""
+
+    date: Day
+    covered_min: int = Field(ge=0, le=1440)
+    online_min: int = Field(ge=0, le=1440)
+    net_down_min: int = Field(ge=0, le=1440)
+    server_down_min: int = Field(ge=0, le=1440)
+    agent_off_min: int = Field(ge=0, le=1440)
+    outages: list[AgentOutage] = []
+
+
+class AgentUptimeDayOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: Day
+    covered_min: int
+    online_min: int
+    net_down_min: int
+    server_down_min: int
+    agent_off_min: int
+    outages: list[dict] = []
+
+    @field_validator("outages", mode="before")
+    @classmethod
+    def _none_is_empty(cls, value: object) -> object:
+        return [] if value is None else value
+
+
+class AgentUptimeTotals(BaseModel):
+    covered_min: int = 0
+    online_min: int = 0
+    net_down_min: int = 0
+    server_down_min: int = 0
+    agent_off_min: int = 0
+    outages: int = 0
+
+
+class AgentUptimeOut(BaseModel):
+    """Karyer sahifasidagi "Onlayn/oflayn" jadvali — kunlar yangidan eskiga."""
+
+    days: list[AgentUptimeDayOut] = []
+    totals: AgentUptimeTotals = AgentUptimeTotals()
 
 
 class AgentConfigUpdate(BaseModel):
@@ -103,6 +169,8 @@ class AgentStatusOut(BaseModel):
     upload_kbps_avg: int = 0
     live_streaming: bool = False
     current_quality: str = ""
+    # "fallback" — asosiy yo'l (ingest) yopiq, agent zaxira orqali ishlayapti
+    route: str = ""
     config: AgentConfigOut | None = None
     # "hls" — MediaMTX oqimi bor; "snapshot" — JPEG kadr; "off" — jonli
     # ko'rinish yo'q (agent offline, o'chirilgan yoki kanal juda sekin).

@@ -330,6 +330,7 @@ async def test_heartbeat_shows_agent_online(client: httpx.AsyncClient, seeded: N
             "upload_kbps_avg": 1840,
             "live_streaming": True,
             "current_quality": "medium",
+            "route": "fallback",
         },
     )
     assert beat.status_code == 200, beat.text
@@ -340,6 +341,8 @@ async def test_heartbeat_shows_agent_online(client: httpx.AsyncClient, seeded: N
     assert after["queue_size"] == 3
     assert after["current_quality"] == "medium"
     assert after["cameras"] == [{"id": "cam1", "ok": True}]
+    # asosiy yo'l yopiq — agent zaxira orqali kelyapti (saytda ko'rinadi)
+    assert after["route"] == "fallback"
     # MediaMTX sozlanmagan bo'lsa havola berilmaydi, lekin rejim "hls" qoladi.
     assert after["live_mode"] == "hls"
 
@@ -472,3 +475,68 @@ async def test_live_status_is_scoped_like_the_quarry_list(
         assert {r["quarry_id"] for r in listed.json()} == {q["id"] for q in quarries}
 
     assert (await client.get("/api/v1/live-status")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_uptime_upserts_daily_stats(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """karyer-local API.md §9: `uptime` kunlari `(karyer, sana)` bo'yicha
+    UPSERT qilinadi, buzuq kun heartbeat'ni yiqitmaydi."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    quarry = await _new_quarry(client, admin)
+    token = await _agent_token(client, admin, quarry["id"])
+
+    today = datetime.now(_UZ_TZ).date()
+    yesterday = today - timedelta(days=1)
+
+    def day(d: object, online: int, net: int, outages: list[dict]) -> dict[str, object]:
+        return {
+            "date": str(d),
+            "covered_min": online + net,
+            "online_min": online,
+            "net_down_min": net,
+            "server_down_min": 0,
+            "agent_off_min": 0,
+            "outages": outages,
+        }
+
+    outage = {"from": "14:12", "to": "15:49", "min": 97, "reason": "internet"}
+    beat = await client.post(
+        "/api/agent/heartbeat",
+        headers=auth_header(token),
+        json={
+            "agent_version": "1.3.0-netwatch",
+            "uptime": [
+                day(yesterday, 1343, 97, [outage]),
+                day(today, 300, 0, []),
+                {"date": "kecha", "online_min": -5},  # buzuq — tashlanadi
+            ],
+        },
+    )
+    assert beat.status_code == 200, beat.text
+
+    # Kun davomida o'sadi — keyingi heartbeat bugungi qatorni yangilaydi.
+    beat = await client.post(
+        "/api/agent/heartbeat",
+        headers=auth_header(token),
+        json={"agent_version": "1.3.0-netwatch", "uptime": [day(today, 301, 0, [])]},
+    )
+    assert beat.status_code == 200, beat.text
+
+    res = await client.get(f"/api/v1/quarries/{quarry['id']}/agent/uptime", headers=admin)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert [d["date"] for d in data["days"]] == [str(today), str(yesterday)]
+    assert data["days"][0]["online_min"] == 301
+    assert data["days"][1]["net_down_min"] == 97
+    assert data["days"][1]["outages"] == [outage]
+    assert data["totals"]["online_min"] == 1644
+    assert data["totals"]["outages"] == 1
+
+    only_yesterday = await client.get(
+        f"/api/v1/quarries/{quarry['id']}/agent/uptime",
+        params={"date_from": str(yesterday), "date_to": str(yesterday)},
+        headers=admin,
+    )
+    assert [d["date"] for d in only_yesterday.json()["days"]] == [str(yesterday)]

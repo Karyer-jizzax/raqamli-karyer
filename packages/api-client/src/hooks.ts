@@ -5,6 +5,7 @@ import {
   createAgentToken,
   getQuarriesLiveStatus,
   getQuarryAgent,
+  getQuarryUptime,
   revokeAgentToken,
   updateAgentConfig,
   type AgentConfig,
@@ -196,6 +197,18 @@ export function useQuarryAgent(quarryId: string | undefined, poll = true) {
     queryFn: () => getQuarryAgent(quarryId!),
     enabled: !!quarryId,
     refetchInterval: poll ? 30_000 : false,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Kunlik onlayn/oflayn statistikasi. Bugungi qator har daqiqada o'sadi,
+ * shuning uchun agent heartbeat'i bilan bir xil oraliqda yangilanadi. */
+export function useQuarryUptime(quarryId: string | undefined, params: DateRangeParams = {}) {
+  return useQuery({
+    queryKey: ['quarry-uptime', quarryId, params],
+    queryFn: () => getQuarryUptime(quarryId!, params),
+    enabled: !!quarryId,
+    refetchInterval: 60_000,
     placeholderData: (prev) => prev,
   });
 }

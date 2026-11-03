@@ -355,7 +355,7 @@ qilinadi/bekor qilinadi. Bekor qilingan token → `401`.
 | `POST /api/agent/events` | `multipart/form-data`: `event` (JSON) + `photo` (majburiy). `201` — yangi, `200` — dublikat (`event_id` idempotentlik kaliti), `422` — foto/JSON xato |
 | `PUT /api/agent/events/{event_id}/video` | Tana `video/mp4` (≤ `AGENT_MAX_VIDEO_MB`). Qayta PUT eski faylni almashtiradi; `404` — bunday hodisa yo'q |
 | `GET /api/agent/config` | doc §3.2 sozlamalari + `live_stream` bloki (MediaMTX push manzili) |
-| `POST /api/agent/heartbeat` | Holat (tarozi, kameralar, navbat, kanal tezligi, joriy sifat); javobda joriy config ham keladi |
+| `POST /api/agent/heartbeat` | Holat (tarozi, kameralar, navbat, kanal tezligi, joriy sifat); javobda joriy config ham keladi. Ixtiyoriy `uptime[]` — kunlik onlayn/oflayn daqiqalari (karyer-local API.md §9), `(karyer, sana)` bo'yicha UPSERT; buzuq kun tashlab yuboriladi, heartbeat baribir `200` |
 | `POST /api/agent/live-snapshot` | Tana `image/jpeg`, `X-Camera-Id` sarlavhasi. Faqat xotirada saqlanadi (`204`) |
 
 Sayt tomoni (JWT bilan):
@@ -366,6 +366,9 @@ Sayt tomoni (JWT bilan):
 | `POST /api/v1/quarries/{id}/agent/token` | Token berish / qayta generatsiya (superadmin) |
 | `DELETE /api/v1/quarries/{id}/agent/token` | Tokenni bekor qilish (superadmin) |
 | `PUT /api/v1/quarries/{id}/agent/config` | Masofadan sozlash (superadmin) |
+| `GET /api/v1/quarries/{id}/agent/uptime?date_from&date_to` | Kunlik onlayn/oflayn statistikasi (yangidan eskiga) + davr yig'indisi — karyer sahifasidagi jadval |
+
+**Zaxira yo'l.** `GET /api/local/config` javobidagi `server.fallback_urls` — ingest manzili karyer tarmog'idan yopilsa agent o'tadigan manzillar: avvalo provision token'idagi sayt manzili (Cloudflare orqali), keyin `AGENT_FALLBACK_URLS` (vergul bilan). Agent heartbeat'da `route` (`primary` | `fallback`) yuboradi; u `GET /api/v1/quarries/{id}/agent` javobida qaytadi va saytda "Zaxira yo'l orqali" belgisi bo'lib ko'rinadi.
 | `GET /api/v1/live-snapshot/{quarry_id}/{camera_id}` | Oxirgi JPEG kadr (snapshot rejimi) |
 
 **Hodisa qanday yoziladi.** Agent hodisasi odatdagi `events` jadvaliga tushadi

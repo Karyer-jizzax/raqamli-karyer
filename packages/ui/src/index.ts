@@ -82,6 +82,7 @@ export { exportM1ToExcel, type ExportM1Options } from './export-events';
 export { AgentStatusStrip, LiveGrid, LivePanel } from './features/live-view';
 export { M1Table } from './features/m1-table';
 export { QuarryOverview } from './features/quarry-overview';
+export { UptimeTable } from './features/uptime-table';
 export { TripsTable } from './features/trips-table';
 
 // shadcn/ui primitives + helpers

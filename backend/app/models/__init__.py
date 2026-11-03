@@ -1,6 +1,7 @@
 """ORM models. Import all here so Alembic autogenerate sees the full metadata."""
 
 from app.models.agent import QuarryAgent
+from app.models.agent_uptime import AgentUptimeDaily
 from app.models.app_setting import AppSetting
 from app.models.event import Event
 from app.models.material import Material
@@ -14,6 +15,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 
 __all__ = [
+    "AgentUptimeDaily",
     "AppSetting",
     "Event",
     "QuarryAgent",

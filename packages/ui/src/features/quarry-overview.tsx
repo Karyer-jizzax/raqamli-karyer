@@ -33,6 +33,7 @@ import { Chip, TONE_DOT } from '../status';
 import { AgentStatusStrip } from './live-view';
 import { M1Table } from './m1-table';
 import { TripsTable } from './trips-table';
+import { UptimeTable } from './uptime-table';
 
 function InfoRow({
   label,
@@ -275,6 +276,9 @@ export function QuarryOverview({
           <p className="py-12 text-center text-data text-muted-foreground">{t('an_empty')}</p>
         )}
       </ChartCard>
+
+      {/* Local server qancha vaqt aloqada bo'lgani — agenti bor karyerdagina. */}
+      {agent?.token_issued_at && <UptimeTable quarryId={quarryId} range={range} />}
 
       {showData && <DataTabs quarryId={quarryId} />}
     </div>

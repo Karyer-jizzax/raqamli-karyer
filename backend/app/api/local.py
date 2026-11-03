@@ -62,6 +62,15 @@ async def local_config(
 ) -> dict[str, object]:
     """The local server's config.json seed — see local README / API.md."""
     quarry, server_url = ctx
+    primary = settings.ingest_public_url.rstrip("/") or server_url
+    # Hosting tarmog'i karyer IP'sidan ingest'ga yo'lni yopib qo'yishi mumkin
+    # (2026-10-30 da shunday bo'lgan). Agent shunda shu manzillarga o'tadi —
+    # avvalo token'dagi (Cloudflare orqali) sayt manzili.
+    fallbacks: list[str] = []
+    for url in [server_url, *settings.agent_fallback_urls.split(",")]:
+        url = url.strip().rstrip("/")
+        if url and url != primary and url not in fallbacks:
+            fallbacks.append(url)
     posts = (
         (
             await db.execute(
@@ -78,7 +87,8 @@ async def local_config(
         "quarry_id": quarry.code,
         "quarry_name": quarry.name,
         "server": {
-            "url": settings.ingest_public_url.rstrip("/") or server_url,
+            "url": primary,
+            "fallback_urls": fallbacks,
             "api_key": quarry.api_key or "",
             "endpoint": "/api/weigh",
             "enabled": True,

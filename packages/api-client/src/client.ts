@@ -881,6 +881,9 @@ export interface AgentStatus {
   upload_kbps_avg: number;
   live_streaming: boolean;
   current_quality: string;
+  /** "fallback" — asosiy yo'l (ingest) yopiq, agent Cloudflare orqali ishlayapti:
+   * ma'lumot keladi, lekin jonli video ishlamaydi. */
+  route: 'primary' | 'fallback' | '';
   config: AgentConfig | null;
   live_mode: 'hls' | 'snapshot' | 'off';
   streams: AgentStream[];
@@ -914,6 +917,37 @@ export const revokeAgentToken = (quarryId: string) =>
   api.del(`/quarries/${quarryId}/agent/token`);
 export const updateAgentConfig = (quarryId: string, body: Partial<AgentConfig>) =>
   api.put<AgentStatus>(`/quarries/${quarryId}/agent/config`, body);
+
+/** Uzilish sababi: internet yo'q, server javob bermadi yoki kompyuter o'chiq. */
+export type UptimeReason = 'internet' | 'server' | 'off';
+
+export interface UptimeOutage {
+  from: string; // HH:MM, UTC+5
+  to: string;
+  min: number;
+  reason: UptimeReason;
+}
+
+/** Bir kunlik onlayn/oflayn statistikasi — agent heartbeat'da yuboradi
+ * (karyer-local API.md §9). `online + net_down + server_down + agent_off =
+ * covered`; bugungi kun uchun `covered` hozirgacha o'tgan daqiqalar. */
+export interface UptimeDay {
+  date: string; // YYYY-MM-DD
+  covered_min: number;
+  online_min: number;
+  net_down_min: number;
+  server_down_min: number;
+  agent_off_min: number;
+  outages: UptimeOutage[];
+}
+
+export interface AgentUptime {
+  days: UptimeDay[]; // yangidan eskiga
+  totals: Omit<UptimeDay, 'date' | 'outages'> & { outages: number };
+}
+
+export const getQuarryUptime = (quarryId: string, params: DateRangeParams = {}) =>
+  api.get<AgentUptime>(`/quarries/${quarryId}/agent/uptime${dateRangeQuery(params)}`);
 
 export interface LiveSnapshot {
   blob: Blob;

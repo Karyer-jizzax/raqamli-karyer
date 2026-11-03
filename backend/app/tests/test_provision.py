@@ -106,6 +106,8 @@ async def test_provision_token_and_local_config(
         headers={"Authorization": f"Bearer {again.json()['token']}"},
     )
     assert cfg3.json()["server"]["url"] == "https://ingest.example.uz"
+    # ingest yo'li yopilsa agent token'dagi (Cloudflare orqali) manzilga o'tadi
+    assert cfg3.json()["server"]["fallback_urls"] == ["http://test"]
 
     # the provisioned key is accepted on /api/weigh for this quarry...
     weigh = await client.post(

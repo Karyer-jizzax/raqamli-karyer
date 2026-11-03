@@ -108,8 +108,28 @@ const uzLatn: Dict = {
   q_token_copied: 'Nusxalandi ✓',
   q_token_action: 'Local server tokeni — {{name}}',
 
+  // Onlayn/oflayn statistikasi (karyer-local API.md §9)
+  up_title: 'Onlayn/oflayn statistikasi',
+  up_hint: "Karyerdagi local server har kuni qancha vaqt aloqada bo'lgani va uzilish sababi",
+  up_date: 'Sana',
+  up_online: 'Onlayn',
+  up_net_down: "Internet yo'q",
+  up_server_down: 'Server javob bermadi',
+  up_agent_off: "Kompyuter o'chiq",
+  up_online_pct: 'Onlayn ulushi',
+  up_outages: 'Uzilishlar',
+  up_empty: "Bu davr uchun statistika yo'q — agent yangilanmagan yoki hali heartbeat yubormagan",
+  up_h: '{{h}} soat',
+  up_m: '{{m}} daq',
+  up_hm: '{{h}} soat {{m}} daq',
+
   // Tarozi punkti agenti (doc.txt)
   agent_section: 'Tarozi agenti',
+  agent_route: "Aloqa yo'li",
+  agent_route_primary: "Asosiy (to'g'ridan-to'g'ri)",
+  agent_route_fallback: "Zaxira yo'l orqali",
+  agent_route_fallback_hint:
+    "Asosiy server manzili bu karyer tarmog'idan ochilmayapti. Ma'lumot Cloudflare orqali kelyapti, jonli video ishlamaydi — hosting firewall'ini tekshiring.",
   agent_action: '{{name}} — tarozi agenti',
   agent_online: 'Agent ishlayapti',
   agent_offline: 'Agent aloqada emas',
@@ -651,8 +671,28 @@ const uzCyrl: Dict = {
   q_token_copied: 'Нусхаланди ✓',
   q_token_action: 'Local server токени — {{name}}',
 
+  // Онлайн/офлайн статистикаси (karyer-local API.md §9)
+  up_title: 'Онлайн/офлайн статистикаси',
+  up_hint: 'Карьердаги локал сервер ҳар куни қанча вақт алоқада бўлгани ва узилиш сабаби',
+  up_date: 'Сана',
+  up_online: 'Онлайн',
+  up_net_down: 'Интернет йўқ',
+  up_server_down: 'Сервер жавоб бермади',
+  up_agent_off: 'Компьютер ўчиқ',
+  up_online_pct: 'Онлайн улуши',
+  up_outages: 'Узилишлар',
+  up_empty: 'Бу давр учун статистика йўқ — агент янгиланмаган ёки ҳали heartbeat юбормаган',
+  up_h: '{{h}} соат',
+  up_m: '{{m}} дақ',
+  up_hm: '{{h}} соат {{m}} дақ',
+
   // Тарози пункти агенти (doc.txt)
   agent_section: 'Тарози агенти',
+  agent_route: 'Алоқа йўли',
+  agent_route_primary: 'Асосий (тўғридан-тўғри)',
+  agent_route_fallback: 'Захира йўл орқали',
+  agent_route_fallback_hint:
+    'Асосий сервер манзили бу карьер тармоғидан очилмаяпти. Маълумот Cloudflare орқали келяпти, жонли видео ишламайди — хостинг firewall\'ини текширинг.',
   agent_action: '{{name}} — тарози агенти',
   agent_online: 'Агент ишлаяпти',
   agent_offline: 'Агент алоқада эмас',
@@ -1190,8 +1230,28 @@ const ru: Dict = {
   q_token_copied: 'Скопировано ✓',
   q_token_action: 'Токен локального сервера — {{name}}',
 
+  // Статистика онлайн/офлайн (karyer-local API.md §9)
+  up_title: 'Статистика онлайн/офлайн',
+  up_hint: 'Сколько времени локальный сервер карьера был на связи и почему связь пропадала',
+  up_date: 'Дата',
+  up_online: 'Онлайн',
+  up_net_down: 'Нет интернета',
+  up_server_down: 'Сервер не отвечал',
+  up_agent_off: 'Компьютер выключен',
+  up_online_pct: 'Доля онлайн',
+  up_outages: 'Обрывы',
+  up_empty: 'Нет статистики за этот период — агент не обновлён или ещё не присылал heartbeat',
+  up_h: '{{h}} ч',
+  up_m: '{{m}} мин',
+  up_hm: '{{h}} ч {{m}} мин',
+
   // Агент весового пункта (doc.txt)
   agent_section: 'Весовой агент',
+  agent_route: 'Канал связи',
+  agent_route_primary: 'Основной (напрямую)',
+  agent_route_fallback: 'Через резервный канал',
+  agent_route_fallback_hint:
+    'Основной адрес сервера недоступен из сети карьера. Данные идут через Cloudflare, живое видео не работает — проверьте firewall хостинга.',
   agent_action: '{{name}} — весовой агент',
   agent_online: 'Агент на связи',
   agent_offline: 'Агент не на связи',

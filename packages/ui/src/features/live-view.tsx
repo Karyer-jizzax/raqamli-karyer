@@ -32,7 +32,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { EmptyState, TableSkeleton } from '../data-table';
 import { FilterSelect, FilterText } from '../filters';
 import { cn } from '../lib/utils';
-import { Chip, TONE_DOT } from '../status';
+import { Chip, TONE_CHIP, TONE_DOT } from '../status';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
@@ -528,6 +528,17 @@ export function AgentStatusStrip({ status, flat }: { status: AgentStatus; flat?:
       )}
       {status.current_quality && (
         <Meta label={t('agent_quality')} value={qualityLabel(status.current_quality, t)} />
+      )}
+      {/* Asosiy yo'l yopiq — ma'lumot zaxira (Cloudflare) orqali kelyapti.
+          Ko'rinib turishi kerak: jonli video shu payt ishlamaydi va bu
+          hosting tomonida tuzatilishi kerak bo'lgan muammo. */}
+      {status.online && status.route === 'fallback' && (
+        <span
+          className={cn('rounded-md px-2 py-0.5 text-2xs font-medium', TONE_CHIP.warning)}
+          title={t('agent_route_fallback_hint')}
+        >
+          {t('agent_route_fallback')}
+        </span>
       )}
       {/* Agent versiyasi bu yerda emas: bu chiziq "hozir ishlayaptimi" degan
           savolga javob beradi, versiya esa adminkaning agent kartasida —

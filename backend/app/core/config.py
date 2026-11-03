@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # below weigh_max_upload_mb — so ingest goes to a DNS-only host
     # (https://ingest.raqamli-karyer.uz). Empty: use the provision token's url.
     ingest_public_url: str = ""
+    # Extra origins the local server falls back to when ingest_public_url is
+    # unreachable from its network (comma-separated). The provision token's
+    # browser-facing url (behind Cloudflare) is always offered first.
+    agent_fallback_urls: str = ""
     # Trip (qatnov) linking: how long after "kon exit" a "main enter" (and
     # after "main enter" a "main exit") may arrive and still join the trip.
     trip_link_window_hours: int = 24

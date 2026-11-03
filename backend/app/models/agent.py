@@ -74,6 +74,9 @@ class QuarryAgent(Base, UUIDMixin, TimestampMixin):
     upload_kbps_avg: Mapped[int] = mapped_column(Integer, default=0)
     live_streaming: Mapped[bool] = mapped_column(Boolean, default=False)
     current_quality: Mapped[str] = mapped_column(String(16), default="")
+    # Agent qaysi yo'ldan kelyapti: "primary" — ingest (to'g'ridan-to'g'ri),
+    # "fallback" — asosiy yo'l yopilgan, Cloudflare orqali (jonli video ishlamaydi).
+    route: Mapped[str] = mapped_column(String(16), default="")
 
     @property
     def is_online(self) -> bool:

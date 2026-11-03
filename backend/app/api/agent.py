@@ -38,6 +38,7 @@ from app.models.event import Event
 from app.models.media import Media
 from app.models.quarry import Quarry
 from app.schemas.agent import AgentEventIn, AgentHeartbeatIn
+from app.services import uptime as uptime_svc
 from app.services.agents import agent_by_token
 from app.services.detection import get_detector
 from app.services.ingest import resolve_camera, resolve_material
@@ -324,6 +325,11 @@ async def heartbeat(body: AgentHeartbeatIn, db: DbDep, agent: AgentDep) -> dict[
     agent.upload_kbps_avg = body.upload_kbps_avg
     agent.live_streaming = body.live_streaming
     agent.current_quality = body.current_quality[:16]
+    agent.route = body.route[:16]
+    # Kunlik onlayn/oflayn statistikasi (karyer-local API.md §9). Eski agent
+    # bu maydonni yubormaydi — bo'sh ro'yxat, hech narsa yozilmaydi.
+    if body.uptime:
+        await uptime_svc.upsert_days(db, agent.quarry_id, uptime_svc.parse_days(body.uptime))
     await db.commit()
     return {
         "ok": True,

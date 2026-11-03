@@ -5,10 +5,11 @@ uchun bo'lgan qism: token berish/bekor qilish, sozlama formasi, "online/offline"
 kartasi va snapshot rejimidagi jonli kadr.
 """
 
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,9 +23,13 @@ from app.schemas.agent import (
     AgentConfigOut,
     AgentConfigUpdate,
     AgentStatusOut,
+    AgentUptimeDayOut,
+    AgentUptimeOut,
+    AgentUptimeTotals,
     LiveStreamOut,
     QuarryLiveStatusOut,
 )
+from app.services import uptime as uptime_svc
 from app.services.agents import get_agent, issue_token, revoke_token
 from app.services.live import get_snapshot, hls_url, webrtc_url
 
@@ -155,6 +160,7 @@ async def _status_out(
         upload_kbps_avg=agent.upload_kbps_avg,
         live_streaming=agent.live_streaming,
         current_quality=agent.current_quality,
+        route=agent.route or "",
         config=AgentConfigOut(**agent.config_payload()),
         live_mode=mode,
         streams=streams,
@@ -243,6 +249,30 @@ async def get_quarry_agent(quarry_id: UUID, user: CurrentUser, db: DbDep) -> Age
     quarry = await _quarry_in_scope(db, user, quarry_id)
     agent = await get_agent(db, quarry_id)
     return await _status_out(db, quarry, agent, with_token=user.role == "superadmin")
+
+
+@router.get("/quarries/{quarry_id}/agent/uptime", response_model=AgentUptimeOut)
+async def get_quarry_uptime(
+    quarry_id: UUID,
+    user: CurrentUser,
+    db: DbDep,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+) -> AgentUptimeOut:
+    """Kunlik onlayn/oflayn statistikasi (karyer-local API.md §9) — karyer
+    sahifasidagi jadval. Ko'rish huquqi karyer kartasi bilan bir xil."""
+    await _quarry_in_scope(db, user, quarry_id)
+    rows = await uptime_svc.list_days(db, quarry_id, date_from, date_to)
+    days = [AgentUptimeDayOut.model_validate(r) for r in rows]
+    totals = AgentUptimeTotals(
+        covered_min=sum(d.covered_min for d in days),
+        online_min=sum(d.online_min for d in days),
+        net_down_min=sum(d.net_down_min for d in days),
+        server_down_min=sum(d.server_down_min for d in days),
+        agent_off_min=sum(d.agent_off_min for d in days),
+        outages=sum(len(d.outages) for d in days),
+    )
+    return AgentUptimeOut(days=days, totals=totals)
 
 
 @router.post("/quarries/{quarry_id}/agent/token", response_model=AgentStatusOut)
