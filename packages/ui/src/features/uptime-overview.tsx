@@ -28,11 +28,13 @@ import { CountPill, Eyebrow } from '../primitives';
 import { Tabs } from '../shell';
 import { type Tone, TONE_CHIP, TONE_DOT } from '../status';
 import { Input } from '../ui/input';
+import { UptimeLog } from './uptime-log';
 import { UptimeTable } from './uptime-table';
 
 type Span = '1' | '7' | '30' | '90';
 type State = 'online' | 'offline' | 'none';
 type StatusFilter = 'all' | State;
+type Detail = 'log' | 'daily';
 
 const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DAY_MS = 86_400_000;
@@ -171,6 +173,7 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Detail>('log');
   // "Qancha vaqtdan beri" yozuvlari so'rovsiz ham yurib tursin.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -436,8 +439,25 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                     </button>
 
                     {expanded && (
-                      <div className="border-t bg-surface-subtle px-[18px] py-4">
-                        <UptimeTable quarryId={q.quarry_id} range={range} />
+                      <div className="grid gap-3 border-t bg-surface-subtle px-[18px] py-4">
+                        <Tabs<Detail>
+                          value={detail}
+                          onChange={setDetail}
+                          items={[
+                            { value: 'log', label: t('log_tab') },
+                            { value: 'daily', label: t('log_tab_daily') },
+                          ]}
+                        />
+                        {detail === 'log' ? (
+                          <UptimeLog
+                            quarryId={q.quarry_id}
+                            range={range}
+                            online={state === 'online'}
+                            lastSeen={state === 'none' ? null : q.last_seen_at}
+                          />
+                        ) : (
+                          <UptimeTable quarryId={q.quarry_id} range={range} />
+                        )}
                       </div>
                     )}
                   </li>
