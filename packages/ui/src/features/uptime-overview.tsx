@@ -36,7 +36,6 @@ import { UptimeTable } from './uptime-table';
 
 type Span = '1' | '7' | '30' | '90';
 type State = 'online' | 'offline';
-type StatusFilter = 'all' | State;
 type Detail = 'log' | 'daily';
 
 const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -128,7 +127,6 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
   const lang = currentLang();
   const dur = useDuration();
   const [span, setSpan] = useState<Span>('7');
-  const [status, setStatus] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail>('log');
@@ -182,10 +180,9 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
     const rank = (q: QuarryUptimeSummary) =>
       stateOf(q) === 'online' ? 1 : hasLiveAgent(q) ? 0 : 2;
     return rows
-      .filter((q) => status === 'all' || stateOf(q) === status)
       .filter((q) => !needle || q.name.toLowerCase().includes(needle))
       .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-  }, [rows, status, search]);
+  }, [rows, search]);
 
   const fmtPct = (v: number | null) =>
     v == null ? '—' : `${formatNumber(v, lang, Number.isInteger(v) ? 0 : 1)}%`;
@@ -226,15 +223,6 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
             <CountPill>{rows.length}</CountPill>
           </div>
           <div className="ml-auto flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
-            <Tabs<StatusFilter>
-              value={status}
-              onChange={setStatus}
-              items={[
-                { value: 'all', label: t('flt_all') },
-                { value: 'online', label: t('ao_online') },
-                { value: 'offline', label: t('ao_offline') },
-              ]}
-            />
             <div className="relative w-full sm:w-56">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
               <Input
