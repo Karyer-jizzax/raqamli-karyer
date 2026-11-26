@@ -37,8 +37,8 @@ function UptimePage() {
   // Ramka boshqa sahifalar (Events, Live) bilan bir xil — AppShell padding bermaydi.
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-3.5 p-4 lg:p-6 xl:max-w-[1680px]">
-      <PageHeader eyebrow={t('sec_oversight')} title={t('ao_title')} subtitle={t('ao_hint')} />
-      <UptimeOverview showHint={false} />
+      <PageHeader eyebrow={t('sec_oversight')} title={t('ao_title')} />
+      <UptimeOverview />
     </div>
   );
 }

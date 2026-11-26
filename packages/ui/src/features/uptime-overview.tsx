@@ -34,20 +34,71 @@ import { UptimeLog } from './uptime-log';
 import { offlineMin, OnlineBar, onlineMin, onlinePct, useDuration } from './uptime-shared';
 import { UptimeTable } from './uptime-table';
 
-type Span = '1' | '7' | '30' | '90';
+type Span = '1' | '7' | '30' | 'custom';
 type State = 'online' | 'offline';
 type Detail = 'log' | 'daily';
 
 const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DAY_MS = 86_400_000;
+/** Backend bir so'rovda ko'pi bilan 92 kun beradi (`/agents/uptime`). */
+const MAX_DAYS = 92;
 
 /** O'zbekiston vaqtidagi kun, YYYY-MM-DD — agent kunlarni shunday sanaydi. */
 function uzDay(offsetDays = 0): string {
   return new Date(Date.now() + UZ_OFFSET_MS - offsetDays * DAY_MS).toISOString().slice(0, 10);
 }
 
-function spanRange(span: Span): DateRangeParams {
-  return { date_from: uzDay(Number(span) - 1), date_to: uzDay(0) };
+function shiftDay(day: string, days: number): string {
+  return new Date(new Date(`${day}T00:00:00Z`).getTime() + days * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** Tanlangan davr; qo'lda tanlanganda tartibi to'g'rilanadi va 92 kunga qisqartiriladi. */
+function spanRange(span: Span, custom: DateRangeParams): DateRangeParams {
+  if (span !== 'custom') return { date_from: uzDay(Number(span) - 1), date_to: uzDay(0) };
+  let { date_from: from, date_to: to } = custom;
+  if (!from || !to) return { date_from: uzDay(6), date_to: uzDay(0) };
+  if (from > to) [from, to] = [to, from];
+  const minFrom = shiftDay(to, -(MAX_DAYS - 1));
+  return { date_from: from < minFrom ? minFrom : from, date_to: to };
+}
+
+/** Ixcham davr tugmalari — qidiruv maydoni bilan bir balandlikda (h-9). */
+function SpanSwitch({
+  value,
+  onChange,
+  items,
+}: {
+  value: Span;
+  onChange: (v: Span) => void;
+  items: { value: Span; label: string }[];
+}) {
+  return (
+    <div role="tablist" className="inline-flex h-9 gap-0.5 rounded-[10px] bg-secondary p-[3px]">
+      {items.map((it) => {
+        const active = it.value === value;
+        return (
+          <button
+            key={it.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(it.value)}
+            className={cn(
+              'cursor-pointer rounded-[8px] px-2.5 text-xs font-semibold whitespace-nowrap',
+              'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
+              active
+                ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(15_23_42_/_0.08)]'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {it.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /** Agent ulanmagan yoki tokeni bekor qilingan karyer — ham oflayn. */
@@ -122,11 +173,15 @@ function SummaryTile({ label, value, dot }: { label: string; value: string; dot?
 const ROW_GRID =
   'md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.3fr)_auto_20px] md:items-center md:gap-5';
 
-export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
+export function UptimeOverview() {
   const { t } = useTranslation();
   const lang = currentLang();
   const dur = useDuration();
   const [span, setSpan] = useState<Span>('7');
+  const [custom, setCustom] = useState<DateRangeParams>(() => ({
+    date_from: uzDay(6),
+    date_to: uzDay(0),
+  }));
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail>('log');
@@ -137,7 +192,7 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
     return () => clearInterval(id);
   }, []);
 
-  const range = useMemo(() => spanRange(span), [span]);
+  const range = useMemo(() => spanRange(span, custom), [span, custom]);
   const { data, isLoading, dataUpdatedAt } = useUptimeSummary(range);
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -149,7 +204,7 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
     for (let ts = start; ts <= end; ts += DAY_MS) out.push(new Date(ts).toISOString().slice(0, 10));
     return out.slice(-30);
   }, [range.date_from, range.date_to]);
-  const showDays = span !== '1';
+  const showDays = dates.length > 1;
 
   const counts = useMemo(() => {
     const c: Record<State, number> = { online: 0, offline: 0 };
@@ -189,25 +244,6 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
 
   return (
     <div className="grid gap-5">
-      {/* hint + davr */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {showHint ? (
-          <p className="m-0 max-w-[70ch] text-sm text-muted-foreground">{t('ao_hint')}</p>
-        ) : (
-          <span />
-        )}
-        <Tabs<Span>
-          value={span}
-          onChange={setSpan}
-          items={[
-            { value: '1', label: t('ao_span_today') },
-            { value: '7', label: t('ao_span_days', { n: 7 }) },
-            { value: '30', label: t('ao_span_days', { n: 30 }) },
-            { value: '90', label: t('ao_span_days', { n: 90 }) },
-          ]}
-        />
-      </div>
-
       {/* umumiy sonlar */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <SummaryTile label={t('ao_now_online')} value={String(counts.online)} dot="bg-success" />
@@ -222,14 +258,46 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
             <Eyebrow className="text-slate-400">{t('nav_quarries')}</Eyebrow>
             <CountPill>{rows.length}</CountPill>
           </div>
-          <div className="ml-auto flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
-            <div className="relative w-full sm:w-56">
+          <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <SpanSwitch
+              value={span}
+              onChange={setSpan}
+              items={[
+                { value: '1', label: t('ao_span_today') },
+                { value: '7', label: t('ao_span_days', { n: 7 }) },
+                { value: '30', label: t('ao_span_days', { n: 30 }) },
+                { value: 'custom', label: t('ao_span_custom') },
+              ]}
+            />
+            {span === 'custom' && (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={custom.date_from}
+                  max={custom.date_to || uzDay(0)}
+                  onChange={(e) => setCustom((c) => ({ ...c, date_from: e.target.value }))}
+                  aria-label={t('ao_date_from')}
+                  className="h-9 w-[136px] px-2.5 text-xs md:text-xs"
+                />
+                <span className="text-xs text-slate-400">–</span>
+                <Input
+                  type="date"
+                  value={custom.date_to}
+                  min={custom.date_from}
+                  max={uzDay(0)}
+                  onChange={(e) => setCustom((c) => ({ ...c, date_to: e.target.value }))}
+                  aria-label={t('ao_date_to')}
+                  className="h-9 w-[136px] px-2.5 text-xs md:text-xs"
+                />
+              </div>
+            )}
+            <div className="relative w-full sm:w-48">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('ao_search')}
-                className="w-full pl-9"
+                className="h-9 w-full pl-9"
               />
             </div>
           </div>
