@@ -39,13 +39,7 @@ export {
   TableSkeleton,
   Unit,
 } from './data-table';
-export {
-  FilterBar,
-  FilterDate,
-  FilterSelect,
-  FilterText,
-  useFilterPanel,
-} from './filters';
+export { FilterBar, FilterDate, FilterSelect, FilterText, useFilterPanel } from './filters';
 export {
   type DateRange,
   deltaPct,
@@ -83,6 +77,7 @@ export { AgentStatusStrip, LiveGrid, LivePanel } from './features/live-view';
 export { M1Table } from './features/m1-table';
 export { QuarryOverview } from './features/quarry-overview';
 export { UptimeTable } from './features/uptime-table';
+export { UptimeOverview } from './features/uptime-overview';
 export { TripsTable } from './features/trips-table';
 
 // shadcn/ui primitives + helpers

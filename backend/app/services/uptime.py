@@ -83,3 +83,32 @@ async def list_days(
         query = query.where(AgentUptimeDaily.date <= date_to)
     query = query.order_by(AgentUptimeDaily.date.desc())
     return list((await db.execute(query)).scalars().all())
+
+
+async def list_days_many(
+    db: AsyncSession,
+    quarry_ids: list[uuid.UUID],
+    date_from: date,
+    date_to: date,
+) -> dict[uuid.UUID, list[AgentUptimeDaily]]:
+    """Bir nechta karyerning davrdagi kunlari — bitta so'rovda, karyer
+    bo'yicha guruhlangan (har birida yangidan eskiga)."""
+    out: dict[uuid.UUID, list[AgentUptimeDaily]] = {qid: [] for qid in quarry_ids}
+    if not quarry_ids:
+        return out
+    query = (
+        select(AgentUptimeDaily)
+        .where(
+            AgentUptimeDaily.quarry_id.in_(quarry_ids),
+            AgentUptimeDaily.date >= date_from,
+            AgentUptimeDaily.date <= date_to,
+        )
+        .order_by(AgentUptimeDaily.quarry_id, AgentUptimeDaily.date.desc())
+    )
+    for row in (await db.execute(query)).scalars().all():
+        out.setdefault(row.quarry_id, []).append(row)
+    return out
+
+
+def today_uz() -> date:
+    return datetime.now(_UZ_TZ).date()

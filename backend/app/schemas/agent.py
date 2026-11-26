@@ -108,6 +108,52 @@ class AgentUptimeOut(BaseModel):
     totals: AgentUptimeTotals = AgentUptimeTotals()
 
 
+class AgentUptimeDayBrief(BaseModel):
+    """Kunlik yig'indi, uzilish oraliqlarisiz — umumiy sahifadagi kun
+    kataklari uchun (oraliqlar karyer ochilganda alohida so'raladi)."""
+
+    date: Day
+    covered_min: int
+    online_min: int
+    net_down_min: int
+    server_down_min: int
+    agent_off_min: int
+    outages: int = 0
+
+
+class AgentLastOutage(BaseModel):
+    """Davrdagi eng so'nggi uzilish — "qachondan beri onlayn" savoliga javob."""
+
+    date: Day
+    from_: str = Field(serialization_alias="from")
+    to: str
+    min: int
+    reason: str
+
+
+class QuarryUptimeSummaryOut(BaseModel):
+    """"Aloqa holati" sahifasidagi bitta karyer qatori.
+
+    Ikki manba birlashadi: hozirgi holat (`online`, `last_seen_at`) — server
+    o'zi ko'rgan heartbeat'dan; davrdagi daqiqalar va sabablar — agent
+    yuborgan `uptime`dan (karyer-local API.md §9). Agent oflayn paytda
+    `uptime` kelmaydi, shuning uchun "hozir qancha vaqtdan beri oflayn"
+    faqat `last_seen_at` dan hisoblanadi."""
+
+    quarry_id: str
+    name: str
+    district_id: str
+    has_agent: bool
+    is_active: bool = False
+    online: bool = False
+    last_seen_at: datetime | None = None
+    agent_version: str = ""
+    route: str = ""
+    totals: AgentUptimeTotals = AgentUptimeTotals()
+    last_outage: AgentLastOutage | None = None
+    days: list[AgentUptimeDayBrief] = []
+
+
 class AgentConfigUpdate(BaseModel):
     """Adminkadagi sozlash formasi (doc §3.2 maydonlari, hammasi ixtiyoriy)."""
 

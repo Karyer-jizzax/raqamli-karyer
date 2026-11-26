@@ -5,7 +5,7 @@ uchun bo'lgan qism: token berish/bekor qilish, sozlama formasi, "online/offline"
 kartasi va snapshot rejimidagi jonli kadr.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -22,12 +22,15 @@ from app.models.user import User
 from app.schemas.agent import (
     AgentConfigOut,
     AgentConfigUpdate,
+    AgentLastOutage,
     AgentStatusOut,
+    AgentUptimeDayBrief,
     AgentUptimeDayOut,
     AgentUptimeOut,
     AgentUptimeTotals,
     LiveStreamOut,
     QuarryLiveStatusOut,
+    QuarryUptimeSummaryOut,
 )
 from app.services import uptime as uptime_svc
 from app.services.agents import get_agent, issue_token, revoke_token
@@ -181,12 +184,22 @@ async def live_status(user: CurrentUser, db: DbDep) -> list[QuarryLiveStatusOut]
     ulanadi (router.py) va `GET /quarries/{quarry_id}` bu satrni o'ziga olib,
     UUID o'rniga "live-status" ko'rgani uchun 422 qaytarardi.
     """
-    # Qamrov qoidasi `quarries.list_quarries` bilan bir xil bo'lishi shart:
-    # bu ro'yxat ham butun mamlakatni bitta tumanning ekraniga chiqarib
-    # yuborishi mumkin. Qator-ma-qator `ensure_quarry_scope` emas — u har
-    # chaqiruvda tuman so'rovini qiladi (karyer soniga teng so'rov) va begona
-    # karyerni filtrlash o'rniga 403 otadi; bu yerda begona karyer xato emas,
-    # shunchaki bo'lmasligi kerak.
+    rows = (await db.execute(_scoped_quarries_with_agent(user))).all()
+    if not rows:
+        return []
+    return await _live_rows(db, rows)
+
+
+def _scoped_quarries_with_agent(user: User):
+    """`(Quarry, QuarryAgent | None)` qatorlari — foydalanuvchi ko'ra oladigan
+    karyerlar, nomi bo'yicha.
+
+    Qamrov qoidasi `quarries.list_quarries` bilan bir xil bo'lishi shart:
+    bu ro'yxat ham butun mamlakatni bitta tumanning ekraniga chiqarib
+    yuborishi mumkin. Qator-ma-qator `ensure_quarry_scope` emas — u har
+    chaqiruvda tuman so'rovini qiladi (karyer soniga teng so'rov) va begona
+    karyerni filtrlash o'rniga 403 otadi; bu yerda begona karyer xato emas,
+    shunchaki bo'lmasligi kerak."""
     stmt = (
         select(Quarry, QuarryAgent)
         .outerjoin(QuarryAgent, QuarryAgent.quarry_id == Quarry.id)
@@ -206,10 +219,11 @@ async def live_status(user: CurrentUser, db: DbDep) -> list[QuarryLiveStatusOut]
                     select(District.id).where(District.region_id == user.region_id)
                 )
             )
-    rows = (await db.execute(stmt)).all()
-    if not rows:
-        return []
+    return stmt
 
+
+async def _live_rows(db: AsyncSession, rows) -> list[QuarryLiveStatusOut]:
+    """`_scoped_quarries_with_agent` qatorlaridan jonli holat ro'yxati."""
     # Agent kamera aytmagan karyerlar uchun zaxira son — `_cameras`ning
     # zaxira yo'li bilan bir xil filtr (faqat faol kameralar). Bitta guruhli
     # so'rov: karyer soniga qarab so'rov ko'paymasin.
@@ -273,6 +287,86 @@ async def get_quarry_uptime(
         outages=sum(len(d.outages) for d in days),
     )
     return AgentUptimeOut(days=days, totals=totals)
+
+
+# Umumiy sahifa uchun davr chegarasi: 90 kundan ortig'ini agent ham saqlamaydi.
+_SUMMARY_MAX_DAYS = 92
+_SUMMARY_DEFAULT_DAYS = 7
+
+
+@router.get("/agents/uptime", response_model=list[QuarryUptimeSummaryOut])
+async def uptime_summary(
+    user: CurrentUser,
+    db: DbDep,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+) -> list[QuarryUptimeSummaryOut]:
+    """"Aloqa holati" sahifasi: ko'rish huquqi bor hamma karyerning hozirgi
+    onlayn/oflayn holati va davrdagi kunlik statistikasi — bitta so'rovda.
+
+    Qamrov `live-status` bilan bir xil. Yo'l `/quarries/...` ostida emas —
+    sababi `live_status` docstring'ida."""
+    to = date_to or uptime_svc.today_uz()
+    frm = date_from or to - timedelta(days=_SUMMARY_DEFAULT_DAYS - 1)
+    if frm > to:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "date_from > date_to")
+    frm = max(frm, to - timedelta(days=_SUMMARY_MAX_DAYS - 1))
+
+    rows = (await db.execute(_scoped_quarries_with_agent(user))).all()
+    by_quarry = await uptime_svc.list_days_many(db, [q.id for q, _ in rows], frm, to)
+
+    out: list[QuarryUptimeSummaryOut] = []
+    for quarry, agent in rows:
+        days = by_quarry.get(quarry.id, [])
+        last_outage = None
+        for day in days:  # yangidan eskiga
+            outages = [o for o in (day.outages or []) if isinstance(o, dict)]
+            if outages:
+                o = outages[-1]
+                last_outage = AgentLastOutage(
+                    date=day.date,
+                    from_=str(o.get("from", "")),
+                    to=str(o.get("to", "")),
+                    min=int(o.get("min", 0) or 0),
+                    reason=str(o.get("reason", "")),
+                )
+                break
+        brief = [
+            AgentUptimeDayBrief(
+                date=d.date,
+                covered_min=d.covered_min,
+                online_min=d.online_min,
+                net_down_min=d.net_down_min,
+                server_down_min=d.server_down_min,
+                agent_off_min=d.agent_off_min,
+                outages=len(d.outages or []),
+            )
+            for d in days
+        ]
+        item = QuarryUptimeSummaryOut(
+            quarry_id=str(quarry.id),
+            name=quarry.name,
+            district_id=str(quarry.district_id),
+            has_agent=bool(agent is not None and agent.token_issued_at is not None),
+            totals=AgentUptimeTotals(
+                covered_min=sum(d.covered_min for d in brief),
+                online_min=sum(d.online_min for d in brief),
+                net_down_min=sum(d.net_down_min for d in brief),
+                server_down_min=sum(d.server_down_min for d in brief),
+                agent_off_min=sum(d.agent_off_min for d in brief),
+                outages=sum(d.outages for d in brief),
+            ),
+            last_outage=last_outage,
+            days=brief,
+        )
+        if agent is not None:
+            item.is_active = agent.is_active
+            item.online = bool(agent.is_active and agent.is_online)
+            item.last_seen_at = agent.last_seen_at
+            item.agent_version = agent.agent_version or ""
+            item.route = agent.route or ""
+        out.append(item)
+    return out
 
 
 @router.post("/quarries/{quarry_id}/agent/token", response_model=AgentStatusOut)

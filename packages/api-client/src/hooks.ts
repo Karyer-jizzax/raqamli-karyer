@@ -6,6 +6,7 @@ import {
   getQuarriesLiveStatus,
   getQuarryAgent,
   getQuarryUptime,
+  getUptimeSummary,
   revokeAgentToken,
   updateAgentConfig,
   type AgentConfig,
@@ -169,8 +170,13 @@ export function useCreateQuarry() {
 export function useUpdateQuarry() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: { name?: string; status?: 'active' | 'suspended' } }) =>
-      updateQuarry(id, body),
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: { name?: string; status?: 'active' | 'suspended' };
+    }) => updateQuarry(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quarries'] }),
   });
 }
@@ -227,6 +233,17 @@ export function useQuarriesLive() {
   });
 }
 
+/** "Aloqa holati" sahifasi — hamma karyer bitta so'rovda; heartbeat
+ * oralig'i bilan bir xil yangilanadi. */
+export function useUptimeSummary(params: DateRangeParams = {}) {
+  return useQuery({
+    queryKey: ['uptime-summary', params],
+    queryFn: () => getUptimeSummary(params),
+    refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
 export function useCreateAgentToken() {
   const qc = useQueryClient();
   return useMutation({
@@ -248,8 +265,7 @@ export function useUpdateAgentConfig() {
   return useMutation({
     mutationFn: ({ quarryId, body }: { quarryId: string; body: Partial<AgentConfig> }) =>
       updateAgentConfig(quarryId, body),
-    onSuccess: (_d, { quarryId }) =>
-      qc.invalidateQueries({ queryKey: ['quarry-agent', quarryId] }),
+    onSuccess: (_d, { quarryId }) => qc.invalidateQueries({ queryKey: ['quarry-agent', quarryId] }),
   });
 }
 
@@ -311,7 +327,9 @@ export function useUpdateCamera() {
       body,
     }: {
       id: string;
-      body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active' | 'brand' | 'ip' | 'login' | 'password'>>;
+      body: Partial<
+        Pick<Camera, 'name' | 'stream_url' | 'is_active' | 'brand' | 'ip' | 'login' | 'password'>
+      >;
     }) => updateCamera(id, body),
     onSuccess: (data: Camera) => qc.invalidateQueries({ queryKey: ['post-cameras', data.post_id] }),
   });

@@ -293,8 +293,10 @@ export interface EventInput {
 export const getEvents = () => api.get<EventRecord[]>('/events');
 export const createEvent = (body: EventInput) => api.post<EventRecord>('/events', body);
 // Manual plate fix for a "no_plate" event — the server re-links it to its trip.
-export const updateEventPlate = (id: string, body: { plate_region: string; plate_number: string }) =>
-  api.patch<EventRecord>(`/events/${id}/plate`, body);
+export const updateEventPlate = (
+  id: string,
+  body: { plate_region: string; plate_number: string },
+) => api.patch<EventRecord>(`/events/${id}/plate`, body);
 
 // ── trips (qatnovlar) — kon exit → main enter → main exit chains, produced
 // server-side by the ingest linker; the UI only reads them ────────────────────
@@ -492,10 +494,7 @@ async function postForm<T>(
 
 export const analyzeFrame = (file: File | null) =>
   postForm<AnalyzeResponse>('/video/analyze', file);
-export const ingestFrame = (
-  file: File | null,
-  refs: { postId?: string; cameraId?: string } = {},
-) =>
+export const ingestFrame = (file: File | null, refs: { postId?: string; cameraId?: string } = {}) =>
   postForm<{ event: EventRecord; detection: Detection; media_url: string | null }>(
     '/video/ingest',
     file,
@@ -725,7 +724,11 @@ export const getOverview = (
 };
 export const getDynamics = (params: { year?: number; district_id?: string } = {}) => {
   const q = new URLSearchParams(
-    Object.fromEntries(Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])),
+    Object.fromEntries(
+      Object.entries(params)
+        .filter(([, v]) => v != null)
+        .map(([k, v]) => [k, String(v)]),
+    ),
   ).toString();
   return api.get<DynamicsResponse>(`/stats/dynamics${q ? `?${q}` : ''}`);
 };
@@ -802,8 +805,7 @@ export interface CameraInput {
   login?: string | null;
   password?: string | null;
 }
-export const getQuarryPosts = (quarryId: string) =>
-  api.get<Post[]>(`/quarries/${quarryId}/posts`);
+export const getQuarryPosts = (quarryId: string) => api.get<Post[]>(`/quarries/${quarryId}/posts`);
 export const createPost = (quarryId: string, body: PostInput) =>
   api.post<Post>(`/quarries/${quarryId}/posts`, body);
 export const updatePost = (id: string, body: Partial<PostInput>) =>
@@ -815,7 +817,9 @@ export const createCamera = (postId: string, body: CameraInput) =>
   api.post<Camera>(`/posts/${postId}/cameras`, body);
 export const updateCamera = (
   id: string,
-  body: Partial<Pick<Camera, 'name' | 'stream_url' | 'is_active' | 'brand' | 'ip' | 'login' | 'password'>>,
+  body: Partial<
+    Pick<Camera, 'name' | 'stream_url' | 'is_active' | 'brand' | 'ip' | 'login' | 'password'>
+  >,
 ) => api.patch<Camera>(`/cameras/${id}`, body);
 export const deleteCamera = (id: string) => api.del(`/cameras/${id}`);
 
@@ -913,8 +917,7 @@ export const getQuarryAgent = (quarryId: string) =>
   api.get<AgentStatus>(`/quarries/${quarryId}/agent`);
 export const createAgentToken = (quarryId: string) =>
   api.post<AgentStatus>(`/quarries/${quarryId}/agent/token`);
-export const revokeAgentToken = (quarryId: string) =>
-  api.del(`/quarries/${quarryId}/agent/token`);
+export const revokeAgentToken = (quarryId: string) => api.del(`/quarries/${quarryId}/agent/token`);
 export const updateAgentConfig = (quarryId: string, body: Partial<AgentConfig>) =>
   api.put<AgentStatus>(`/quarries/${quarryId}/agent/config`, body);
 
@@ -949,6 +952,28 @@ export interface AgentUptime {
 export const getQuarryUptime = (quarryId: string, params: DateRangeParams = {}) =>
   api.get<AgentUptime>(`/quarries/${quarryId}/agent/uptime${dateRangeQuery(params)}`);
 
+/** "Aloqa holati" sahifasidagi bitta karyer: hozirgi holat (server ko'rgan
+ * heartbeat) + davrdagi kunlik yig'indi (agent yuborgan `uptime`). */
+export interface QuarryUptimeSummary {
+  quarry_id: string;
+  name: string;
+  district_id: string;
+  has_agent: boolean;
+  is_active: boolean;
+  online: boolean;
+  last_seen_at: string | null;
+  agent_version: string;
+  route: string;
+  totals: AgentUptime['totals'];
+  /** Davrdagi eng so'nggi uzilish — "qachondan beri onlayn". */
+  last_outage: (UptimeOutage & { date: string }) | null;
+  days: (Omit<UptimeDay, 'outages'> & { outages: number })[]; // yangidan eskiga
+}
+
+/** Ko'rish huquqi bor hamma karyerning onlayn/oflayn statistikasi. */
+export const getUptimeSummary = (params: DateRangeParams = {}) =>
+  api.get<QuarryUptimeSummary[]>(`/agents/uptime${dateRangeQuery(params)}`);
+
 export interface LiveSnapshot {
   blob: Blob;
   /** Kadr necha soniyalik — server `X-Snapshot-Age`da aytadi. */
@@ -980,11 +1005,8 @@ export async function fetchLiveSnapshot(path: string): Promise<LiveSnapshot> {
 }
 
 export const getQuarries = () => api.get<Quarry[]>('/quarries');
-export const createQuarry = (body: {
-  district_id: string;
-  name: string;
-  code: string;
-}) => api.post<Quarry>('/quarries', body);
+export const createQuarry = (body: { district_id: string; name: string; code: string }) =>
+  api.post<Quarry>('/quarries', body);
 export const updateQuarry = (
   id: string,
   body: { name?: string; status?: 'active' | 'suspended' },

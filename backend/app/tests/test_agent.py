@@ -540,3 +540,74 @@ async def test_heartbeat_uptime_upserts_daily_stats(
         headers=admin,
     )
     assert [d["date"] for d in only_yesterday.json()["days"]] == [str(yesterday)]
+
+
+@pytest.mark.asyncio
+async def test_uptime_summary_lists_every_quarry(
+    client: httpx.AsyncClient, seeded: None
+) -> None:
+    """"Aloqa holati" sahifasi: hamma karyer bitta ro'yxatda — hozirgi holat,
+    davr yig'indisi va eng so'nggi uzilish."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    quarry = await _new_quarry(client, admin)
+    token = await _agent_token(client, admin, quarry["id"])
+
+    today = datetime.now(_UZ_TZ).date()
+    yesterday = today - timedelta(days=1)
+    early = {"from": "02:00", "to": "02:10", "min": 10, "reason": "off"}
+    late = {"from": "14:12", "to": "15:49", "min": 97, "reason": "internet"}
+    beat = await client.post(
+        "/api/agent/heartbeat",
+        headers=auth_header(token),
+        json={
+            "agent_version": "1.4.0",
+            "uptime": [
+                {
+                    "date": str(yesterday),
+                    "covered_min": 1440,
+                    "online_min": 1333,
+                    "net_down_min": 97,
+                    "server_down_min": 0,
+                    "agent_off_min": 10,
+                    "outages": [early, late],
+                },
+                {
+                    "date": str(today),
+                    "covered_min": 300,
+                    "online_min": 300,
+                    "net_down_min": 0,
+                    "server_down_min": 0,
+                    "agent_off_min": 0,
+                    "outages": [],
+                },
+            ],
+        },
+    )
+    assert beat.status_code == 200, beat.text
+
+    res = await client.get("/api/v1/agents/uptime", headers=admin)
+    assert res.status_code == 200, res.text
+    rows = {r["quarry_id"]: r for r in res.json()}
+    quarries = (await client.get("/api/v1/quarries", headers=admin)).json()
+    assert set(rows) == {q["id"] for q in quarries}
+
+    row = rows[quarry["id"]]
+    assert row["has_agent"] is True
+    assert row["online"] is True
+    assert row["agent_version"] == "1.4.0"
+    assert row["totals"]["online_min"] == 1633
+    assert row["totals"]["outages"] == 2
+    assert [d["date"] for d in row["days"]] == [str(today), str(yesterday)]
+    # Bugun uzilish yo'q — eng so'nggisi kechagi oxirgi oraliq.
+    assert row["last_outage"] == {"date": str(yesterday), **late}
+
+    only_today = await client.get(
+        "/api/v1/agents/uptime",
+        params={"date_from": str(today), "date_to": str(today)},
+        headers=admin,
+    )
+    row = {r["quarry_id"]: r for r in only_today.json()}[quarry["id"]]
+    assert row["last_outage"] is None
+    assert row["totals"]["covered_min"] == 300
+
+    assert (await client.get("/api/v1/agents/uptime")).status_code == 401

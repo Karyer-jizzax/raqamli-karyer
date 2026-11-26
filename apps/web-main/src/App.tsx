@@ -1,5 +1,5 @@
 import { useTranslation } from '@karier/i18n';
-import { cn, LangSwitcher, ProfileMenu, RequireAuth } from '@karier/ui';
+import { cn, LangSwitcher, ProfileMenu, RequireAuth, UptimeOverview } from '@karier/ui';
 import {
   Building2Icon,
   ChevronRightIcon,
@@ -8,6 +8,7 @@ import {
   PackageIcon,
   SlidersHorizontalIcon,
   UsersIcon,
+  WifiIcon,
   XIcon,
   type LucideIcon,
 } from 'lucide-react';
@@ -19,10 +20,11 @@ import { Materials } from './features/Materials';
 import { Quarries } from './features/Quarries';
 import { Settings } from './features/Settings';
 
-type Tab = 'quarries' | 'geo' | 'materials' | 'departments' | 'settings';
+type Tab = 'quarries' | 'uptime' | 'geo' | 'materials' | 'departments' | 'settings';
 
 const NAV: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: 'quarries', label: 'nav_quarries', icon: Building2Icon },
+  { key: 'uptime', label: 'nav_uptime', icon: WifiIcon },
   { key: 'materials', label: 'nav_materials', icon: PackageIcon },
   { key: 'geo', label: 'nav_geo', icon: MapIcon },
   { key: 'departments', label: 'nav_departments', icon: UsersIcon },
@@ -156,21 +158,14 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar
-        tab={tab}
-        setTab={setTab}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <Sidebar tab={tab} setTab={setTab} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-h-screen flex-col lg:pl-[248px]">
-        <Topbar
-          section={t('nav_section')}
-          title={title}
-          onMenu={() => setSidebarOpen(true)}
-        />
+        <Topbar section={t('nav_section')} title={title} onMenu={() => setSidebarOpen(true)} />
         <main className="mx-auto w-full max-w-[1080px] flex-1 p-4 lg:p-6">
           {tab === 'quarries' ? (
             <Quarries />
+          ) : tab === 'uptime' ? (
+            <UptimeOverview eyebrow={t('nav_section')} />
           ) : tab === 'materials' ? (
             <Materials />
           ) : tab === 'geo' ? (

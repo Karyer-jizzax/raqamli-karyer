@@ -1,4 +1,4 @@
-import { AppShell, type NavEntry, RequireAuth } from '@karier/ui';
+import { AppShell, type NavEntry, RequireAuth, UptimeOverview } from '@karier/ui';
 import {
   ChartColumnIcon,
   ClipboardListIcon,
@@ -6,7 +6,9 @@ import {
   MountainIcon,
   RadioIcon,
   TruckIcon,
+  WifiIcon,
 } from 'lucide-react';
+import { useTranslation } from '@karier/i18n';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import { Analytics } from './features/Analytics';
@@ -27,7 +29,13 @@ const NAV: (NavEntry & { path: string })[] = [
   { key: 'events', path: '/events', labelKey: 'ev_list', icon: ClipboardListIcon },
   { key: 'data', path: '/data', labelKey: 'nav_data', icon: TruckIcon },
   { key: 'live', path: '/live', labelKey: 'nav_live', icon: RadioIcon },
+  { key: 'uptime', path: '/uptime', labelKey: 'nav_uptime', icon: WifiIcon },
 ];
+
+function UptimeEyebrow() {
+  const { t } = useTranslation();
+  return <UptimeOverview eyebrow={t('sec_oversight')} />;
+}
 
 function Shell() {
   const navigate = useNavigate();
@@ -62,6 +70,8 @@ function Shell() {
         <Route path="/events" element={<Events />} />
         {/* Jonli ko'rish: viloyatdagi tanlangan karyer kameralari */}
         <Route path="/live" element={<Live />} />
+        {/* Aloqa holati: karyer kompyuterlari qachon onlayn/oflayn bo'lgani */}
+        <Route path="/uptime" element={<UptimeEyebrow />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppShell>
