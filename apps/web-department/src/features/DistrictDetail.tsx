@@ -308,13 +308,9 @@ export function DistrictDetail() {
   const trend = (dynamics?.buckets ?? []).map((b) => ({
     month: String(b.month).padStart(2, '0'),
     name: monthName(b.month, lang),
-    confirmed: b.confirmed,
-    unconfirmed: Math.max(0, b.total - b.confirmed),
+    total: b.total,
   }));
-  const trendSeries = [
-    { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
-    { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
-  ];
+  const trendSeries = [{ key: 'total', label: t('dash_events'), color: 'var(--primary)' }];
 
   const fn = (v: number | undefined) => formatNumber(v ?? 0, lang);
   const districtLabel = district ? localizedName(district) : t('loading');
@@ -473,16 +469,13 @@ export function DistrictDetail() {
               title={`${t('an_dynamics')} · ${range.from?.slice(0, 4) ?? ''}`}
               subtitle={t('an_dynamics_hint')}
               stale={dynFetching}
-              legend={
-                <ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />
-              }
               table={
                 <ChartTable
-                  head={[t('an_month'), t('an_confirmed'), t('an_unconfirmed')]}
+                  head={[t('an_month'), t('dash_events')]}
                   rows={trend.map((r) => ({
                     key: r.month,
                     label: r.month,
-                    values: [fn(r.confirmed), fn(r.unconfirmed)],
+                    values: [fn(r.total)],
                   }))}
                 />
               }

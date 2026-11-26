@@ -2,7 +2,6 @@ import { useDistrictsWithQuarries, useDynamics, useOverview } from '@karier/api-
 import { currentLang, formatNumber, monthName, useTranslation } from '@karier/i18n';
 import {
   ChartCard,
-  ChartLegend,
   ChartTable,
   deltaPct,
   FilterSelect,
@@ -71,15 +70,11 @@ export function Analytics() {
       return {
         month: String(i + 1).padStart(2, '0'),
         name: monthName(i + 1, lang),
-        confirmed: b?.confirmed ?? 0,
-        unconfirmed: b ? Math.max(0, b.total - b.confirmed) : 0,
+        total: b?.total ?? 0,
       };
     });
   }, [dynamics, lang]);
-  const trendSeries = [
-    { key: 'unconfirmed', label: t('an_unconfirmed'), color: 'var(--chart-context)' },
-    { key: 'confirmed', label: t('an_confirmed'), color: 'var(--primary)' },
-  ];
+  const trendSeries = [{ key: 'total', label: t('dash_events'), color: 'var(--primary)' }];
 
   const hasTrend = (dynamics?.buckets ?? []).length > 0;
   const monthLabel = (m: string) => trend.find((r) => r.month === m)?.name ?? m;
@@ -129,16 +124,13 @@ export function Analytics() {
         title={`${t('an_dynamics')} · ${period.year}`}
         subtitle={t('an_dynamics_hint')}
         stale={dynFetching}
-        legend={
-          <ChartLegend items={trendSeries.map((s) => ({ label: s.label, color: s.color }))} />
-        }
         table={
           <ChartTable
-            head={[t('an_month'), t('an_confirmed'), t('an_unconfirmed')]}
+            head={[t('an_month'), t('dash_events')]}
             rows={trend.map((r) => ({
               key: r.month,
               label: r.name,
-              values: [fn(r.confirmed), fn(r.unconfirmed)],
+              values: [fn(r.total)],
             }))}
           />
         }
