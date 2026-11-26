@@ -1,51 +1,38 @@
 /**
- * Aloqa jurnali — bitta karyer kompyuteri qachon onlayn bo'lgan va qachon,
- * nima sababdan uzilgan: "11:30 da internet o'chdi, 16:30 da qaytdi · 5 soat".
+ * Aloqa jurnali — bitta karyer kompyuteri qachon onlayn, qachon oflayn
+ * bo'lgan: "11:30 – 16:30 · Oflayn · 5 soat", ostida kulrang kichik izoh
+ * "internet yo'q edi" yoki "kompyuter o'chiq edi" (modemmi yoki tokmi —
+ * texnik xodim shundan biladi).
  *
  * Alohida endpoint yo'q: agent har kun uchun uzilish oraliqlarini
  * (`outages: [{from, to, min, reason}]`, UTC+5) heartbeat'da yuboradi
  * (karyer-local API.md §9). Bu yerda ular bitta vaqt chizig'iga yig'iladi:
- *   - yarim tunda kesilgan uzilish (23:10–00:00 + 00:00–02:00) bitta qatorga
- *     qo'shiladi — agent kunlarni alohida sanaydi, odam esa bitta voqea ko'radi;
- *   - uzilishlar orasidagi vaqt — "onlayn" qatorlari;
+ *   - "server javob bermadi" oraliqlari tashlanadi — o'sha paytda karyerda
+ *     internet bor edi, ya'ni karyer uchun bu onlayn vaqt (`uptime-shared`);
+ *   - ketma-ket oflayn oraliqlar (yarim tunda bo'lingani yoki internet
+ *     uzilib, keyin tok ketgani) bitta qatorga qo'shiladi, sabablari izohda;
+ *   - oflaynlar orasidagi vaqt — onlayn qatorlari;
  *   - agent hozir aloqada bo'lmasa, oxirgi heartbeat'dan boshlangan ochiq
- *     qator qo'shiladi. Uning sababi (internet yoki tok) hali noma'lum —
- *     kompyuter qayta ulanganda agent aniq oraliqni yuboradi va bu qator
- *     o'zi o'sha bilan almashadi.
+ *     oflayn qator qo'shiladi. Sababi hali noma'lum — kompyuter qayta
+ *     ulanganda agent aniq oraliqni yuboradi va qator o'sha bilan almashadi.
  */
 import { type DateRangeParams, useQuarryUptime } from '@karier/api-client';
 import { useTranslation } from '@karier/i18n';
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
-import { type Tone, TONE_CHIP, TONE_DOT } from '../status';
-
-type Kind = 'online' | 'internet' | 'server' | 'off' | 'unknown';
+import { isOfflineOutage, type OfflineReason, REASON_NOTE, useDuration } from './uptime-shared';
 
 interface Segment {
-  kind: Kind;
+  online: boolean;
   start: number; // ms
   end: number | null; // null — hali davom etyapti
+  /** Oflayn sabablari, vaqt tartibida; bo'sh — noma'lum (hali ulanmagan). */
+  reasons: OfflineReason[];
 }
 
 const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DAY_MS = 86_400_000;
-
-const KIND_TONE: Record<Kind, Tone> = {
-  online: 'success',
-  internet: 'warning',
-  server: 'info',
-  off: 'danger',
-  unknown: 'neutral',
-};
-
-const KIND_LABEL: Record<Kind, string> = {
-  online: 'up_online',
-  internet: 'up_net_down',
-  server: 'up_server_down',
-  off: 'up_agent_off',
-  unknown: 'log_unknown',
-};
 
 /** "2026-11-26" + "11:30" (UTC+5) → ms. */
 function uzTs(date: string, hhmm: string): number {
@@ -67,25 +54,26 @@ function buildSegments(
   const outages: Segment[] = [];
   for (const day of days) {
     for (const o of day.outages) {
+      if (!isOfflineOutage(o)) continue;
       const start = uzTs(day.date, o.from);
       let end = uzTs(day.date, o.to);
       if (Number.isNaN(start) || Number.isNaN(end)) continue;
       if (end <= start) end += DAY_MS; // "23:10" → "00:00" — ertasi kun yarim tuni
-      const kind: Kind =
-        o.reason === 'internet' || o.reason === 'server' || o.reason === 'off' ? o.reason : 'off';
-      outages.push({ kind, start, end });
+      const reason: OfflineReason = o.reason === 'internet' ? 'internet' : 'off';
+      outages.push({ online: false, start, end, reasons: [reason] });
     }
   }
   outages.sort((a, b) => a.start - b.start);
 
-  // Yarim tunda bo'lingan bir xil sababli uzilishlarni birlashtiramiz.
+  // Bir-biriga tegib turgan oflayn oraliqlar — bitta voqea.
   const merged: Segment[] = [];
   for (const seg of outages) {
     const prev = merged[merged.length - 1];
-    if (prev && prev.kind === seg.kind && prev.end != null && seg.start - prev.end <= 60_000) {
+    if (prev && prev.end != null && seg.start - prev.end <= 60_000) {
       prev.end = Math.max(prev.end, seg.end ?? prev.end);
+      for (const r of seg.reasons) if (!prev.reasons.includes(r)) prev.reasons.push(r);
     } else {
-      merged.push({ ...seg });
+      merged.push({ ...seg, reasons: [...seg.reasons] });
     }
   }
 
@@ -95,38 +83,20 @@ function buildSegments(
     out.push(seg);
     const next = merged[i + 1];
     if (next && seg.end != null && next.start > seg.end) {
-      out.push({ kind: 'online', start: seg.end, end: next.start });
+      out.push({ online: true, start: seg.end, end: next.start, reasons: [] });
     }
   });
 
-  const tail = merged[merged.length - 1];
-  const tailEnd = tail?.end ?? null;
+  const tailEnd = merged[merged.length - 1]?.end ?? null;
   if (online) {
-    if (tailEnd != null) out.push({ kind: 'online', start: tailEnd, end: null });
+    if (tailEnd != null) out.push({ online: true, start: tailEnd, end: null, reasons: [] });
   } else if (lastSeenTs != null) {
     if (tailEnd != null && lastSeenTs > tailEnd) {
-      out.push({ kind: 'online', start: tailEnd, end: lastSeenTs });
+      out.push({ online: true, start: tailEnd, end: lastSeenTs, reasons: [] });
     }
-    if (lastSeenTs < now) out.push({ kind: 'unknown', start: lastSeenTs, end: null });
+    if (lastSeenTs < now) out.push({ online: false, start: lastSeenTs, end: null, reasons: [] });
   }
   return out.reverse(); // yangidan eskiga
-}
-
-function useDuration() {
-  const { t } = useTranslation();
-  return (minutes: number) => {
-    if (minutes <= 0) return t('up_m', { m: 0 });
-    const d = Math.floor(minutes / 1440);
-    const h = Math.floor((minutes % 1440) / 60);
-    const m = minutes % 60;
-    if (d) return h ? t('up_dh', { d, h }) : t('up_d', { d });
-    if (!h) return t('up_m', { m });
-    return m ? t('up_hm', { h, m }) : t('up_h', { h });
-  };
-}
-
-function sentenceKey(kind: Kind, ongoing: boolean): string {
-  return `log_${kind}${ongoing ? '_now' : ''}`;
 }
 
 export function UptimeLog({
@@ -141,7 +111,7 @@ export function UptimeLog({
   lastSeen: string | null;
 }) {
   const { t } = useTranslation();
-  const dur = useDuration();
+  const dur = useDuration(t('up_m', { m: 0 }));
   const { data, isLoading } = useQuarryUptime(quarryId, range);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -196,46 +166,39 @@ export function UptimeLog({
                 to.day === from.day
                   ? to.time
                   : `${to.day.slice(8, 10)}.${to.day.slice(5, 7)} ${to.time}`;
+              const note = s.online
+                ? ''
+                : s.reasons.length
+                  ? s.reasons.map((r) => t(REASON_NOTE[r])).join(', ')
+                  : t('log_reason_unknown');
               return (
                 <li
-                  key={`${s.kind}-${s.start}`}
+                  key={`${s.online}-${s.start}`}
                   className="flex items-start gap-3 border-t px-4 py-3 first:border-t-0"
                 >
                   <span
                     className={cn(
-                      'mt-1.5 inline-block size-2 shrink-0 rounded-full',
-                      s.kind === 'unknown' ? 'bg-slate-400' : TONE_DOT[KIND_TONE[s.kind]],
+                      'mt-[7px] inline-block size-2 shrink-0 rounded-full',
+                      s.online ? 'bg-success' : 'bg-danger',
                       ongoing && 'animate-pulse',
                     )}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-semibold text-foreground tabular-nums">
+                    <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                      <span className="font-semibold text-foreground tabular-nums">
                         {from.time} – {ongoing ? t('log_till_now') : toLabel}
                       </span>
+                      <span className="text-slate-300">·</span>
                       <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-2xs font-semibold',
-                          TONE_CHIP[KIND_TONE[s.kind]],
-                        )}
+                        className={cn('font-semibold', s.online ? 'text-success' : 'text-danger')}
                       >
-                        {t(KIND_LABEL[s.kind])}
+                        {t(s.online ? 'ao_online' : 'ao_offline')}
                       </span>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-foreground tabular-nums">{dur(minutes)}</span>
                     </div>
-                    <p className="m-0 mt-0.5 text-xs text-muted-foreground">
-                      {t(sentenceKey(s.kind, ongoing), { from: from.time, to: toLabel })}
-                    </p>
+                    {note && <p className="m-0 mt-0.5 text-xs text-slate-400">{note}</p>}
                   </div>
-                  <span
-                    className={cn(
-                      'shrink-0 text-sm tabular-nums',
-                      s.kind === 'online'
-                        ? 'text-muted-foreground'
-                        : 'font-semibold text-foreground',
-                    )}
-                  >
-                    {dur(minutes)}
-                  </span>
                 </li>
               );
             })}

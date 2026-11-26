@@ -294,6 +294,13 @@ _SUMMARY_MAX_DAYS = 92
 _SUMMARY_DEFAULT_DAYS = 7
 
 
+def _offline_outages(raw: list | None) -> list[dict]:
+    """Karyer tomonidagi uzilishlar. "server" sababli oraliqlar chiqariladi:
+    o'sha paytda karyerda internet bor edi, sayt ularni onlayn deb ko'rsatadi
+    va "qachondan beri onlayn" ham ular bilan uzilmasligi kerak."""
+    return [o for o in (raw or []) if isinstance(o, dict) and o.get("reason") != "server"]
+
+
 @router.get("/agents/uptime", response_model=list[QuarryUptimeSummaryOut])
 async def uptime_summary(
     user: CurrentUser,
@@ -320,7 +327,7 @@ async def uptime_summary(
         days = by_quarry.get(quarry.id, [])
         last_outage = None
         for day in days:  # yangidan eskiga
-            outages = [o for o in (day.outages or []) if isinstance(o, dict)]
+            outages = _offline_outages(day.outages)
             if outages:
                 o = outages[-1]
                 last_outage = AgentLastOutage(
@@ -339,7 +346,7 @@ async def uptime_summary(
                 net_down_min=d.net_down_min,
                 server_down_min=d.server_down_min,
                 agent_off_min=d.agent_off_min,
-                outages=len(d.outages or []),
+                outages=len(_offline_outages(d.outages)),
             )
             for d in days
         ]

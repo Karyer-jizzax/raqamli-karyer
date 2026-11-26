@@ -1,77 +1,57 @@
 /**
- * Kunlik onlayn/oflayn statistikasi — karyerdagi local server qancha vaqt
- * ma'lumot uzatishga tayyor bo'lgani va qolgan vaqt nima sababdan uzilgani
- * (karyer-local API.md §9). Ma'lumot agent heartbeat'idan keladi; server
- * o'zi "internet yo'q" bilan "kompyuter o'chiq"ni ajrata olmaydi.
+ * Kunlik onlayn/oflayn statistikasi — karyerdagi local server har kuni
+ * qancha vaqt onlayn va qancha vaqt oflayn bo'lgani (karyer-local API.md §9).
+ *
+ * Faqat ikki holat (qoidalari `uptime-shared.tsx`da): "server javob
+ * bermadi" onlaynga qo'shiladi, internet yo'qligi va kompyuter o'chiqligi —
+ * oflayn. Oflayn sababi kichik kulrang izohda: texnik xodimga kerak, lekin
+ * ko'zga tashlanib turmasligi kerak.
  */
-import { type DateRangeParams, type UptimeDay, useQuarryUptime } from '@karier/api-client';
+import { type DateRangeParams, useQuarryUptime } from '@karier/api-client';
 import { currentLang, formatNumber, useTranslation } from '@karier/i18n';
 import { ChevronDownIcon, WifiIcon } from 'lucide-react';
-import { Fragment, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
-import { type Tone, TONE_CHIP, TONE_DOT } from '../status';
+import {
+  isOfflineOutage,
+  offlineMin,
+  OnlineBar,
+  onlineMin,
+  onlinePct,
+  REASON_NOTE,
+  type UptimeMinutes,
+  useDuration,
+} from './uptime-shared';
 
-type Part = 'online_min' | 'net_down_min' | 'server_down_min' | 'agent_off_min';
-
-const PARTS: { key: Part; label: string; tone: Tone }[] = [
-  { key: 'online_min', label: 'up_online', tone: 'success' },
-  { key: 'net_down_min', label: 'up_net_down', tone: 'warning' },
-  { key: 'server_down_min', label: 'up_server_down', tone: 'info' },
-  { key: 'agent_off_min', label: 'up_agent_off', tone: 'danger' },
-];
-
-const REASON_TONE: Record<string, Tone> = { internet: 'warning', server: 'info', off: 'danger' };
-const REASON_LABEL: Record<string, string> = {
-  internet: 'up_net_down',
-  server: 'up_server_down',
-  off: 'up_agent_off',
-};
-
-/** Daqiqani "21 s 41 daq" ko'rinishiga. */
-function useDuration() {
+/** Oflayn vaqt sabablari bo'yicha: "internet yo'q edi 1 soat · kompyuter o'chiq edi 20 daq". */
+function useReasonNote() {
   const { t } = useTranslation();
-  return (minutes: number) => {
-    if (!minutes) return '—';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (!h) return t('up_m', { m });
-    return m ? t('up_hm', { h, m }) : t('up_h', { h });
-  };
-}
-
-function pct(part: number, whole: number): number | null {
-  return whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
-}
-
-/** To'rt bo'lakli chiziq — kun qanday taqsimlangani bir qarashda. */
-function SplitBar({ day }: { day: Pick<UptimeDay, Part | 'covered_min'> }) {
-  if (!day.covered_min) return <div className="h-1.5 w-full rounded-full bg-secondary" />;
-  return (
-    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-      {PARTS.map((p) =>
-        day[p.key] > 0 ? (
-          <span
-            key={p.key}
-            className={TONE_DOT[p.tone]}
-            style={{ width: `${(day[p.key] / day.covered_min) * 100}%` }}
-          />
-        ) : null,
-      )}
-    </div>
-  );
+  const dur = useDuration();
+  return (d: UptimeMinutes) =>
+    [
+      d.net_down_min > 0 && `${t(REASON_NOTE.internet)} ${dur(d.net_down_min)}`,
+      d.agent_off_min > 0 && `${t(REASON_NOTE.off)} ${dur(d.agent_off_min)}`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
 }
 
 export function UptimeTable({ quarryId, range }: { quarryId?: string; range: DateRangeParams }) {
   const { t } = useTranslation();
   const lang = currentLang();
   const dur = useDuration();
+  const reasonNote = useReasonNote();
   const { data, isFetching } = useQuarryUptime(quarryId, range);
   const [open, setOpen] = useState<string | null>(null);
 
-  const days = data?.days ?? [];
+  // "server" oraliqlari karyer uzilishi emas — ro'yxatdan ham, sonidan ham chiqadi.
+  const days = useMemo(
+    () => (data?.days ?? []).map((d) => ({ ...d, outages: d.outages.filter(isOfflineOutage) })),
+    [data],
+  );
   const totals = data?.totals;
-  const totalPct = totals ? pct(totals.online_min, totals.covered_min) : null;
+  const outageTotal = days.reduce((s, d) => s + d.outages.length, 0);
   const fmtPct = (v: number | null) =>
     v == null ? '—' : `${formatNumber(v, lang, Number.isInteger(v) ? 0 : 1)}%`;
 
@@ -93,16 +73,15 @@ export function UptimeTable({ quarryId, range }: { quarryId?: string; range: Dat
           </h2>
           <p className="m-0 mt-0.5 text-2xs text-muted-foreground">{t('up_hint')}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {PARTS.map((p) => (
-            <span
-              key={p.key}
-              className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground"
-            >
-              <span className={cn('inline-block size-2 rounded-full', TONE_DOT[p.tone])} />
-              {t(p.label)}
-            </span>
-          ))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block size-2 rounded-full bg-success" />
+            {t('ao_online')}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block size-2 rounded-full bg-danger" />
+            {t('ao_offline')}
+          </span>
         </div>
       </header>
 
@@ -111,36 +90,49 @@ export function UptimeTable({ quarryId, range }: { quarryId?: string; range: Dat
       ) : (
         <>
           {totals && (
-            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="rounded-lg border bg-surface-subtle px-3 py-2">
                 <div className="text-2xs text-muted-foreground">{t('up_online_pct')}</div>
-                <b className="text-lg text-foreground tabular-nums">{fmtPct(totalPct)}</b>
+                <b className="text-lg text-foreground tabular-nums">{fmtPct(onlinePct(totals))}</b>
               </div>
-              {PARTS.map((p) => (
-                <div key={p.key} className="rounded-lg border px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
-                    <span className={cn('inline-block size-2 rounded-full', TONE_DOT[p.tone])} />
-                    {t(p.label)}
-                  </div>
-                  <b className="text-sm text-foreground tabular-nums">{dur(totals[p.key])}</b>
+              <div className="rounded-lg border px-3 py-2">
+                <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+                  <span className="inline-block size-2 rounded-full bg-success" />
+                  {t('ao_online')}
                 </div>
-              ))}
+                <b className="text-sm text-foreground tabular-nums">{dur(onlineMin(totals))}</b>
+              </div>
+              <div className="rounded-lg border px-3 py-2">
+                <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+                  <span className="inline-block size-2 rounded-full bg-danger" />
+                  {t('ao_offline')}
+                </div>
+                <b className="text-sm text-foreground tabular-nums">{dur(offlineMin(totals))}</b>
+                {offlineMin(totals) > 0 && (
+                  <div className="text-2xs text-slate-400">{reasonNote(totals)}</div>
+                )}
+              </div>
+              <div className="rounded-lg border px-3 py-2">
+                <div className="text-2xs text-muted-foreground">{t('up_outages')}</div>
+                <b className="text-sm text-foreground tabular-nums">{outageTotal}</b>
+              </div>
             </div>
           )}
 
           <div className="max-h-[420px] overflow-auto rounded-[10px] border border-grid">
-            <table className="w-full min-w-[720px] border-collapse text-data">
+            <table className="w-full min-w-[600px] border-collapse text-data">
               <thead className="sticky top-0 z-[1] bg-surface-subtle">
                 <tr>
                   <th scope="col" className={cn(th, 'text-left')}>
                     {t('up_date')}
                   </th>
-                  {PARTS.map((p) => (
-                    <th key={p.key} scope="col" className={cn(th, 'text-right')}>
-                      {t(p.label)}
-                    </th>
-                  ))}
-                  <th scope="col" className={cn(th, 'w-[160px] text-right')}>
+                  <th scope="col" className={cn(th, 'text-right')}>
+                    {t('ao_online')}
+                  </th>
+                  <th scope="col" className={cn(th, 'text-left')}>
+                    {t('ao_offline')}
+                  </th>
+                  <th scope="col" className={cn(th, 'w-[170px] text-right')}>
                     {t('up_online_pct')}
                   </th>
                   <th scope="col" className={cn(th, 'text-right')}>
@@ -150,7 +142,8 @@ export function UptimeTable({ quarryId, range }: { quarryId?: string; range: Dat
               </thead>
               <tbody>
                 {days.map((d) => {
-                  const p = pct(d.online_min, d.covered_min);
+                  const p = onlinePct(d);
+                  const off = offlineMin(d);
                   const expanded = open === d.date;
                   const hasOutages = d.outages.length > 0;
                   return (
@@ -165,22 +158,20 @@ export function UptimeTable({ quarryId, range }: { quarryId?: string; range: Dat
                         <td className="px-2.5 py-2 whitespace-nowrap text-foreground tabular-nums">
                           {d.date.split('-').reverse().join('.')}
                         </td>
-                        {PARTS.map((part) => (
-                          <td
-                            key={part.key}
-                            className={cn(
-                              'px-2.5 py-2 text-right whitespace-nowrap tabular-nums',
-                              d[part.key] ? 'text-foreground' : 'text-muted-foreground',
-                            )}
-                          >
-                            {dur(d[part.key])}
-                          </td>
-                        ))}
+                        <td className="px-2.5 py-2 text-right whitespace-nowrap text-foreground tabular-nums">
+                          {dur(onlineMin(d))}
+                        </td>
+                        <td className="px-2.5 py-2 tabular-nums">
+                          <span className={off ? 'text-foreground' : 'text-muted-foreground'}>
+                            {dur(off)}
+                          </span>
+                          {off > 0 && (
+                            <div className="text-2xs text-slate-400">{reasonNote(d)}</div>
+                          )}
+                        </td>
                         <td className="px-2.5 py-2">
                           <div className="flex items-center justify-end gap-2">
-                            <div className="w-[80px]">
-                              <SplitBar day={d} />
-                            </div>
+                            <OnlineBar d={d} className="w-[90px]" />
                             <b
                               className={cn(
                                 'w-[48px] text-right tabular-nums',
@@ -209,19 +200,16 @@ export function UptimeTable({ quarryId, range }: { quarryId?: string; range: Dat
                       </tr>
                       {expanded && (
                         <tr className="border-b border-grid bg-surface-subtle last:border-b-0">
-                          <td colSpan={7} className="px-2.5 py-2">
+                          <td colSpan={5} className="px-2.5 py-2">
                             <div className="flex flex-wrap gap-1.5">
                               {d.outages.map((o, i) => (
                                 <span
                                   key={`${o.from}-${i}`}
-                                  className={cn(
-                                    'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-2xs tabular-nums',
-                                    TONE_CHIP[REASON_TONE[o.reason] ?? 'neutral'],
-                                  )}
+                                  className="inline-flex items-center gap-1.5 rounded-md bg-danger-tint px-2 py-0.5 text-2xs text-danger tabular-nums"
                                 >
-                                  {o.from}–{o.to}
-                                  <span className="opacity-80">
-                                    · {dur(o.min)} · {t(REASON_LABEL[o.reason] ?? o.reason)}
+                                  {o.from}–{o.to} · {dur(o.min)}
+                                  <span className="text-slate-400">
+                                    {t(REASON_NOTE[o.reason === 'internet' ? 'internet' : 'off'])}
                                   </span>
                                 </span>
                               ))}

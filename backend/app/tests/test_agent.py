@@ -556,6 +556,7 @@ async def test_uptime_summary_lists_every_quarry(
     yesterday = today - timedelta(days=1)
     early = {"from": "02:00", "to": "02:10", "min": 10, "reason": "off"}
     late = {"from": "14:12", "to": "15:49", "min": 97, "reason": "internet"}
+    server = {"from": "01:00", "to": "01:05", "min": 5, "reason": "server"}
     beat = await client.post(
         "/api/agent/heartbeat",
         headers=auth_header(token),
@@ -574,11 +575,12 @@ async def test_uptime_summary_lists_every_quarry(
                 {
                     "date": str(today),
                     "covered_min": 300,
-                    "online_min": 300,
+                    "online_min": 295,
                     "net_down_min": 0,
-                    "server_down_min": 0,
+                    "server_down_min": 5,
                     "agent_off_min": 0,
-                    "outages": [],
+                    # Server tomoni muammosi — karyer uzilishi emas.
+                    "outages": [server],
                 },
             ],
         },
@@ -595,10 +597,11 @@ async def test_uptime_summary_lists_every_quarry(
     assert row["has_agent"] is True
     assert row["online"] is True
     assert row["agent_version"] == "1.4.0"
-    assert row["totals"]["online_min"] == 1633
+    assert row["totals"]["online_min"] == 1628
+    assert row["totals"]["server_down_min"] == 5
     assert row["totals"]["outages"] == 2
     assert [d["date"] for d in row["days"]] == [str(today), str(yesterday)]
-    # Bugun uzilish yo'q — eng so'nggisi kechagi oxirgi oraliq.
+    # "server" oralig'i sanalmaydi: eng so'nggisi kechagi oxirgi oraliq.
     assert row["last_outage"] == {"date": str(yesterday), **late}
 
     only_today = await client.get(

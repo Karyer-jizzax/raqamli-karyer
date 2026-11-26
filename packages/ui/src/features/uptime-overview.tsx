@@ -1,15 +1,18 @@
 /**
  * "Aloqa holati" — hamma karyerdagi local server (karyer-local agenti) bir
- * sahifada: hozir onlaynmi, qachondan beri shu holatda, davr davomida qancha
- * vaqt aloqada bo'lgan va qolgan vaqt nima sababdan uzilgan.
+ * sahifada: hozir onlaynmi yoki oflaynmi, qachondan beri, davr davomida
+ * qancha vaqt onlayn bo'lgan.
+ *
+ * Ekranda faqat ikki holat: yashil **Onlayn**, qizil **Oflayn** (qoidalari
+ * `uptime-shared.tsx`da). Oflayn sababi — internet yo'qmi, kompyuter
+ * o'chiqmi, agent umuman ulanmaganmi — kichik kulrang izoh: texnik xodimga
+ * kerak, lekin ko'zga tashlanib turmasligi kerak.
  *
  * Ikki manba bor:
  *   - hozirgi holat va "oxirgi aloqa" — server o'zi ko'rgan heartbeat;
- *   - kunlik daqiqalar va sabablar (internet / kompyuter o'chiq / server) —
- *     agent o'zi yig'ib, ulanganda yuboradigan `uptime` (karyer-local API.md §9).
- * Agent oflayn paytda statistika kelmaydi: o'sha kunlar u qayta ulanganda
- * to'ldiriladi. Shuning uchun oflayn karyerning "qancha vaqtdan beri" degan
- * qiymati faqat oxirgi heartbeat'dan hisoblanadi.
+ *   - kunlik daqiqalar va sabablar — agent o'zi yig'ib, ulanganda
+ *     yuboradigan `uptime` (karyer-local API.md §9). Agent oflayn paytda
+ *     statistika kelmaydi: o'sha kunlar u qayta ulanganda to'ldiriladi.
  *
  * Komponent sahifa ramkasini (padding, sarlavha) chizmaydi — uni ilova
  * beradi: web-main'da sarlavha Topbar'da, web-department'da `PageHeader`da.
@@ -26,13 +29,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { cn } from '../lib/utils';
 import { CountPill, Eyebrow } from '../primitives';
 import { Tabs } from '../shell';
-import { type Tone, TONE_CHIP, TONE_DOT } from '../status';
 import { Input } from '../ui/input';
 import { UptimeLog } from './uptime-log';
+import { offlineMin, OnlineBar, onlineMin, onlinePct, useDuration } from './uptime-shared';
 import { UptimeTable } from './uptime-table';
 
 type Span = '1' | '7' | '30' | '90';
-type State = 'online' | 'offline' | 'none';
+type State = 'online' | 'offline';
 type StatusFilter = 'all' | State;
 type Detail = 'log' | 'daily';
 
@@ -48,26 +51,12 @@ function spanRange(span: Span): DateRangeParams {
   return { date_from: uzDay(Number(span) - 1), date_to: uzDay(0) };
 }
 
-/** Daqiqani "2 kun 3 soat" / "3 soat 5 daq" / "12 daq" ko'rinishiga. */
-function useDuration() {
-  const { t } = useTranslation();
-  return (minutes: number) => {
-    if (minutes <= 0) return '—';
-    const d = Math.floor(minutes / 1440);
-    const h = Math.floor((minutes % 1440) / 60);
-    const m = minutes % 60;
-    if (d) return h ? t('up_dh', { d, h }) : t('up_d', { d });
-    if (!h) return t('up_m', { m });
-    return m ? t('up_hm', { h, m }) : t('up_h', { h });
-  };
-}
+/** Agent ulanmagan yoki tokeni bekor qilingan karyer — ham oflayn. */
+const hasLiveAgent = (q: QuarryUptimeSummary) => q.has_agent && q.is_active;
 
 function stateOf(q: QuarryUptimeSummary): State {
-  if (!q.has_agent || !q.is_active) return 'none';
-  return q.online ? 'online' : 'offline';
+  return hasLiveAgent(q) && q.online ? 'online' : 'offline';
 }
-
-const STATE_TONE: Record<State, Tone> = { online: 'success', offline: 'danger', none: 'neutral' };
 
 /** Hozirgi holat qachon boshlangan (ms), noma'lum bo'lsa null.
  *
@@ -75,50 +64,22 @@ const STATE_TONE: Record<State, Tone> = { online: 'success', offline: 'danger', 
  * tugagan daqiqasi (agent HH:MM ni UTC+5 da yozadi); davrda uzilish bo'lmasa
  * noma'lum, ya'ni "davr davomida uzilishsiz". */
 function sinceOf(q: QuarryUptimeSummary, state: State): number | null {
+  if (!hasLiveAgent(q)) return null;
   if (state === 'offline') return q.last_seen_at ? new Date(q.last_seen_at).getTime() : null;
-  if (state === 'online' && q.last_outage?.to) {
+  if (q.last_outage?.to) {
     const ts = new Date(`${q.last_outage.date}T${q.last_outage.to}:00+05:00`).getTime();
     return Number.isNaN(ts) || ts > Date.now() ? null : ts;
   }
   return null;
 }
 
-function pct(part: number, whole: number): number | null {
-  return whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
-}
-
+/** Kun katagi rangi — onlayn ulushiga qarab. */
 function pctTone(p: number | null): string {
   if (p == null) return 'bg-secondary';
-  return p >= 99 ? TONE_DOT.success : p >= 90 ? TONE_DOT.warning : TONE_DOT.danger;
+  return p >= 99 ? 'bg-success' : p >= 90 ? 'bg-success/50' : 'bg-danger';
 }
 
-type Part = 'online_min' | 'net_down_min' | 'server_down_min' | 'agent_off_min';
-const PARTS: { key: Part; label: string; tone: Tone }[] = [
-  { key: 'online_min', label: 'up_online', tone: 'success' },
-  { key: 'net_down_min', label: 'up_net_down', tone: 'warning' },
-  { key: 'server_down_min', label: 'up_server_down', tone: 'info' },
-  { key: 'agent_off_min', label: 'up_agent_off', tone: 'danger' },
-];
-
-/** Davr qanday taqsimlangani — to'rt bo'lakli chiziq. */
-function SplitBar({ totals }: { totals: QuarryUptimeSummary['totals'] }) {
-  return (
-    <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
-      {totals.covered_min > 0 &&
-        PARTS.map((p) =>
-          totals[p.key] > 0 ? (
-            <span
-              key={p.key}
-              className={TONE_DOT[p.tone]}
-              style={{ width: `${(totals[p.key] / totals.covered_min) * 100}%` }}
-            />
-          ) : null,
-        )}
-    </div>
-  );
-}
-
-/** Davrdagi har bir kun — bitta katak, rangi onlayn ulushiga qarab. */
+/** Davrdagi har bir kun — bitta katak. */
 function DayStrip({ q, dates }: { q: QuarryUptimeSummary; dates: string[] }) {
   const { t } = useTranslation();
   const dur = useDuration();
@@ -133,13 +94,10 @@ function DayStrip({ q, dates }: { q: QuarryUptimeSummary; dates: string[] }) {
             key={date}
             title={
               d
-                ? `${label} · ${t('up_online')}: ${dur(d.online_min)} / ${dur(d.covered_min)}`
+                ? `${label} · ${t('ao_online')}: ${dur(onlineMin(d))} · ${t('ao_offline')}: ${dur(offlineMin(d))}`
                 : `${label} · ${t('ao_no_data')}`
             }
-            className={cn(
-              'inline-block size-2.5 rounded-[3px]',
-              pctTone(d ? pct(d.online_min, d.covered_min) : null),
-            )}
+            className={cn('inline-block size-2.5 rounded-[3px]', pctTone(d ? onlinePct(d) : null))}
           />
         );
       })}
@@ -196,40 +154,41 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
   const showDays = span !== '1';
 
   const counts = useMemo(() => {
-    const c: Record<State, number> = { online: 0, offline: 0, none: 0 };
+    const c: Record<State, number> = { online: 0, offline: 0 };
     for (const q of rows) c[stateOf(q)] += 1;
     return c;
   }, [rows]);
 
   const avgPct = useMemo(() => {
-    const covered = rows.reduce((s, q) => s + q.totals.covered_min, 0);
-    const online = rows.reduce((s, q) => s + q.totals.online_min, 0);
-    return pct(online, covered);
+    const sum = {
+      covered_min: 0,
+      online_min: 0,
+      net_down_min: 0,
+      server_down_min: 0,
+      agent_off_min: 0,
+    };
+    for (const q of rows) {
+      sum.covered_min += q.totals.covered_min;
+      sum.online_min += q.totals.online_min;
+      sum.server_down_min += q.totals.server_down_min;
+    }
+    return onlinePct(sum);
   }, [rows]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    // Oflaynlar tepada — sahifa "qayerda muammo bor" savoliga javob beradi.
-    const order: Record<State, number> = { offline: 0, online: 1, none: 2 };
+    // Oflaynlar tepada — sahifa "qayerda muammo bor" savoliga javob beradi;
+    // agenti umuman ulanmaganlar esa oxirida (bu doimiy holat, yangilik emas).
+    const rank = (q: QuarryUptimeSummary) =>
+      stateOf(q) === 'online' ? 1 : hasLiveAgent(q) ? 0 : 2;
     return rows
       .filter((q) => status === 'all' || stateOf(q) === status)
       .filter((q) => !needle || q.name.toLowerCase().includes(needle))
-      .sort((a, b) => order[stateOf(a)] - order[stateOf(b)] || a.name.localeCompare(b.name));
+      .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   }, [rows, status, search]);
 
   const fmtPct = (v: number | null) =>
     v == null ? '—' : `${formatNumber(v, lang, Number.isInteger(v) ? 0 : 1)}%`;
-
-  const stateLabel = (q: QuarryUptimeSummary, s: State) =>
-    t(
-      s === 'online'
-        ? 'ao_online'
-        : s === 'offline'
-          ? 'ao_offline'
-          : q.has_agent
-            ? 'agent_token_revoked'
-            : 'ao_no_agent_short',
-    );
 
   return (
     <div className="grid gap-5">
@@ -253,18 +212,9 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
       </div>
 
       {/* umumiy sonlar */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryTile
-          label={t('ao_now_online')}
-          value={String(counts.online)}
-          dot={TONE_DOT.success}
-        />
-        <SummaryTile
-          label={t('ao_now_offline')}
-          value={String(counts.offline)}
-          dot={TONE_DOT.danger}
-        />
-        <SummaryTile label={t('ao_no_agent')} value={String(counts.none)} dot="bg-slate-300" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <SummaryTile label={t('ao_now_online')} value={String(counts.online)} dot="bg-success" />
+        <SummaryTile label={t('ao_now_offline')} value={String(counts.offline)} dot="bg-danger" />
         <SummaryTile label={t('ao_avg_online')} value={fmtPct(avgPct)} />
       </div>
 
@@ -283,7 +233,6 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                 { value: 'all', label: t('flt_all') },
                 { value: 'online', label: t('ao_online') },
                 { value: 'offline', label: t('ao_offline') },
-                { value: 'none', label: t('ao_no_agent_short') },
               ]}
             />
             <div className="relative w-full sm:w-56">
@@ -323,17 +272,19 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
             <ul className="m-0 list-none p-0">
               {visible.map((q) => {
                 const state = stateOf(q);
+                const live = hasLiveAgent(q);
                 const since = sinceOf(q, state);
                 const sinceMin =
                   since == null ? 0 : Math.max(0, Math.floor((now - since) / 60_000));
-                const offlineMin =
-                  q.totals.net_down_min + q.totals.server_down_min + q.totals.agent_off_min;
-                const p = pct(q.totals.online_min, q.totals.covered_min);
+                const p = onlinePct(q.totals);
                 const expanded = open === q.quarry_id;
                 const canOpen = q.has_agent;
-                const sinceText =
-                  state === 'none'
-                    ? ''
+
+                // Holat ostidagi kulrang izoh.
+                const note = !q.has_agent
+                  ? t('ao_note_no_agent')
+                  : !q.is_active
+                    ? t('agent_token_revoked')
                     : since == null
                       ? state === 'online'
                         ? t('ao_no_outage_period')
@@ -362,10 +313,12 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                         <div className="truncate text-sm font-semibold text-foreground">
                           {q.name}
                         </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {q.agent_version ? `v${q.agent_version}` : '—'}
-                          {q.route === 'fallback' && ` · ${t('agent_route_fallback')}`}
-                        </div>
+                        {q.agent_version && (
+                          <div className="truncate text-xs text-muted-foreground">
+                            v{q.agent_version}
+                            {q.route === 'fallback' && ` · ${t('agent_route_fallback')}`}
+                          </div>
+                        )}
                       </div>
 
                       {/* holat */}
@@ -373,25 +326,23 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                         <span
                           className={cn(
                             'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                            TONE_CHIP[STATE_TONE[state]],
+                            state === 'online'
+                              ? 'bg-success-tint text-success'
+                              : 'bg-danger-tint text-danger',
                           )}
                         >
                           <span
                             className={cn(
                               'inline-block size-1.5 rounded-full',
-                              state === 'none' ? 'bg-slate-400' : TONE_DOT[STATE_TONE[state]],
+                              state === 'online' ? 'bg-success' : 'bg-danger',
                             )}
                           />
-                          {stateLabel(q, state)}
+                          {t(state === 'online' ? 'ao_online' : 'ao_offline')}
                         </span>
-                        {(sinceText || q.last_seen_at) && (
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            {sinceText}
-                            {q.last_seen_at && (
-                              <span className="block tabular-nums">
-                                {t('ao_last_seen')}: {formatDateTime(q.last_seen_at)}
-                              </span>
-                            )}
+                        {note && <div className="mt-1 text-xs text-muted-foreground">{note}</div>}
+                        {live && q.last_seen_at && (
+                          <div className="text-xs text-slate-400 tabular-nums">
+                            {t('ao_last_seen')}: {formatDateTime(q.last_seen_at)}
                           </div>
                         )}
                       </div>
@@ -401,9 +352,7 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                         {q.totals.covered_min > 0 ? (
                           <>
                             <div className="flex items-center gap-2.5">
-                              <div className="flex-1">
-                                <SplitBar totals={q.totals} />
-                              </div>
+                              <OnlineBar d={q.totals} className="flex-1" />
                               <b
                                 className={cn(
                                   'w-12 text-right text-sm tabular-nums',
@@ -414,9 +363,8 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                               </b>
                             </div>
                             <div className="mt-1 text-xs text-muted-foreground tabular-nums">
-                              {t('ao_offline_short', { d: dur(offlineMin) })}
-                              {q.totals.outages > 0 &&
-                                ` · ${t('ao_outages_n', { n: q.totals.outages })}`}
+                              {t('ao_online')}: {dur(onlineMin(q.totals))} · {t('ao_offline')}:{' '}
+                              {dur(offlineMin(q.totals))}
                             </div>
                           </>
                         ) : (
@@ -453,7 +401,7 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
                             quarryId={q.quarry_id}
                             range={range}
                             online={state === 'online'}
-                            lastSeen={state === 'none' ? null : q.last_seen_at}
+                            lastSeen={live ? q.last_seen_at : null}
                           />
                         ) : (
                           <UptimeTable quarryId={q.quarry_id} range={range} />
@@ -469,12 +417,14 @@ export function UptimeOverview({ showHint = true }: { showHint?: boolean }) {
 
         {/* izoh */}
         <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t px-[18px] py-3 text-xs text-muted-foreground">
-          {PARTS.map((p) => (
-            <span key={p.key} className="inline-flex items-center gap-1.5">
-              <span className={cn('inline-block size-2 rounded-full', TONE_DOT[p.tone])} />
-              {t(p.label)}
-            </span>
-          ))}
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block size-2 rounded-full bg-success" />
+            {t('ao_online')}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block size-2 rounded-full bg-danger" />
+            {t('ao_offline')}
+          </span>
           {dataUpdatedAt > 0 && (
             <span className="ml-auto tabular-nums">
               {t('ao_updated')}: {formatDateTime(new Date(dataUpdatedAt).toISOString()).slice(11)}
