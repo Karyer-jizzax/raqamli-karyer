@@ -148,6 +148,9 @@ const uzLatn: Dict = {
   ao_offline_for: "{{d}} davomida aloqa yo'q",
   ao_no_outage_period: 'Davr davomida uzilishsiz',
   ao_just_now: 'hozirgina',
+  ao_period_col: "Davr bo'yicha",
+  ao_offline_short: 'Oflayn: {{d}}',
+  ao_outages_n: '{{n}} ta uzilish',
 
   // Tarozi punkti agenti (doc.txt)
   agent_section: 'Tarozi agenti',
@@ -738,6 +741,9 @@ const uzCyrl: Dict = {
   ao_offline_for: '{{d}} давомида алоқа йўқ',
   ao_no_outage_period: 'Давр давомида узилишсиз',
   ao_just_now: 'ҳозиргина',
+  ao_period_col: 'Давр бўйича',
+  ao_offline_short: 'Офлайн: {{d}}',
+  ao_outages_n: '{{n}} та узилиш',
 
   // Тарози пункти агенти (doc.txt)
   agent_section: 'Тарози агенти',
@@ -1323,6 +1329,9 @@ const ru: Dict = {
   ao_offline_for: 'Нет связи уже {{d}}',
   ao_no_outage_period: 'Без перебоев за период',
   ao_just_now: 'только что',
+  ao_period_col: 'За период',
+  ao_offline_short: 'Офлайн: {{d}}',
+  ao_outages_n: 'Перебоев: {{n}}',
 
   // Агент весового пункта (doc.txt)
   agent_section: 'Весовой агент',

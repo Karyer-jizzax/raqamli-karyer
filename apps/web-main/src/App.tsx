@@ -165,7 +165,7 @@ function Home() {
           {tab === 'quarries' ? (
             <Quarries />
           ) : tab === 'uptime' ? (
-            <UptimeOverview eyebrow={t('nav_section')} />
+            <UptimeOverview />
           ) : tab === 'materials' ? (
             <Materials />
           ) : tab === 'geo' ? (

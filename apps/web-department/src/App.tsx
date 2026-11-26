@@ -1,4 +1,4 @@
-import { AppShell, type NavEntry, RequireAuth, UptimeOverview } from '@karier/ui';
+import { AppShell, type NavEntry, PageHeader, RequireAuth, UptimeOverview } from '@karier/ui';
 import {
   ChartColumnIcon,
   ClipboardListIcon,
@@ -32,9 +32,15 @@ const NAV: (NavEntry & { path: string })[] = [
   { key: 'uptime', path: '/uptime', labelKey: 'nav_uptime', icon: WifiIcon },
 ];
 
-function UptimeEyebrow() {
+function UptimePage() {
   const { t } = useTranslation();
-  return <UptimeOverview eyebrow={t('sec_oversight')} />;
+  // Ramka boshqa sahifalar (Events, Live) bilan bir xil — AppShell padding bermaydi.
+  return (
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-3.5 p-4 lg:p-6 xl:max-w-[1680px]">
+      <PageHeader eyebrow={t('sec_oversight')} title={t('ao_title')} subtitle={t('ao_hint')} />
+      <UptimeOverview showHint={false} />
+    </div>
+  );
 }
 
 function Shell() {
@@ -71,7 +77,7 @@ function Shell() {
         {/* Jonli ko'rish: viloyatdagi tanlangan karyer kameralari */}
         <Route path="/live" element={<Live />} />
         {/* Aloqa holati: karyer kompyuterlari qachon onlayn/oflayn bo'lgani */}
-        <Route path="/uptime" element={<UptimeEyebrow />} />
+        <Route path="/uptime" element={<UptimePage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppShell>
