@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, insert, or_, select
+from sqlalchemy import delete, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,9 +18,14 @@ from app.core.deps import (
 )
 from app.core.security import create_provision_token
 from app.db.session import get_db
+from app.models.event import Event
 from app.models.material import Material
+from app.models.media import Media
+from app.models.protocol import Protocol
 from app.models.quarry import Camera, Post, Quarry, quarry_materials
 from app.models.region import District
+from app.models.trip import Trip, TripStop
+from app.models.user import User
 from app.schemas.material import MaterialOut
 from app.schemas.quarry import (
     CameraCreate,
@@ -193,8 +198,45 @@ async def issue_provision_token(
 
 @router.delete("/quarries/{quarry_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_quarry(quarry_id: UUID, db: DbDep, _a: AdminDep) -> None:
-    quarry = await _get_quarry(db, quarry_id)
-    await db.delete(quarry)
+    """Karyerni butun tarixi bilan o'chiradi.
+
+    events/trips/users jadvallarining FK'lari `ondelete` siz, shuning uchun
+    bog'liq qatorlarni bolalardan boshlab qo'lda tozalaymiz — aks holda
+    PostgreSQL ForeignKeyViolation beradi (500). quarry_agents,
+    agent_uptime_daily va quarry_materials bazada CASCADE.
+    """
+    await _get_quarry(db, quarry_id)
+
+    post_ids = select(Post.id).where(Post.quarry_id == quarry_id)
+    camera_ids = select(Camera.id).where(Camera.post_id.in_(post_ids))
+    event_ids = select(Event.id).where(
+        or_(
+            Event.quarry_id == quarry_id,
+            Event.post_id.in_(post_ids),
+            Event.camera_id.in_(camera_ids),
+        )
+    )
+    trip_ids = select(Trip.id).where(Trip.quarry_id == quarry_id)
+
+    await db.execute(
+        delete(TripStop).where(
+            or_(
+                TripStop.trip_id.in_(trip_ids),
+                TripStop.event_id.in_(event_ids),
+                TripStop.post_id.in_(post_ids),
+            )
+        )
+    )
+    await db.execute(delete(Trip).where(Trip.quarry_id == quarry_id))
+    await db.execute(delete(Protocol).where(Protocol.event_id.in_(event_ids)))
+    await db.execute(delete(Media).where(Media.event_id.in_(event_ids)))
+    await db.execute(delete(Event).where(Event.id.in_(event_ids)))
+    await db.execute(
+        update(User).where(User.quarry_id == quarry_id).values(quarry_id=None)
+    )
+    await db.execute(delete(Camera).where(Camera.post_id.in_(post_ids)))
+    await db.execute(delete(Post).where(Post.quarry_id == quarry_id))
+    await db.execute(delete(Quarry).where(Quarry.id == quarry_id))
     await db.commit()
 
 

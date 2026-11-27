@@ -254,3 +254,20 @@ async def test_one_way_drabilka_camera_completes_the_chain(
     assert len(trips) == 1, trips
     assert trips[0]["status"] == "done"
     assert trips[0]["netto_source"] == "count"
+
+
+@pytest.mark.asyncio
+async def test_delete_quarry_with_history(client: httpx.AsyncClient, seeded: None) -> None:
+    """Hodisa va qatnovi bor karyer ham o'chadi — avval FK tufayli 500 berardi."""
+    admin = auth_header(await login(client, "admin", "admin123"))
+    quarry, cams = await _quarry_with(client, admin, ("kon", None), ("tarozi", None))
+    plate = _plate()
+    code = str(quarry["code"])
+    await _send(client, code, cams["kon"], plate, "in", 0)
+    await _send(client, code, cams["kon"], plate, "out", 8)
+    await _send(client, code, cams["tarozi"], plate, "in", 20, weight=40000)
+
+    deleted = await client.delete(f"/api/v1/quarries/{quarry['id']}", headers=admin)
+    assert deleted.status_code == 204, deleted.text
+    gone = await client.get(f"/api/v1/quarries/{quarry['id']}", headers=admin)
+    assert gone.status_code == 404
