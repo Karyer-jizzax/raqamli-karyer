@@ -19,13 +19,16 @@ export interface UptimeMinutes {
   net_down_min: number;
   server_down_min: number;
   agent_off_min: number;
+  /** Hozirgi, hali yuborilmagan uzilish — sababi aloqa qaytganda keladi. */
+  pending_min?: number;
 }
 
 /** Oflayn sabablari — `outages[].reason` qiymatlari. "server" bu yerda yo'q. */
 export type OfflineReason = 'internet' | 'off';
 
 export const onlineMin = (d: UptimeMinutes) => d.online_min + d.server_down_min;
-export const offlineMin = (d: UptimeMinutes) => d.net_down_min + d.agent_off_min;
+export const offlineMin = (d: UptimeMinutes) =>
+  d.net_down_min + d.agent_off_min + (d.pending_min ?? 0);
 
 /** Onlayn ulushi, 0.1% aniqlikda; hisoblangan vaqt bo'lmasa null. */
 export function onlinePct(d: UptimeMinutes): number | null {

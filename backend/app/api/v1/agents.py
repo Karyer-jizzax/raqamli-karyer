@@ -6,7 +6,7 @@ kartasi va snapshot rejimidagi jonli kadr.
 """
 
 from datetime import date, timedelta
-from typing import Annotated
+from typing import Annotated, TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -39,6 +39,7 @@ from app.services.live import get_snapshot, hls_url, webrtc_url
 router = APIRouter(tags=["agents"])
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+_Day = TypeVar("_Day", AgentUptimeDayOut, AgentUptimeDayBrief)
 AdminDep = Annotated[object, Depends(require_role("superadmin"))]
 
 
@@ -265,6 +266,44 @@ async def get_quarry_agent(quarry_id: UUID, user: CurrentUser, db: DbDep) -> Age
     return await _status_out(db, quarry, agent, with_token=user.role == "superadmin")
 
 
+def _with_pending_offline(
+    days: list[_Day],
+    agent: QuarryAgent | None,
+    date_from: date | None,
+    date_to: date | None,
+    model: type[_Day],
+) -> list[_Day]:
+    """Hozir oflayn agentning hali yuborilmagan uzilishini kunlarga qo'shish.
+
+    Agent oflayn paytda statistika kelmaydi, shuning uchun oxirgi
+    heartbeat'dan hozirgacha bo'lgan vaqt oflayn deb hisoblanadi. Sababi
+    hali noma'lum, shuning uchun alohida `pending_min`ga yoziladi.
+    Agent qayta ulanib haqiqiy raqamlarni yuborgach, karyer onlayn bo'ladi
+    va bu qo'shimcha tushib qoladi. Ro'yxat yangidan eskiga qaytadi."""
+    if agent is None or not agent.is_active or agent.is_online or agent.last_seen_at is None:
+        return days
+    extra = uptime_svc.pending_offline_minutes(agent.last_seen_at, date_from, date_to)
+    if not extra:
+        return days
+    by_date = {d.date: d for d in days}
+    for day, minutes in extra.items():
+        d = by_date.get(day)
+        if d is None:
+            d = by_date[day] = model(
+                date=day,
+                covered_min=0,
+                online_min=0,
+                net_down_min=0,
+                server_down_min=0,
+                agent_off_min=0,
+            )
+        # Agent yozgan vaqt bilan ustma-ust tushmasin: kunda o'tgan vaqtdan oshmaydi.
+        add = min(minutes, max(0, uptime_svc.day_elapsed_min(day) - d.covered_min))
+        d.covered_min += add
+        d.pending_min += add
+    return sorted(by_date.values(), key=lambda d: d.date, reverse=True)
+
+
 @router.get("/quarries/{quarry_id}/agent/uptime", response_model=AgentUptimeOut)
 async def get_quarry_uptime(
     quarry_id: UUID,
@@ -278,12 +317,15 @@ async def get_quarry_uptime(
     await _quarry_in_scope(db, user, quarry_id)
     rows = await uptime_svc.list_days(db, quarry_id, date_from, date_to)
     days = [AgentUptimeDayOut.model_validate(r) for r in rows]
+    agent = await get_agent(db, quarry_id)
+    days = _with_pending_offline(days, agent, date_from, date_to, AgentUptimeDayOut)
     totals = AgentUptimeTotals(
         covered_min=sum(d.covered_min for d in days),
         online_min=sum(d.online_min for d in days),
         net_down_min=sum(d.net_down_min for d in days),
         server_down_min=sum(d.server_down_min for d in days),
         agent_off_min=sum(d.agent_off_min for d in days),
+        pending_min=sum(d.pending_min for d in days),
         outages=sum(len(d.outages) for d in days),
     )
     return AgentUptimeOut(days=days, totals=totals)
@@ -350,6 +392,7 @@ async def uptime_summary(
             )
             for d in days
         ]
+        brief = _with_pending_offline(brief, agent, frm, to, AgentUptimeDayBrief)
         item = QuarryUptimeSummaryOut(
             quarry_id=str(quarry.id),
             name=quarry.name,
@@ -361,6 +404,7 @@ async def uptime_summary(
                 net_down_min=sum(d.net_down_min for d in brief),
                 server_down_min=sum(d.server_down_min for d in brief),
                 agent_off_min=sum(d.agent_off_min for d in brief),
+                pending_min=sum(d.pending_min for d in brief),
                 outages=sum(d.outages for d in brief),
             ),
             last_outage=last_outage,

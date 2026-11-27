@@ -32,6 +32,7 @@ function useReasonNote() {
     [
       d.net_down_min > 0 && `${t(REASON_NOTE.internet)} ${dur(d.net_down_min)}`,
       d.agent_off_min > 0 && `${t(REASON_NOTE.off)} ${dur(d.agent_off_min)}`,
+      (d.pending_min ?? 0) > 0 && t('log_reason_unknown'),
     ]
       .filter(Boolean)
       .join(' · ');
@@ -90,11 +91,7 @@ export function UptimeTable({ quarryId, range }: { quarryId?: string; range: Dat
       ) : (
         <>
           {totals && (
-            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-lg border bg-surface-subtle px-3 py-2">
-                <div className="text-2xs text-muted-foreground">{t('up_online_pct')}</div>
-                <b className="text-lg text-foreground tabular-nums">{fmtPct(onlinePct(totals))}</b>
-              </div>
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <div className="rounded-lg border px-3 py-2">
                 <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
                   <span className="inline-block size-2 rounded-full bg-success" />

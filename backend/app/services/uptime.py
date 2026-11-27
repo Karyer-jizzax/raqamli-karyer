@@ -6,7 +6,7 @@ UPSERT qilinadi — kun davomida raqamlar o'sib boradi, oxirgisi to'g'ri.
 """
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from pydantic import ValidationError
@@ -112,3 +112,44 @@ async def list_days_many(
 
 def today_uz() -> date:
     return datetime.now(_UZ_TZ).date()
+
+
+def pending_offline_minutes(
+    last_seen: datetime,
+    date_from: date | None,
+    date_to: date | None,
+    now: datetime | None = None,
+) -> dict[date, int]:
+    """Agent hozir oflayn: oxirgi heartbeat'dan hozirgacha bo'lgan vaqt,
+    O'zbekiston kunlari bo'yicha daqiqada.
+
+    Oflayn paytda agent statistika yubora olmaydi — u uzilishni qayta
+    ulanganda yuboradi. Usiz sahifa "3 soatdan beri oflayn" deb turib,
+    davr ustunida 100% onlayn ko'rsatardi. Agent qayta ulanib haqiqiy
+    raqamlarni yuborgach, bu qo'shimcha o'z-o'zidan yo'qoladi (karyer
+    onlayn bo'ladi)."""
+    if last_seen.tzinfo is None:
+        last_seen = last_seen.replace(tzinfo=timezone.utc)
+    start = last_seen.astimezone(_UZ_TZ)
+    end = (now or datetime.now(timezone.utc)).astimezone(_UZ_TZ)
+    out: dict[date, int] = {}
+    day = start.date()
+    while day <= end.date():
+        if (date_from is None or day >= date_from) and (date_to is None or day <= date_to):
+            d0 = datetime.combine(day, time.min, _UZ_TZ)
+            d1 = d0 + timedelta(days=1)
+            minutes = int((min(end, d1) - max(start, d0)).total_seconds() // 60)
+            if minutes > 0:
+                out[day] = minutes
+        day += timedelta(days=1)
+    return out
+
+
+def day_elapsed_min(day: date, now: datetime | None = None) -> int:
+    """Kunning hozirgacha o'tgan daqiqalari (o'tgan kun uchun 1440)."""
+    end = (now or datetime.now(timezone.utc)).astimezone(_UZ_TZ)
+    if day < end.date():
+        return 1440
+    if day > end.date():
+        return 0
+    return end.hour * 60 + end.minute

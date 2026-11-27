@@ -84,6 +84,8 @@ class AgentUptimeDayOut(BaseModel):
     net_down_min: int
     server_down_min: int
     agent_off_min: int
+    # Agent hozir oflayn: oxirgi heartbeat'dan beri, sababi hali noma'lum.
+    pending_min: int = 0
     outages: list[dict] = []
 
     @field_validator("outages", mode="before")
@@ -98,6 +100,7 @@ class AgentUptimeTotals(BaseModel):
     net_down_min: int = 0
     server_down_min: int = 0
     agent_off_min: int = 0
+    pending_min: int = 0
     outages: int = 0
 
 
@@ -118,6 +121,7 @@ class AgentUptimeDayBrief(BaseModel):
     net_down_min: int
     server_down_min: int
     agent_off_min: int
+    pending_min: int = 0
     outages: int = 0
 
 

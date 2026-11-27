@@ -212,22 +212,6 @@ export function UptimeOverview() {
     return c;
   }, [rows]);
 
-  const avgPct = useMemo(() => {
-    const sum = {
-      covered_min: 0,
-      online_min: 0,
-      net_down_min: 0,
-      server_down_min: 0,
-      agent_off_min: 0,
-    };
-    for (const q of rows) {
-      sum.covered_min += q.totals.covered_min;
-      sum.online_min += q.totals.online_min;
-      sum.server_down_min += q.totals.server_down_min;
-    }
-    return onlinePct(sum);
-  }, [rows]);
-
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     // Oflaynlar tepada — sahifa "qayerda muammo bor" savoliga javob beradi;
@@ -248,17 +232,10 @@ export function UptimeOverview() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <SummaryTile label={t('ao_now_online')} value={String(counts.online)} dot="bg-success" />
         <SummaryTile label={t('ao_now_offline')} value={String(counts.offline)} dot="bg-danger" />
-        <SummaryTile label={t('ao_avg_online')} value={fmtPct(avgPct)} />
-      </div>
-
-      {/* ro'yxat */}
-      <div className="overflow-hidden rounded-2xl border bg-card">
-        <header className="flex flex-wrap items-center gap-3 border-b px-[18px] py-4">
-          <div className="flex items-center gap-[9px]">
-            <Eyebrow className="text-slate-400">{t('nav_quarries')}</Eyebrow>
-            <CountPill>{rows.length}</CountPill>
-          </div>
-          <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        {/* vaqt filtri */}
+        <div className="col-span-2 rounded-2xl border bg-card px-[18px] py-4 lg:col-span-1">
+          <div className="text-xs text-muted-foreground">{t('an_period')}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <SpanSwitch
               value={span}
               onChange={setSpan}
@@ -291,6 +268,18 @@ export function UptimeOverview() {
                 />
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* ro'yxat */}
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <header className="flex flex-wrap items-center gap-3 border-b px-[18px] py-4">
+          <div className="flex items-center gap-[9px]">
+            <Eyebrow className="text-slate-400">{t('nav_quarries')}</Eyebrow>
+            <CountPill>{rows.length}</CountPill>
+          </div>
+          <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <div className="relative w-full sm:w-48">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -369,12 +358,6 @@ export function UptimeOverview() {
                         <div className="truncate text-sm font-semibold text-foreground">
                           {q.name}
                         </div>
-                        {q.agent_version && (
-                          <div className="truncate text-xs text-muted-foreground">
-                            v{q.agent_version}
-                            {q.route === 'fallback' && ` · ${t('agent_route_fallback')}`}
-                          </div>
-                        )}
                       </div>
 
                       {/* holat */}

@@ -941,6 +941,8 @@ export interface UptimeDay {
   net_down_min: number;
   server_down_min: number;
   agent_off_min: number;
+  /** Agent hozir oflayn: oxirgi aloqadan beri, sababi hali noma'lum (server qo'shadi). */
+  pending_min?: number;
   outages: UptimeOutage[];
 }
 
