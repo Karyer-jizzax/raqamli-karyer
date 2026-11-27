@@ -6,7 +6,7 @@ UPSERT qilinadi — kun davomida raqamlar o'sib boradi, oxirgisi to'g'ri.
 """
 
 import uuid
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta, timezone
 from typing import Any
 
 from pydantic import ValidationError
@@ -129,9 +129,9 @@ def pending_offline_minutes(
     raqamlarni yuborgach, bu qo'shimcha o'z-o'zidan yo'qoladi (karyer
     onlayn bo'ladi)."""
     if last_seen.tzinfo is None:
-        last_seen = last_seen.replace(tzinfo=timezone.utc)
+        last_seen = last_seen.replace(tzinfo=UTC)
     start = last_seen.astimezone(_UZ_TZ)
-    end = (now or datetime.now(timezone.utc)).astimezone(_UZ_TZ)
+    end = (now or datetime.now(UTC)).astimezone(_UZ_TZ)
     out: dict[date, int] = {}
     day = start.date()
     while day <= end.date():
@@ -147,7 +147,7 @@ def pending_offline_minutes(
 
 def day_elapsed_min(day: date, now: datetime | None = None) -> int:
     """Kunning hozirgacha o'tgan daqiqalari (o'tgan kun uchun 1440)."""
-    end = (now or datetime.now(timezone.utc)).astimezone(_UZ_TZ)
+    end = (now or datetime.now(UTC)).astimezone(_UZ_TZ)
     if day < end.date():
         return 1440
     if day > end.date():
